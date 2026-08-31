@@ -54,44 +54,60 @@ SwiftUI needs Xcode and a real device, and is deliberately kept out of
 ## How it works
 
 ```
-NFC tag  ──tap──▶  Shortcuts automation  ──▶  ToggleTimIntent
-                                                    │
-                                              TimEngine.handleTap
-                                                    │
-                                    ┌───────────────┴───────────────┐
-                                    ▼                               ▼
-                          ManagedSettingsStore              TimStore (App Group)
-                          .shield.applications              active session, modes,
-                                    │                       paired tags, history
-                                    ▼                               │
-                        iOS shields the apps                        ▼
-                                    │                     read by the shield
-                                    ▼                        extension
-                       ShieldConfigurationExtension  ◀──────────────┘
-                            "Timmed."
+NFC tag ──tap──▶ Shortcuts automation ──▶ ToggleTimIntent ──┐
+                                                            │
+  in-app scan ──────────────────────────────────────────────┤
+  shield's emergency button ────────────────────────────────┤
+  DeviceActivity timed release ─────────────────────────────┤
+                                                            ▼
+                                                      TimEngine
+                                          (Foundation only, fully tested)
+                                                            │
+              ┌──────────────┬──────────────┬───────────────┘
+              ▼              ▼              ▼
+      ShieldControlling  SessionScheduling  TimPersisting   ← ports
+              │              │              │
+      ManagedSettings   DeviceActivity   App Group           ← iOS adapters
+              │
+      iOS shields the apps ──▶ ShieldConfigurationExtension
+                                    "Timmed."
 ```
+
+Every trigger funnels through one engine, so there is exactly one place a
+session can begin or end. The engine depends only on four protocols, which is
+what lets the whole state machine be tested without a device —
+[ADR 001](docs/adr/001-ports-and-adapters.md).
 
 The restrictions are held by the system, not by this app. Force-quitting Tim
 does not unblock anything. Strict Mode additionally sets `denyAppRemoval`, so
-you can't delete Tim to escape it either.
+you can't delete Tim to escape it either. If a crash ever leaves the shield and
+the stored session disagreeing, `reconcile()` settles it on next launch — in
+both directions, so neither a half-finished start nor a half-finished stop can
+strand you.
 
 Tim never learns which apps you blocked. `FamilyActivityPicker` hands back
-opaque tokens that only iOS can resolve, and those tokens are all that's stored.
-Nothing leaves the device — there is no server and no network code.
+opaque tokens that only iOS can resolve, and Core holds them as a `Data` blob
+it cannot read — only one adapter file interprets it, to hand the tokens to
+ManagedSettings. Nothing leaves the device; there is no server and no network
+code.
 
 ## Layout
 
 ```
 Tim/
-  Shared/          model + engine, compiled into all four targets
-    Core/          Foundation-only, also built by Package.swift for `swift test`
-      TimVocabulary  every string carrying the verb, in one place
-      TimSession     one stretch of being Timmed
-      TimStats       streaks, totals, chart data — all tested
-    TimMode        a Mode's blocked selection
-    TimStore       App Group persistence
-    Shielder       the ManagedSettings wrapper that does the blocking
-    TimEngine      start/stop/toggle — one path for every trigger
+  Shared/
+    Core/          Foundation-only. Built into all four targets, and by
+                   Package.swift for `swift test`. No iOS frameworks, ever.
+      TimEngine        start/stop/toggle — one path for every trigger
+      Ports            the four protocols the engine depends on
+      TimMode          a Mode; BlockedSelection is opaque here by design
+      TimSession       one stretch of being Timmed
+      TimStats         streaks, totals, chart data
+      EmergencyAllowance  five per rolling 30 days
+      TimVocabulary    every string carrying the verb, in one place
+    Adapters/      the iOS side of each port — thin, no logic worth testing
+      ManagedSettingsShield, DeviceActivityScheduler, UserDefaultsStore,
+      SystemClock, TimMode+FamilyControls, TimEngine+Live (composition root)
   App/             the SwiftUI app, NFC scanning, App Intents
   Extensions/
     ShieldConfiguration   the "Timmed." screen over blocked apps
@@ -108,6 +124,11 @@ adding a file.
 The core loop, the three tap paths, and the stats screen are built. Widgets,
 scheduled Modes and Android are [not done](docs/roadmap.md).
 
-`swift test` passes — 15 tests over the session and streak logic. The rest has
-never been compiled: it needs a Mac, your Team ID and the Family Controls
-capability. [Day-one checklist](docs/first-tap.md).
+`swift test` passes — 54 tests covering the whole engine state machine, the
+override allowance, and the session/streak maths. The suite is mutation-checked:
+deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
+history bound, the scheduler floor or the reconcile clear each turns it red.
+
+The iOS layer — views, adapters, extensions — has never been compiled. It needs
+a Mac, your Team ID and the Family Controls capability.
+[Day-one checklist](docs/first-tap.md).

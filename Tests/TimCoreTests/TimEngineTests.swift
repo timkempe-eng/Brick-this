@@ -286,3 +286,31 @@ final class TimEngineTests: XCTestCase {
         XCTAssertTrue(h.store.modes.isEmpty)
     }
 }
+
+/// `tim(with:)` is reachable from the App Intents as well as from `handleTap`,
+/// so it has to behave when called in states `handleTap` would have screened out.
+final class TimEngineDirectStartTests: XCTestCase {
+
+    func testStartingWhileAlreadyTimmedClosesOutTheOldSession() {
+        let h = Harness()
+        let first = h.addMode(name: "A")
+        let second = h.addMode(name: "B")
+
+        h.engine.tim(with: first)
+        h.clock.advance(10 * 60)
+        h.engine.tim(with: second)
+
+        XCTAssertEqual(h.store.history.count, 1, "the first session must not vanish")
+        XCTAssertEqual(h.store.history.first?.modeName, "A")
+        XCTAssertEqual(h.store.history.first?.duration, 10 * 60)
+        XCTAssertEqual(h.store.activeSession?.modeID, second.id)
+        XCTAssertEqual(h.shield.appliedMode, second.id)
+    }
+
+    func testStartingWhileAlreadyTimmedDoesNotSpendAnOverride() {
+        let h = Harness()
+        h.engine.tim(with: h.addMode(name: "A"))
+        h.engine.tim(with: h.addMode(name: "B"))
+        XCTAssertEqual(h.engine.emergencyUnTimsRemaining, EmergencyAllowance.perWindow)
+    }
+}

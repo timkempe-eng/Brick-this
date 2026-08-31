@@ -1,5 +1,8 @@
 # What's not built yet
 
+The engine, its ports, and the stats maths are covered by `swift test`. The
+list below is roughly in the order the remaining work is worth doing.
+
 The core loop is complete: pick a Mode, tap, apps disappear, tap, they come
 back. These are the things Brick has that Tim doesn't, roughly in the order
 they'd be worth adding.

@@ -9,6 +9,11 @@ final class TimModel: ObservableObject {
 
     @Published private(set) var activeSession: TimSession?
     @Published private(set) var modes: [TimMode] = []
+
+    /// Snapshotted rather than computed on demand: reading it walks the whole
+    /// session history out of `UserDefaults` and back through JSON, and the
+    /// stats screen touches it a dozen times per render.
+    @Published private(set) var stats = TimStats(sessions: [])
     @Published var authorization: AuthorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @Published var banner: String?
     @Published var pendingModeChoice = false
@@ -27,8 +32,17 @@ final class TimModel: ObservableObject {
     func reload() {
         modes = engine.store.modes
         activeSession = engine.store.activeSession
+        stats = engine.stats
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
+    }
+
+    /// Makes the shield agree with the stored session. Called at launch and
+    /// whenever the app comes back to the foreground, so a session interrupted
+    /// by a crash or a kill can't leave the two out of step.
+    func reconcile() {
+        engine.reconcile()
+        reload()
     }
 
     var isTimmed: Bool { activeSession != nil }
@@ -39,10 +53,6 @@ final class TimModel: ObservableObject {
     }
 
     var emergencyUnTimsRemaining: Int { engine.emergencyUnTimsRemaining }
-
-    /// Recomputed on each access from the stored history — cheap at this size,
-    /// and it means the numbers can't go stale behind a cached copy.
-    var stats: TimStats { engine.stats }
 
     var pairedTagCount: Int { engine.store.pairedTagUIDs.count }
 

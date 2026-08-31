@@ -73,6 +73,13 @@ struct TimEngine {
     // MARK: - Starting and stopping
 
     func tim(with mode: TimMode) {
+        // Starting while a session is running would drop the old one from
+        // history without ever ending it. Close it out first so the record
+        // stays honest, whoever called us.
+        if store.activeSession != nil {
+            unTim(byEmergency: false)
+        }
+
         // State first, then the shield. If the process dies between the two,
         // `reconcile()` on next launch puts the shield back — whereas a shield
         // with no session recorded would leave the user blocked with nothing
