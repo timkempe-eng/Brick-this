@@ -50,7 +50,7 @@ struct StartTimIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let engine = TimEngine.live
         guard engine.store.activeSession == nil else {
-            return .result(dialog: "Already \(Vocab.verbPast.lowercased()).")
+            return .result(dialog: "Already \(Vocab.verbPast).")
         }
         guard let name = modeName,
               let mode = engine.store.modes.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }),
@@ -68,7 +68,7 @@ struct StopTimIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         guard let finished = TimEngine.live.unTim(byEmergency: false) else {
-            return .result(dialog: "Your phone isn't \(Vocab.verbPast.lowercased()).")
+            return .result(dialog: "Your phone isn't \(Vocab.verbPast).")
         }
         return .result(dialog: "\(Vocab.sessionSummary(duration: finished.duration.timDurationText))")
     }

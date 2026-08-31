@@ -44,7 +44,8 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test
+swift test                      # 98 tests, no Mac required
+./scripts/lint-vocabulary.sh    # the verb never ships lowercased
 ```
 
 Everything touching FamilyControls, ManagedSettings, DeviceActivity, CoreNFC or
@@ -126,7 +127,7 @@ adding a file.
 The core loop, the three tap paths, and the stats screen are built. Widgets,
 scheduled Modes and Android are [not done](docs/roadmap.md).
 
-`swift test` passes — 97 tests covering the whole engine state machine,
+`swift test` passes — 98 tests covering the whole engine state machine,
 recurring schedules, the override allowance, and the session/streak maths. The suite is mutation-checked:
 deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
 history bound, the scheduler floor or the reconcile clear each turns it red.

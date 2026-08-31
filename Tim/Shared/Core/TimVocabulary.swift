@@ -38,7 +38,7 @@ enum Vocab {
     static let idleSubtitle  = "Tap your \(tagNoun) to Tim it."
     static let activeTitle   = "Your phone is \(verbPast)"
     static func activeSubtitle(mode: String) -> String {
-        "\(mode) · tap your \(tagNoun) again to \(unVerb.lowercased())."
+        "\(mode) · tap your \(tagNoun) again to \(unVerb)."
     }
 
     // MARK: Shield copy — what you see when you open a blocked app

@@ -161,4 +161,30 @@ final class VocabularyTests: XCTestCase {
         XCTAssertEqual(Vocab.activeTitle, "Your phone is Timmed")
         XCTAssertEqual(Vocab.sessionSummary(duration: "1h 42m"), "You were Timmed for 1h 42m.")
     }
+
+    /// naming.md: capital T mid-sentence, always. A lowercase verb anywhere in
+    /// the produced copy reads as a typo and undoes the whole conceit.
+    func testTheVerbIsNeverLowercasedInProducedCopy() {
+        let copy = [
+            Vocab.activeTitle,
+            Vocab.idleSubtitle,
+            Vocab.activeSubtitle(mode: "Deep Work"),
+            Vocab.shieldTitle,
+            Vocab.shieldSubtitle(mode: "Deep Work"),
+            Vocab.shieldSecondaryButton,
+            Vocab.timAction,
+            Vocab.unTimAction,
+            Vocab.emergencyUnTim,
+            Vocab.sessionSummary(duration: "1h"),
+            Vocab.tagline,
+        ]
+        for line in copy {
+            XCTAssertFalse(line.contains("tim") && !line.contains("Tim"),
+                           "lowercase verb in: \(line)")
+            for bad in ["timmed", "timming", "un-tim", "tim your", "tim my"] {
+                XCTAssertFalse(line.lowercased().contains(bad) && !line.contains("Tim"),
+                               "lowercase verb form '\(bad)' in: \(line)")
+            }
+        }
+    }
 }

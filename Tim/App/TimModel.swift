@@ -109,7 +109,7 @@ final class TimModel: ObservableObject {
 
     func pair(tagUID: String) {
         engine.pair(tagUID: tagUID)
-        banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.verb.lowercased()) your phone."
+        banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.verb) your phone."
         reload()
     }
 

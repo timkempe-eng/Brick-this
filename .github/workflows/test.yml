@@ -16,3 +16,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: swift test
         run: swift test
+
+      - name: vocabulary lint
+        run: ./scripts/lint-vocabulary.sh

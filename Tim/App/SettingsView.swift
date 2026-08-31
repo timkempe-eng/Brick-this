@@ -32,7 +32,7 @@ struct SettingsView: View {
                 } footer: {
                     Text(model.pairedTagCount == 0
                          ? "No tag paired yet, so any NFC tag will work. Pair one to lock Tim to it."
-                         : "Only your paired tags can \(Vocab.verb.lowercased()) and \(Vocab.unVerb.lowercased()) this phone.")
+                         : "Only your paired tags can \(Vocab.verb) and \(Vocab.unVerb) this phone.")
                 }
 
                 Section {

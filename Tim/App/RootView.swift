@@ -65,7 +65,7 @@ struct HomeView: View {
                 VStack(spacing: 12) {
                     Button {
                         scanner.scan(prompt: model.isTimmed
-                                     ? "Hold your iPhone near your \(Vocab.tagNoun) to \(Vocab.unVerb.lowercased())."
+                                     ? "Hold your iPhone near your \(Vocab.tagNoun) to \(Vocab.unVerb)."
                                      : "Hold your iPhone near your \(Vocab.tagNoun).") { uid in
                             model.tap(tagUID: uid)
                         }

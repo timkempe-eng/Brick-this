@@ -11,6 +11,7 @@ suffix — the same rule that turns *trim* into *trimmed* and *slam* into
 | Third person | Tims | "The tag Tims your phone." |
 | Past / participle | Timmed | "I Timmed my phone at nine." |
 | Gerund | Timming | "He's Timming again." |
+| Third person | Tims | "Your phone Tims itself at ten." |
 | State | Timmed | "Your phone is Timmed." |
 | Release | Un-Tim | "Un-Tim my phone." |
 | Release, past | Un-Timmed | "Un-Timmed after two hours." |

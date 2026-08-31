@@ -33,7 +33,7 @@ struct ModesView: View {
                         offsets.map { model.modes[$0] }.forEach(model.delete)
                     }
                 } footer: {
-                    Text("A \(Vocab.modeNoun.lowercased()) is a set of apps to take away. Pick one when you \(Vocab.verb.lowercased()) your phone.")
+                    Text("A \(Vocab.modeNoun.lowercased()) is a set of apps to take away. Pick one when you \(Vocab.verb) your phone.")
                 }
 
                 Button {
@@ -110,7 +110,7 @@ struct ModeEditorView: View {
                     }
                     Toggle("Strict", isOn: $mode.isStrict)
                 } footer: {
-                    Text("Strict stops Tim being deleted while your phone is \(Vocab.verbPast.lowercased()) — the fastest way to cheat.")
+                    Text("Strict stops Tim being deleted while your phone is \(Vocab.verbPast) — the fastest way to cheat.")
                 }
             }
             .navigationTitle(mode.name)
@@ -194,7 +194,7 @@ private struct ScheduleSection: View {
         } footer: {
             if let schedule = mode.schedule, schedule.isEnabled {
                 if schedule.isValid {
-                    Text("\(schedule.displayText()). Your phone \(Vocab.verbGerund.lowercased()) itself, and you can still tap out early.")
+                    Text("\(schedule.displayText()). Your phone \(Vocab.verbThirdPerson) itself, and you can still tap out early.")
                 } else {
                     Text("This schedule can't run: pick at least one day and a window of 15 minutes or more.")
                         .foregroundStyle(.orange)
