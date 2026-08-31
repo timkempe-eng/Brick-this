@@ -20,6 +20,7 @@ struct HomeView: View {
     @StateObject private var scanner = TagScanner()
     @State private var showingModes = false
     @State private var showingSettings = false
+    @State private var showingStats = false
 
     var body: some View {
         NavigationStack {
@@ -46,6 +47,15 @@ struct HomeView: View {
                     } else {
                         Text(Vocab.idleSubtitle)
                             .foregroundStyle(.secondary)
+
+                        if model.stats.currentStreak > 0 {
+                            let days = model.stats.currentStreak
+                            Label("\(days) day\(days == 1 ? "" : "s") in a row",
+                                  systemImage: "flame.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 8)
+                        }
                     }
                 }
                 .padding(.horizontal)
@@ -90,12 +100,16 @@ struct HomeView: View {
                     Button { showingModes = true } label: { Image(systemName: "square.grid.2x2") }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingStats = true } label: { Image(systemName: "chart.bar") }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showingSettings = true } label: { Image(systemName: "gearshape") }
                 }
             }
             .nfcErrorAlert($scanner.lastError)
             .sheet(isPresented: $showingModes) { ModesView() }
             .sheet(isPresented: $showingSettings) { SettingsView() }
+            .sheet(isPresented: $showingStats) { StatsView() }
             // Reached when a tap arrives and more than one mode could apply.
             .confirmationDialog("Which \(Vocab.modeNoun.lowercased())?",
                                 isPresented: $model.pendingModeChoice,

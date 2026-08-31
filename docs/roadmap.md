@@ -4,10 +4,9 @@ The core loop is complete: pick a Mode, tap, apps disappear, tap, they come
 back. These are the things Brick has that Tim doesn't, roughly in the order
 they'd be worth adding.
 
-**Stats and streaks.** `TimStore.history` already records every session with its
-mode, duration, and whether it ended by tag or by emergency override — the data
-is there, there's just no screen showing it. A weekly total, a current streak,
-and the ratio of clean finishes to bail-outs would cover most of it.
+~~**Stats and streaks.**~~ Built — `TimStats` plus `StatsView`. Streak, weekly
+total, a seven-day chart, and the clean-finish ratio. The arithmetic is
+Foundation-only and covered by `swift test`.
 
 **A Lock Screen widget and Live Activity.** The status is currently only visible
 inside the app, which is a little absurd for a product about not opening your

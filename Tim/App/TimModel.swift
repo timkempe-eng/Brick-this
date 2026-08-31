@@ -39,6 +39,10 @@ final class TimModel: ObservableObject {
 
     var emergencyUnTimsRemaining: Int { store.emergencyUnTimsRemaining }
 
+    /// Recomputed on each access from the stored history — cheap at this size,
+    /// and it means the numbers can't go stale behind a cached copy.
+    var stats: TimStats { TimStats(sessions: store.history) }
+
     var pairedTagCount: Int { store.pairedTagUIDs.count }
 
     // MARK: - Authorization

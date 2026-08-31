@@ -38,6 +38,19 @@ Then, before it will build on a device:
 
 Buy **NTAG215** stickers, not MIFARE Classic and not anything at 125 kHz — neither works with an iPhone. Don't stick them to metal. [Buying guide](docs/nfc-and-tags.md#what-to-buy).
 
+## Tests
+
+The Foundation-only core — session maths, streaks, week boundaries, the verb
+forms — builds and tests anywhere, no Mac required:
+
+```bash
+swift test
+```
+
+Everything touching FamilyControls, ManagedSettings, DeviceActivity, CoreNFC or
+SwiftUI needs Xcode and a real device, and is deliberately kept out of
+`Tim/Shared/Core` so that stays true.
+
 ## How it works
 
 ```
@@ -71,8 +84,11 @@ Nothing leaves the device — there is no server and no network code.
 ```
 Tim/
   Shared/          model + engine, compiled into all four targets
-    TimVocabulary  every string carrying the verb, in one place
-    TimMode        a Mode and a session
+    Core/          Foundation-only, also built by Package.swift for `swift test`
+      TimVocabulary  every string carrying the verb, in one place
+      TimSession     one stretch of being Timmed
+      TimStats       streaks, totals, chart data — all tested
+    TimMode        a Mode's blocked selection
     TimStore       App Group persistence
     Shielder       the ManagedSettings wrapper that does the blocking
     TimEngine      start/stop/toggle — one path for every trigger
@@ -89,7 +105,9 @@ adding a file.
 
 ## Status
 
-The core loop is built and the three tap paths are wired up. Stats, widgets,
-scheduled Modes and Android are [not done](docs/roadmap.md). None of it has run
-on a device yet — it needs your Team ID and the Family Controls capability
-before it will compile for one.
+The core loop, the three tap paths, and the stats screen are built. Widgets,
+scheduled Modes and Android are [not done](docs/roadmap.md).
+
+`swift test` passes — 15 tests over the session and streak logic. The rest has
+never been compiled: it needs a Mac, your Team ID and the Family Controls
+capability. [Day-one checklist](docs/first-tap.md).

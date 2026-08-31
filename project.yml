@@ -29,7 +29,8 @@ targets:
     platform: iOS
     sources:
       - Tim/App
-      - Tim/Shared
+      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+                        # part that `swift test` also builds via Package.swift
       - path: Tim/Resources
         buildPhase: resources
     settings:
@@ -55,7 +56,8 @@ targets:
     platform: iOS
     sources:
       - Tim/Extensions/ShieldConfiguration
-      - Tim/Shared
+      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+                        # part that `swift test` also builds via Package.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ShieldConfiguration
@@ -72,7 +74,8 @@ targets:
     platform: iOS
     sources:
       - Tim/Extensions/ShieldAction
-      - Tim/Shared
+      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+                        # part that `swift test` also builds via Package.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ShieldAction
@@ -89,7 +92,8 @@ targets:
     platform: iOS
     sources:
       - Tim/Extensions/ActivityMonitor
-      - Tim/Shared
+      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+                        # part that `swift test` also builds via Package.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ActivityMonitor
