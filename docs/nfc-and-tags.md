@@ -2,19 +2,48 @@
 
 ## What to buy
 
-**NTAG215 stickers.** Roughly $0.30 each in packs of 10–50 from any of the usual
-marketplaces. 504 bytes of user memory — far more than the link needs, and the
-size iOS Shortcuts is happiest with. NTAG213 (144 bytes) also works for the
-Shortcuts route, which only reads the tag's UID.
+Short version: **search "NTAG215 stickers" and buy those.** Roughly $0.30 each
+in packs of 10–50. 504 bytes of user memory, and the chip iOS Shortcuts is
+most reliable with. NTAG213 (144 bytes) and NTAG216 (888 bytes) are fine too —
+the Shortcuts route only reads the tag's UID, so capacity barely matters.
 
-Two things to know:
+"Amiibo blank" stickers are NTAG215 sold under a different name and are often
+the cheapest listing on the page. They work perfectly.
 
-- **Metal kills NFC.** Don't stick a plain tag to a laptop, a fridge door or a
-  tin. Buy "on-metal" / ferrite-backed tags if you need to, or mount to wood,
-  plastic, card or glass.
+### Two listings that will not work
+
+**125 kHz tags.** Amazon sells a lot of "RFID key fobs" and "proximity cards"
+at 125 kHz — the old building-access frequency. **No iPhone can read these at
+all**, and no app or setting changes that. iPhones only speak 13.56 MHz. If a
+listing says 125 kHz, EM4100, EM4305 or T5577, it is the wrong radio.
+
+**MIFARE Classic (1K / 4K).** These *are* 13.56 MHz, which is what makes them
+such an effective trap — they look right. But iPhone does not support MIFARE
+Classic; Apple's own developer forums confirm it, and Core NFC simply won't
+return the tag. They're cheap and they're everywhere. Skip them.
+
+### Reading the listing
+
+| Look for | Avoid |
+|---|---|
+| NTAG213 / NTAG215 / NTAG216 | MIFARE Classic 1K / 4K |
+| NXP NTAG21x | 125 kHz, EM4100, EM4305, T5577 |
+| 13.56 MHz | UHF / 860–960 MHz |
+| "NFC Forum Type 2", NDEF-formatted | "RFID key fob" with no chip named |
+| "works with iPhone Shortcuts" | MIFARE Ultralight C (needs auth) |
+
+A listing that names no chip at all is usually MIFARE Classic. If the seller
+won't say, pick a different seller.
+
+### Two physical gotchas
+
+- **Metal kills NFC.** Don't stick a plain tag to a laptop, a fridge door, a
+  radiator or a tin. Buy "on-metal" or "anti-metal" tags — they have a ferrite
+  layer — or mount to wood, plastic, card or glass.
 - **The UID is factory-burned and read-only.** Tim pairs against the UID rather
   than anything written to the tag, so a paired tag can't be spoofed by writing
-  the same text onto a second sticker.
+  the same text onto a second sticker. It also means a pre-locked or
+  "read-only" tag still works for pairing and for Shortcuts.
 
 Good places to put one: the back of a coaster on the kitchen table, inside a
 drawer in another room, the underside of a bedside table, the inside of the

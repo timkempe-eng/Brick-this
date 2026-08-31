@@ -26,7 +26,11 @@ final class TagScanner: NSObject, ObservableObject {
             return
         }
         self.onRead = onRead
-        session = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
+        // .iso14443 covers the NTAG21x stickers almost everyone buys;
+        // .iso15693 covers NFC Forum Type 5 (ICODE and friends). FeliCa is
+        // left out deliberately — polling for it needs a separate entitlement
+        // listing system codes, and it isn't hardware you'd buy for this.
+        session = NFCTagReaderSession(pollingOption: [.iso14443, .iso15693], delegate: self, queue: nil)
         session?.alertMessage = prompt
         session?.begin()
         isScanning = true
@@ -77,9 +81,8 @@ extension TagScanner: NFCTagReaderSessionDelegate {
     nonisolated private static func identifier(of tag: NFCTag) -> Data? {
         switch tag {
         case .miFare(let t):    return t.identifier      // NTAG213/215/216 land here
-        case .iso7816(let t):   return t.identifier
-        case .iso15693(let t):  return t.identifier
-        case .feliCa(let t):    return t.currentIDm
+        case .iso15693(let t):  return t.identifier      // NFC Forum Type 5
+        case .iso7816(let t):   return t.identifier      // payment-style cards; unlikely but harmless
         @unknown default:       return nil
         }
     }

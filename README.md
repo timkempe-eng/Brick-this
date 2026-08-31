@@ -36,7 +36,7 @@ Then, before it will build on a device:
 5. Set up the Shortcuts automation so a tap works with the app closed —
    [three lines of setup](docs/nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
 
-Buy NTAG215 stickers. Don't stick them to metal. [Details](docs/nfc-and-tags.md).
+Buy **NTAG215** stickers, not MIFARE Classic and not anything at 125 kHz — neither works with an iPhone. Don't stick them to metal. [Buying guide](docs/nfc-and-tags.md#what-to-buy).
 
 ## How it works
 
