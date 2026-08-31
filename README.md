@@ -31,6 +31,9 @@ Controls entitlement, and Swift Playgrounds on iPad can't build app extensions
 (Tim has three). TestFlight is the only Mac-free route onto a phone, and it
 requires the paid program.
 
+Signing is fastlane `match`, not Xcode automatic signing —
+[why that distinction costs a week](docs/signing.md).
+
 Start the **Family Controls (Distribution)** entitlement request the day you
 enrol: it's a manual review at Apple, days to weeks, needed for each of the four
 bundle ids. Everything else waits on it.

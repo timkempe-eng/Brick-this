@@ -43,6 +43,10 @@ developer.apple.com, from Safari. Enrolment can take a day or two.
 
 ### 2. Request Family Controls (Distribution) — do this immediately
 
+Then, once approved, **enable the capability on each App ID** in Certificates,
+IDs & Profiles. Approval and enablement are two different steps, and `match`
+does not do the second one for you.
+
 App blocking needs an entitlement Apple grants by hand, per bundle id. TestFlight
 will reject the build without it. Reported turnaround is four business days to
 several weeks, so file it the day you enrol.
@@ -66,9 +70,10 @@ App Store Connect → Users and Access → Integrations → App Store Connect AP
 Role: **App Manager**. The `.p8` file downloads **once** — save it somewhere you
 can copy from on the iPad.
 
-This key is what lets the CI machine create its own signing certificate and
-provisioning profiles. Nothing has to be exported from anyone's Keychain, which
-is the usual reason this needs a Mac.
+This key is what lets fastlane `match` create and store the signing certificate
+and profiles. Nothing is exported from anyone's Keychain, which is the usual
+reason this needs a Mac. **Not** Xcode automatic signing — that fails in CI for
+reasons worth reading once: [signing.md](signing.md).
 
 ### 4. Add four repository secrets
 
@@ -79,7 +84,14 @@ GitHub → Settings → Secrets and variables → Actions → New repository sec
 | `APPLE_TEAM_ID` | Membership page, 10 characters |
 | `ASC_KEY_ID` | shown next to the key you just made |
 | `ASC_ISSUER_ID` | shown above the key list |
-| `ASC_KEY_P8` | the whole `.p8` file, BEGIN/END lines included |
+| `ASC_KEY_P8` | **base64** of the `.p8` — `base64 -i AuthKey_XXXX.p8`. There's no local `base64` on an iPad, so run it in an agent session |
+| `MATCH_PASSWORD` | any passphrase; it encrypts the stored certificate |
+
+And one repository **variable** (Variables tab, not Secrets):
+
+| Variable | Value |
+|---|---|
+| `MATCH_GIT_URL` | the repo whose `match` branch holds the certificate. Point it at an existing one to reuse that certificate — Apple caps distribution certificates at about two per account. [Why](signing.md#the-certificate-ceiling) |
 
 ### 5. Create the app record
 
@@ -120,10 +132,17 @@ build, install Tim.
 and line. That is the normal way to work here.
 
 **TestFlight rejects the upload.** Almost always the Family Controls entitlement
-isn't approved yet, or isn't approved for all four bundle ids.
+isn't approved yet, or isn't approved for all four bundle ids. `match` does not
+manage capabilities, so the App ID must carry Family Controls *before* the
+profile is minted — and after enabling it, run Release once with
+`force_profiles: true`, because `match` reuses a profile that predates the
+capability.
 
-**`ASC_KEY_P8` errors.** Paste the entire file including the BEGIN and END lines.
-The workflow checks for them and fails early if they're missing.
+**`ASC_KEY_P8` errors.** It must be base64, not the raw file. The Fastfile
+rejects a raw paste up front.
+
+**Signing fails with "no registered devices" or "No Accounts".** That is
+automatic signing, not `match`. See [signing.md](signing.md).
 
 **The tap does nothing.** Check the Shortcuts automation has Ask Before Running
 off. NFC personal automations need iPhone XS or later.

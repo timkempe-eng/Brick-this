@@ -1,36 +1,43 @@
 name: Release to TestFlight
 
 # Builds a signed build and ships it to TestFlight, with no Mac anywhere.
+# Run it from the Actions tab on github.com, which works from an iPad.
 #
-# Run it from the Actions tab on github.com — which works fine from an iPad.
+# Signing follows docs/DEV_SETUP.md in timkempe-eng/hydive: fastlane match,
+# never Xcode automatic signing. See docs/signing.md for why.
 #
-# Signing assets are created by Apple on demand rather than exported from
-# somebody's Keychain: `-allowProvisioningUpdates` with an App Store Connect
-# API key lets xcodebuild register the App IDs, request the certificate and
-# build the provisioning profiles itself. That is the piece that makes a
-# Mac-free setup possible at all.
+# Required repository secrets:
+#   APPLE_TEAM_ID   10-character Team ID (Developer account → Membership)
+#   ASC_KEY_ID      App Store Connect API key id
+#   ASC_ISSUER_ID   the issuer id above the key list
+#   ASC_KEY_P8      base64 of AuthKey_XXXX.p8 — NOT the raw file
+#   MATCH_PASSWORD  passphrase for the stored certificates
 #
-# Required repository secrets (Settings → Secrets and variables → Actions):
-#
-#   APPLE_TEAM_ID     10-character Team ID, from the Membership page
-#   ASC_KEY_ID        App Store Connect API key id
-#   ASC_ISSUER_ID     the issuer id shown above the key list
-#   ASC_KEY_P8        the whole .p8 file, including BEGIN/END lines
-#
-# Create the key at App Store Connect → Users and Access → Integrations →
-# App Store Connect API, with the App Manager role. The .p8 downloads once.
+# Required repository variable:
+#   MATCH_GIT_URL   repo holding the `match` branch. Reuse an existing one to
+#                   reuse its distribution certificate — Apple caps those at
+#                   about two per account. See docs/signing.md.
 #
 # This cannot succeed until Apple approves Family Controls (Distribution) for
-# all four bundle ids — see docs/entitlements.md. Before then the build signs
-# fine and the upload is rejected.
+# all four bundle ids, AND the capability is enabled on each App ID: match does
+# not manage capabilities, so a profile minted before the capability exists
+# will not authorize it.
 
 on:
   workflow_dispatch:
     inputs:
+      force_profiles:
+        description: "Regenerate provisioning profiles (only after changing capabilities)"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
       notes:
         description: "What's new in this build (shown to testers)"
         required: false
-        default: "Latest from main."
+        default: "Latest from the trunk."
+
+permissions:
+  contents: write   # match stores certificates on a branch of a repo
 
 concurrency:
   group: release
@@ -39,110 +46,44 @@ concurrency:
 jobs:
   testflight:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
 
+      # Before anything that compiles or resolves dependencies. Apple rejects
+      # uploads built against an old SDK — a 409 after a twenty-minute build —
+      # so the toolchain is pinned rather than inherited from the image.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - run: xcodebuild -version
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate the project
+      - name: Build and upload
         env:
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          if [ -z "$TEAM_ID" ]; then
-            echo "::error::APPLE_TEAM_ID secret is not set. See the header of this workflow."
-            exit 1
-          fi
-          # project.yml ships with an empty DEVELOPMENT_TEAM so the repo stays
-          # free of anyone's account details; it is filled in here.
-          python3 - <<'PY'
-          import os, re
-          spec = open('project.yml').read()
-          spec = spec.replace('DEVELOPMENT_TEAM: ""',
-                              f'DEVELOPMENT_TEAM: "{os.environ["TEAM_ID"]}"')
-          open('project.yml', 'w').write(spec)
-          PY
-          xcodegen generate
-
-      - name: Write the App Store Connect API key
-        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+          MATCH_GIT_BRANCH: ${{ vars.MATCH_GIT_BRANCH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
         run: |
-          mkdir -p ~/private_keys
-          printf '%s' "$ASC_KEY_P8" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
-          # A truncated or mangled secret produces a signing error a long way
-          # from the cause, so fail here instead.
-          if ! grep -q "BEGIN PRIVATE KEY" ~/private_keys/AuthKey_${ASC_KEY_ID}.p8; then
-            echo "::error::ASC_KEY_P8 doesn't look like a .p8 — paste the whole file, BEGIN/END lines included."
-            exit 1
-          fi
-
-      - name: Archive
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: |
-          set -o pipefail
-          xcodebuild archive \
-            -project Tim.xcodeproj \
-            -scheme Tim \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/Tim.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            | tail -60
-
-      - name: Export the .ipa
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          set -o pipefail
-          cat > build/ExportOptions.plist <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>${TEAM_ID}</string>
-            <key>uploadSymbols</key><true/>
-            <key>signingStyle</key><string>automatic</string>
-          </dict>
-          </plist>
-          PLIST
-
-          xcodebuild -exportArchive \
-            -archivePath build/Tim.xcarchive \
-            -exportPath build/export \
-            -exportOptionsPlist build/ExportOptions.plist \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            | tail -40
-
-      - name: Upload to TestFlight
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: |
-          # altool looks for the key in ~/private_keys by convention.
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$(ls build/export/*.ipa | head -1)" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+          pip3 install --quiet pyyaml
+          bundle exec fastlane ios beta force_profiles:${{ inputs.force_profiles }} \
+            || fastlane ios beta force_profiles:${{ inputs.force_profiles }}
 
       - name: Keep the build
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Tim-ipa
-          path: build/export/*.ipa
+          path: build/*.ipa
           if-no-files-found: warn

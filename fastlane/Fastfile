@@ -1,0 +1,132 @@
+# Signing follows docs/DEV_SETUP.md from timkempe-eng/hydive: fastlane match,
+# never Xcode automatic signing.
+#
+# Automatic signing tries to resolve the whole signing lifecycle — development
+# profile as well as distribution — the moment xcodebuild has any valid Apple
+# credentials. A from-scratch CI account can't satisfy the development side
+# (no registered devices) and can't persist a keychain across ephemeral
+# runners. match sidesteps the class: one distribution certificate and profile,
+# created once, encrypted, stored on a branch, reused forever.
+
+require "base64"
+
+APP_ID       = "app.tim.Tim"
+EXTENSION_IDS = [
+  "app.tim.Tim.ShieldConfiguration",
+  "app.tim.Tim.ShieldAction",
+  "app.tim.Tim.ActivityMonitor",
+].freeze
+ALL_IDS = ([APP_ID] + EXTENSION_IDS).freeze
+
+def require_env(name, how)
+  value = ENV[name].to_s
+  # A missing GitHub secret arrives as "", not nil, so ||= and ?? never fire.
+  UI.user_error!("#{name} is not set. #{how}") if value.empty?
+  value
+end
+
+platform :ios do
+
+  desc "Build and upload to TestFlight"
+  lane :beta do |options|
+    key_id    = require_env("ASC_KEY_ID", "App Store Connect → Users and Access → Integrations.")
+    issuer_id = require_env("ASC_ISSUER_ID", "Same page, above the key list.")
+    key_p8    = require_env("ASC_KEY_P8", "base64 of AuthKey_XXXX.p8 — it downloads once.")
+    team_id   = require_env("APPLE_TEAM_ID", "Developer account → Membership, 10 characters.")
+
+    unless key_p8.start_with?("LS0t")
+      # base64 of "-----BEGIN" starts LS0t. Catch a raw .p8 paste here rather
+      # than as an opaque signing failure twenty minutes in.
+      UI.user_error!("ASC_KEY_P8 doesn't look base64-encoded. Store `base64 -i AuthKey_XXXX.p8`, not the raw file.")
+    end
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_content: key_p8,
+      is_key_content_base64: true,
+    )
+
+    # match clones its storage branch OUTSIDE the checkout tree, so it does not
+    # inherit the checkout's credentials — hand it the workflow's own token.
+    match(
+      type: "appstore",
+      app_identifier: ALL_IDS,
+      api_key: api_key,
+      team_id: team_id,
+      storage_mode: "git",
+      git_url: require_env("MATCH_GIT_URL", "Set the MATCH_GIT_URL repository variable."),
+      git_branch: ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"],
+      git_basic_authorization: Base64.strict_encode64("x-access-token:#{require_env('GITHUB_TOKEN', 'Provided by Actions.')}"),
+      readonly: false,
+      # match judges a profile valid by expiry and certificate, not by its
+      # capability set, so it will happily reuse one that predates a capability
+      # you just added. Force only on the run that changed capabilities.
+      force: options[:force_profiles].to_s == "true",
+    )
+
+    # Never hardcode a profile name: if an earlier partial run took the default,
+    # match silently auto-suffixes a timestamp. Read back what it produced.
+    profiles = ALL_IDS.to_h do |id|
+      name = ENV["sigh_#{id}_appstore_profile-name"].to_s
+      UI.user_error!("match produced no profile name for #{id}.") if name.empty?
+      [id, name]
+    end
+    UI.message("Profiles: #{profiles.inspect}")
+
+    # XcodeGen builds the project, so manual signing is injected into the spec
+    # rather than set in an Xcode UI nobody here can open. CODE_SIGN_ENTITLEMENTS
+    # stays per-target: a global one forces the app's entitlements onto an
+    # extension whose profile doesn't authorize them, and the export fails.
+    sh("python3", "../scripts/apply_signing.py",
+       team_id,
+       *profiles.flat_map { |id, name| [id, name] })
+
+    sh("xcodegen", "generate", "--spec", "../project.yml", "--project", "..")
+
+    build_app(
+      project: "../Tim.xcodeproj",
+      scheme: "Tim",
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: {
+        signingStyle: "manual",
+        teamID: team_id,
+        provisioningProfiles: profiles,
+      },
+      output_directory: "../build",
+      clean: true,
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      changelog: ENV["RELEASE_NOTES"],
+    )
+  end
+
+  desc "List and revoke distribution certificates. Apple caps them at about two."
+  lane :certs do |options|
+    api_key = app_store_connect_api_key(
+      key_id: require_env("ASC_KEY_ID", "See the beta lane."),
+      issuer_id: require_env("ASC_ISSUER_ID", "See the beta lane."),
+      key_content: require_env("ASC_KEY_P8", "See the beta lane."),
+      is_key_content_base64: true,
+    )
+    Spaceship::ConnectAPI.auth(**api_key.slice(:key_id, :issuer_id, :key)) rescue Spaceship::ConnectAPI.token = api_key
+
+    certs = Spaceship::ConnectAPI::Certificate.all.select do |c|
+      c.certificate_type.to_s.include?("DISTRIBUTION")
+    end
+    certs.each { |c| UI.important("#{c.id}  #{c.certificate_type}  expires #{c.expiration_date}  #{c.display_name}") }
+    UI.important("#{certs.count} distribution certificate(s). Apple's ceiling is about two.")
+
+    target = options[:revoke_id].to_s
+    unless target.empty?
+      cert = certs.find { |c| c.id == target }
+      UI.user_error!("No distribution certificate with id #{target}.") if cert.nil?
+      cert.delete!
+      UI.success("Revoked #{target}. Delete the match branch too, or match will keep serving the orphaned profile.")
+    end
+  end
+end

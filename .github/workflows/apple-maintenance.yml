@@ -1,0 +1,38 @@
+name: Apple account maintenance
+
+# Apple caps distribution certificates at roughly two per account. A run that
+# creates one and dies before storing it strands that slot forever, and two
+# stranded slots lock you out of distribution entirely.
+#
+# This lists them, and revokes one by id on request. It only makes HTTP calls,
+# so it runs on Ubuntu — there is no reason to pay for a macOS runner to talk
+# to an API.
+
+on:
+  workflow_dispatch:
+    inputs:
+      revoke_id:
+        description: "Certificate id to revoke (leave blank to only list)"
+        required: false
+        default: ""
+
+jobs:
+  certs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ubuntu-latest has no Ruby on PATH; macOS runners do.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - run: gem install fastlane --no-document
+
+      - name: List (and optionally revoke)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+        run: fastlane ios certs revoke_id:"${{ inputs.revoke_id }}"

@@ -16,12 +16,5 @@
 		<string>NDEF</string>
 		<string>TAG</string>
 	</array>
-
-	<!-- Only needed for background tag reading, which requires a domain you
-	     control. Harmless to leave out until you have one. -->
-	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>applinks:tim.example.com</string>
-	</array>
 </dict>
 </plist>

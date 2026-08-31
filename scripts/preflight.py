@@ -127,6 +127,34 @@ check("com.apple.developer.nfc.readersession.formats" in app_ent,
 check("NFCReaderUsageDescription" in app_info,
       "app: missing NFCReaderUsageDescription — the scan sheet would crash")
 
+# --- Entitlements must not name placeholder infrastructure. An entitlement
+#     you don't ship a feature for is a capability the App ID has to carry, a
+#     review surface, and one more thing that can break signing.
+for name, target in targets.items():
+    ent_path = target["settings"]["base"].get("CODE_SIGN_ENTITLEMENTS")
+    if not ent_path:
+        continue
+    raw = (ROOT / ent_path).read_text()
+    for placeholder in ("example.com", "TEAMID", "CHANGEME"):
+        check(placeholder not in raw,
+              f"{name}: entitlements still reference the placeholder '{placeholder}'")
+
+# --- Declare export compliance in the build, or answer the question on every
+#     single upload, forever.
+check(app_info.get("ITSAppUsesNonExemptEncryption") is not None,
+      "app: Info.plist doesn't declare ITSAppUsesNonExemptEncryption")
+
+# --- Signing must never be automatic. Xcode's automatic signing resolves the
+#     whole lifecycle — development profile included — the moment it has valid
+#     credentials, which a from-scratch CI account cannot satisfy.
+release = (ROOT / ".github/workflows/release.yml")
+if release.exists():
+    text = release.read_text()
+    check("-allowProvisioningUpdates" not in text,
+          "release.yml uses -allowProvisioningUpdates; use fastlane match (docs/signing.md)")
+    check("signingStyle: automatic" not in text and '"automatic"' not in text,
+          "release.yml requests automatic signing; match requires manual")
+
 print(f"preflight: {checks} checks")
 if problems:
     print("\nFAILED:")
