@@ -4,8 +4,8 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 98 tests, runnable anywhere. The iOS layer above them (views,
-adapters, extensions) has never been compiled; that needs a Mac.
+`swift test` — 98 tests, runnable anywhere. The iOS layer above them compiles
+on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
 
@@ -42,10 +42,10 @@ cosmetic, entirely worth it.
 
 ## Known limitations
 
-**Nothing above `Tim/Shared/Core` has been compiled.** The views, adapters and
-extensions are written but unverified. `scripts/preflight.py` catches the
-configuration mistakes that fail silently on device; it cannot catch a type
-error. Expect some shakeout on the first Xcode build.
+**Compiled, but never run.** The app and all three extensions build cleanly
+against the iOS SDK in CI, so the code is type-checked and links. Nothing has
+executed on a device: Screen Time and NFC both no-op in the Simulator, so the
+first real evidence that a tap blocks anything comes from TestFlight.
 
 **Stored data has no schema versioning.** Arrays decode leniently, so one bad
 record can't destroy a whole history, but a rename like `TimMode.selection` →

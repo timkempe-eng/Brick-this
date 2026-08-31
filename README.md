@@ -16,27 +16,30 @@ putting the off switch in another room. [The teardown](docs/brick-teardown.md).
 
 ## Quick start
 
-```bash
-brew install xcodegen
-xcodegen generate
-open Tim.xcodeproj
-```
+There is no Mac in this project. GitHub's macOS runners have Xcode on them and
+are free for public repositories, so the Mac is a rented one that exists for
+four minutes per push.
 
-Then, before it will build on a device:
+- **Every push** compiles the app and all three extensions against the real iOS
+  SDK, and runs the tests and checks. Green means it builds.
+- **To get it on your phone**, run the *Release to TestFlight* workflow from the
+  Actions tab — which works from an iPad — then install from TestFlight.
 
-1. Set `DEVELOPMENT_TEAM` in `project.yml` to your Apple Developer Team ID and
-   run `xcodegen generate` again.
-2. In Xcode, add the **Family Controls** capability to all four targets. It's
-   available for development straight away; shipping to TestFlight or the App
-   Store needs Apple's approval, which takes days to weeks —
-   [file it early](docs/entitlements.md).
-3. Run on a real iPhone. Screen Time and NFC do not work in the Simulator.
-4. Grant Screen Time access when asked, build a Mode, and pair a tag in
-   Settings.
-5. Set up the Shortcuts automation so a tap works with the app closed —
-   [three lines of setup](docs/nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
+The one unavoidable cost is the **Apple Developer Program, $99/year**. Free
+provisioning needs Xcode on a Mac, sideloading tools can't grant the Family
+Controls entitlement, and Swift Playgrounds on iPad can't build app extensions
+(Tim has three). TestFlight is the only Mac-free route onto a phone, and it
+requires the paid program.
 
-Buy **NTAG215** stickers, not MIFARE Classic and not anything at 125 kHz — neither works with an iPhone. Don't stick them to metal. [Buying guide](docs/nfc-and-tags.md#what-to-buy).
+Start the **Family Controls (Distribution)** entitlement request the day you
+enrol: it's a manual review at Apple, days to weeks, needed for each of the four
+bundle ids. Everything else waits on it.
+
+Full walkthrough: **[docs/first-tap.md](docs/first-tap.md)**.
+
+Then buy **NTAG215** stickers, not MIFARE Classic and not anything at 125 kHz —
+neither works with an iPhone. Don't stick them to metal.
+[Buying guide](docs/nfc-and-tags.md#what-to-buy).
 
 ## Tests
 
@@ -44,10 +47,13 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test                      # 98 tests, no Mac required
+swift test                      # 98 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
-python3 scripts/preflight.py    # App Groups, principal classes, framework links
+python3 scripts/preflight.py    # 44 checks on the Xcode wiring
 ```
+
+CI runs all three on Linux, plus a fourth job on a macOS runner that actually
+compiles the app and extensions.
 
 `preflight.py` checks the Xcode wiring that fails *silently* on a device — a
 mismatched App Group leaves the shield showing the wrong Mode while the app
@@ -130,14 +136,16 @@ adding a file.
 
 ## Status
 
-The core loop, the three tap paths, and the stats screen are built. Widgets,
-scheduled Modes and Android are [not done](docs/roadmap.md).
+The core loop, the three tap paths, scheduled Modes and the stats screen are
+built. Widgets and Android are [not done](docs/roadmap.md).
 
 `swift test` passes — 98 tests covering the whole engine state machine,
 recurring schedules, the override allowance, and the session/streak maths. The suite is mutation-checked:
 deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
 history bound, the scheduler floor or the reconcile clear each turns it red.
 
-The iOS layer — views, adapters, extensions — has never been compiled. It needs
-a Mac, your Team ID and the Family Controls capability.
+The app and all three extensions compile cleanly against the iOS SDK on a
+GitHub macOS runner, on every push. Nothing has run on a device yet — Screen
+Time and NFC both no-op in the Simulator, so the first real proof that a tap
+blocks anything comes from TestFlight.
 [Day-one checklist](docs/first-tap.md).
