@@ -103,6 +103,22 @@ for f in (ROOT / "Tim/Shared/Core").glob("*.swift"):
     bad = set(re.findall(r"^import (\w+)", f.read_text(), re.M)) - {"Foundation"}
     check(not bad, f"Core/{f.name} imports {sorted(bad)} — Core must stay Foundation-only")
 
+# --- The standard bundle keys. Xcode's own template supplies these; a
+#     hand-written Info.plist that omits CFBundleName still builds, but the
+#     App Intents Siri-training step then fails with "Unable to parse
+#     Info.plist" — naming neither the key nor the file.
+REQUIRED_BUNDLE_KEYS = [
+    "CFBundleDevelopmentRegion", "CFBundleExecutable", "CFBundleIdentifier",
+    "CFBundleInfoDictionaryVersion", "CFBundleName", "CFBundlePackageType",
+]
+for name, target in targets.items():
+    info_path = target["settings"]["base"].get("INFOPLIST_FILE")
+    if not info_path:
+        continue
+    info = plistlib.loads((ROOT / info_path).read_bytes())
+    missing = [k for k in REQUIRED_BUNDLE_KEYS if k not in info]
+    check(not missing, f"{name}: Info.plist is missing {missing}")
+
 # --- NFC needs both the entitlement and the usage string.
 app_ent = plistlib.loads((ROOT / targets["Tim"]["settings"]["base"]["CODE_SIGN_ENTITLEMENTS"]).read_bytes())
 app_info = plistlib.loads((ROOT / targets["Tim"]["settings"]["base"]["INFOPLIST_FILE"]).read_bytes())

@@ -1,80 +1,147 @@
-# Day one: from a bag of stickers to a Timmed phone
+# From a GitHub repo to a Timmed phone, with no Mac
 
-Your NTAG215s are the right chip. Here's the order to do things in, and where
-it's most likely to go wrong.
+You have an iPhone, an iPad and a GitHub account. No Mac, no Xcode. That is
+enough — but the route is different from the usual one, and one part of it
+costs money.
 
-## Before the tags arrive
+Everything below happens in Safari on the iPad.
 
-You can do all of this now — none of it needs the stickers.
+## The short version
 
-1. **Run the checks.** `swift test` covers the engine; `python3
-   scripts/preflight.py` checks the Xcode wiring that nothing else will warn
-   you about — App Groups matching across all four targets, extension
-   principal classes actually existing, every target linking what its adapters
-   import. Both run without a Mac.
-2. **Request the Family Controls entitlement.** Development access is instant,
-   but if you ever want this on TestFlight the distribution request is a manual
-   review at Apple that takes days to weeks, per bundle ID.
-   [Details](entitlements.md). File it first; everything else is faster.
-3. **Generate the project.** `brew install xcodegen && xcodegen generate`
-4. **Set your Team ID** in `project.yml`, then `xcodegen generate` again.
-5. **Add the Family Controls capability** to all four targets in Xcode, and
-   **App Groups** (`group.app.tim.shared`) to all four. A mismatch here doesn't
-   fail loudly — the shield just shows the wrong mode name — which is why
-   preflight checks it.
-6. **Build to your iPhone.** Screen Time and NFC both no-op in the Simulator,
-   so a real device is the only way to see anything work.
+GitHub's macOS runners have Xcode on them, and they're free for public
+repositories. So the Mac in this project is a rented one that exists for four
+minutes per push:
 
-At this point you can already Tim your phone from the in-app button; only the
-tap is missing.
+- **Every push** builds the app and all three extensions (`.github/workflows/test.yml`).
+  If it compiles, it compiles.
+- **When you want it on your phone**, run the Release workflow from the Actions
+  tab. It signs the build and sends it to TestFlight.
+- **You install from TestFlight** on the iPhone, like any beta.
+
+## What this costs
+
+**The Apple Developer Program, $99/year.** This is not optional and there is no
+way around it:
+
+- Free provisioning — the 7-day-certificate route — requires Xcode on a Mac.
+- Sideloading tools (AltStore and friends) can't grant the Family Controls
+  entitlement, which is the whole app.
+- Swift Playgrounds on iPad can build and submit apps, but **not app
+  extensions**, and Tim needs three of them. It cannot build this project.
+
+So: TestFlight is the only Mac-free way onto the phone, and TestFlight requires
+the paid program. If that's a dealbreaker, stop here rather than after buying
+the tags.
+
+## Order of operations
+
+The waiting item is first, because it's the long pole.
+
+### 1. Join the Apple Developer Program
+
+developer.apple.com, from Safari. Enrolment can take a day or two.
+
+### 2. Request Family Controls (Distribution) — do this immediately
+
+App blocking needs an entitlement Apple grants by hand, per bundle id. TestFlight
+will reject the build without it. Reported turnaround is four business days to
+several weeks, so file it the day you enrol.
+
+You need it for all four ids:
+
+- `app.tim.Tim`
+- `app.tim.Tim.ShieldConfiguration`
+- `app.tim.Tim.ShieldAction`
+- `app.tim.Tim.ActivityMonitor`
+
+Say plainly that it's a personal digital-wellbeing app that hides your own apps
+at your own request, that the tap mechanic is NFC, and that the app never
+receives app identities — only opaque tokens. See [entitlements.md](entitlements.md).
+
+While you wait, the build still runs on every push. You just can't install it.
+
+### 3. Create an App Store Connect API key
+
+App Store Connect → Users and Access → Integrations → App Store Connect API.
+Role: **App Manager**. The `.p8` file downloads **once** — save it somewhere you
+can copy from on the iPad.
+
+This key is what lets the CI machine create its own signing certificate and
+provisioning profiles. Nothing has to be exported from anyone's Keychain, which
+is the usual reason this needs a Mac.
+
+### 4. Add four repository secrets
+
+GitHub → Settings → Secrets and variables → Actions → New repository secret:
+
+| Secret | Where it comes from |
+|---|---|
+| `APPLE_TEAM_ID` | Membership page, 10 characters |
+| `ASC_KEY_ID` | shown next to the key you just made |
+| `ASC_ISSUER_ID` | shown above the key list |
+| `ASC_KEY_P8` | the whole `.p8` file, BEGIN/END lines included |
+
+### 5. Create the app record
+
+App Store Connect → Apps → **+** → New App, bundle id `app.tim.Tim`. TestFlight
+needs somewhere to put the build.
+
+### 6. Run the Release workflow
+
+Actions tab → **Release to TestFlight** → Run workflow. Ten minutes or so.
+
+### 7. Install from TestFlight
+
+Install Apple's TestFlight app on the iPhone, accept the invite for your own
+build, install Tim.
 
 ## When the tags arrive
 
 1. **Open Tim, grant Screen Time access.** One system prompt.
-2. **Build a Mode.** Start with one — "Deep Work" — and pick three or four apps
-   you actually lose time to. Blocking thirty apps on day one is how people
-   quit this after a week.
-3. **Pair a tag.** Settings → Pair a Tim tag → hold the phone to the sticker.
-   Until you pair one, any tag works; after that only yours do.
+2. **Build a Mode.** Start with one — "Deep Work" — and three or four apps you
+   actually lose time to. Blocking thirty on day one is how people quit this
+   after a week.
+3. **Pair a tag.** Settings → Pair a Tim tag. Until you pair one, any tag works.
 4. **Test it in-app.** Press "Tim my phone", then try to open a blocked app. You
-   should get the "Timmed." shield. Press "Un-Tim" to release.
+   should get the "Timmed." shield.
 5. **Optionally give a Mode a schedule.** Sleep, every night, 22:00–07:00, and
    the phone Tims itself. A schedule never overrides a session you started by
    hand, and you can always tap out early.
-6. **Set up the Shortcuts automation** so the tap works with Tim closed:
-   Shortcuts → Automation → NFC → Scan → add the "Tim my phone" action → turn
-   **Ask Before Running** off. [Full steps](nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
+6. **Set up the Shortcuts automation** so a tap works with Tim closed —
+   [three lines of setup](nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
+   This is all on the iPhone, no computer involved.
 7. **Stick the tag somewhere inconvenient.** This is the actual product. A
    sticker on your desk gives you nothing; one in a drawer in another room is
    the whole mechanism.
 
 ## If something doesn't work
 
+**The build fails on macOS.** Read the log in the Actions tab — it names the file
+and line. That is the normal way to work here.
+
+**TestFlight rejects the upload.** Almost always the Family Controls entitlement
+isn't approved yet, or isn't approved for all four bundle ids.
+
+**`ASC_KEY_P8` errors.** Paste the entire file including the BEGIN and END lines.
+The workflow checks for them and fails early if they're missing.
+
 **The tap does nothing.** Check the Shortcuts automation has Ask Before Running
 off. NFC personal automations need iPhone XS or later.
 
-**"Tag not found" / nothing reads.** Is it on metal? Even a laptop lid detunes
-the antenna enough to kill the read.
+**"Tag not found."** Is it on metal? Even a laptop lid detunes the antenna.
 
 **Apps aren't blocked but the app says Timmed.** The Mode has nothing selected,
-or Screen Time authorization was declined. Check Settings → Screen Time.
+or Screen Time authorization was declined.
 
-**The shield shows the wrong Mode name.** The App Group isn't set on the shield
-extension target. It's the most common mismatch, because the app itself works
-fine without it — run `python3 scripts/preflight.py`, which checks exactly this.
-
-**A scheduled Mode never fires.** Check the schedule is enabled, has at least
-one day, and spans 15 minutes or more; anything shorter is below what
-DeviceActivity will monitor. The editor says so under the section when the
-schedule can't run.
-
-**You can still delete Tim while Timmed.** That Mode doesn't have Strict on.
+**A scheduled Mode never fires.** It needs at least one day and a window of 15
+minutes or more — anything shorter is below what DeviceActivity will monitor.
+The editor says so when the schedule can't run.
 
 ## A note on the escape hatches
 
-You get five emergency overrides per rolling 30 days, and they come back on
-their own. That's deliberate — Brick makes you email support, which is friction
-for its own sake. The point of the limit is to make you notice you're using
-them, not to lock you out of your own phone.
+Five emergency overrides per rolling 30 days, and they come back on their own.
+Brick makes you email support; that's friction for its own sake. The limit
+exists to make you notice you're reaching for the hatch, not to lock you out of
+your own phone.
 
-If you find yourself burning all five, the Mode is wrong. Block less.
+If you're burning all five, the Mode is wrong. Block less.
