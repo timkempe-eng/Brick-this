@@ -17,10 +17,21 @@ settings:
     # Replace with your own Apple Developer Team ID before building on device.
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
-    SWIFT_VERSION: "5.9"
+    # Swift language version, not toolchain: valid values are 4.0/4.2/5.0/6.0.
+    SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+schemes:
+  Tim:
+    build:
+      targets:
+        Tim: all
+    run:
+      config: Debug
+    test:
+      config: Debug
 
 targets:
 

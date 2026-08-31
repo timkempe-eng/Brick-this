@@ -1,14 +1,13 @@
 name: Test
 
-# Only the Foundation-only core can be tested here — everything touching
-# FamilyControls, ManagedSettings, DeviceActivity, CoreNFC or SwiftUI needs
-# Xcode and a device. That's still the part where the fiddly logic lives.
 on:
   push:
     branches: ["**"]
   pull_request:
 
 jobs:
+  # The Foundation-only core: the engine, schedules, allowance and stats maths.
+  # Runs on Linux in seconds, and is where the real behaviour is verified.
   core:
     runs-on: ubuntu-latest
     container: swift:6.0
@@ -16,11 +15,49 @@ jobs:
       - uses: actions/checkout@v4
       - name: swift test
         run: swift test
-
       - name: vocabulary lint
         run: ./scripts/lint-vocabulary.sh
 
+  # Separate job because the Swift container has no pip. Also runs in parallel.
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
       - name: preflight (Xcode wiring)
+        run: python3 scripts/preflight.py
+
+  # The part that needs a Mac — and this is the only Mac involved.
+  #
+  # Compiles the app and all three extensions against the real iOS SDK, which
+  # is the only thing that can catch a type error in the SwiftUI layer, the
+  # adapters, or the extensions. Code signing is off: this proves the code
+  # compiles, not that it can be installed. Signing happens in release.yml.
+  #
+  # macOS runners are free for public repositories.
+  app:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate the project
+        run: xcodegen generate
+
+      - name: Build app and extensions
         run: |
-          pip install --quiet pyyaml
-          python3 scripts/preflight.py
+          set -o pipefail
+          xcodebuild build \
+            -project Tim.xcodeproj \
+            -scheme Tim \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -80
