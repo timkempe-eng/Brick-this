@@ -16,8 +16,8 @@ re-run the check, it isn't ✅.**
 | Family Controls (Distribution) | ❓ | — | Certificates, IDs & Profiles → the four App IDs show the capability |
 | App Store Connect API key | ❓ | — | Users and Access → Integrations lists the key id |
 | `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | — | run Release; the Fastfile names any missing one |
-| `MATCH_GIT_URL` variable | ❓ | — | Settings → Variables |
-| `match` branch + certificate | ❓ | — | run Apple account maintenance; it lists distribution certs |
+| Distribution certs below the cap | ❓ | — | run Apple account maintenance; expect fewer than 2 |
+| `match` branch + certificate | ❓ | — | the `match` branch exists in this repo after the first Release run |
 | App Store Connect record | ❓ | — | Connect → Apps shows `app.tim.Tim` |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |

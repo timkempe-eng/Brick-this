@@ -25,6 +25,33 @@ def require_env(name, how)
   value
 end
 
+def distribution_certificate_count(api_key:)
+  Spaceship::ConnectAPI.token = api_key[:key] if api_key[:key]
+  Spaceship::ConnectAPI::Certificate.all.count do |c|
+    c.certificate_type.to_s.include?("DISTRIBUTION")
+  end
+rescue StandardError => e
+  # Never block a release on a failed count — report and continue.
+  UI.important("Could not count distribution certificates (#{e.class}). Continuing.")
+  0
+end
+
+def match_branch_exists?
+  branch = ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"]
+  repo = ENV["GITHUB_REPOSITORY"].to_s
+  token = ENV["GITHUB_TOKEN"].to_s
+  return false if repo.empty? || token.empty?
+  require "net/http"
+  uri = URI("https://api.github.com/repos/#{repo}/branches/#{branch}")
+  req = Net::HTTP::Get.new(uri)
+  req["Authorization"] = "Bearer #{token}"
+  req["Accept"] = "application/vnd.github+json"
+  res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
+  res.code == "200"
+rescue StandardError
+  false
+end
+
 platform :ios do
 
   desc "Build and upload to TestFlight"
@@ -47,6 +74,22 @@ platform :ios do
       is_key_content_base64: true,
     )
 
+    # Apple caps distribution certificates at roughly two per account, and
+    # this project mints its own rather than reusing another app's. A run that
+    # creates one and dies before storing it strands that slot permanently, and
+    # two stranded slots lock the account out of distribution entirely. So look
+    # before leaping, every time — it is one API call.
+    existing = distribution_certificate_count(api_key: api_key)
+    UI.important("#{existing} distribution certificate(s) on this account.")
+    if existing >= 2 && !match_branch_exists?
+      UI.user_error!(
+        "This account already has #{existing} distribution certificates and no stored " \
+        "match branch to reuse, so match would try to mint one past Apple's ceiling. " \
+        "Run the 'Apple account maintenance' workflow to list them and revoke a stranded " \
+        "one, or point MATCH_GIT_URL at a repo whose match branch already holds a cert."
+      )
+    end
+
     # match clones its storage branch OUTSIDE the checkout tree, so it does not
     # inherit the checkout's credentials — hand it the workflow's own token.
     match(
@@ -55,7 +98,12 @@ platform :ios do
       api_key: api_key,
       team_id: team_id,
       storage_mode: "git",
-      git_url: require_env("MATCH_GIT_URL", "Set the MATCH_GIT_URL repository variable."),
+      # Defaults to this repo: Tim keeps its own certificate rather than
+      # sharing hydive's. Override the variable to point at another repo's
+      # match branch if you ever want to reuse a certificate instead.
+      git_url: ENV["MATCH_GIT_URL"].to_s.empty? ?
+        "https://github.com/#{require_env('GITHUB_REPOSITORY', 'Provided by Actions.')}" :
+        ENV["MATCH_GIT_URL"],
       git_branch: ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"],
       git_basic_authorization: Base64.strict_encode64("x-access-token:#{require_env('GITHUB_TOKEN', 'Provided by Actions.')}"),
       readonly: false,

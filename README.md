@@ -107,6 +107,12 @@ it cannot read — only one adapter file interprets it, to hand the tokens to
 ManagedSettings. Nothing leaves the device; there is no server and no network
 code.
 
+## Working on this
+
+`CLAUDE.md` is the contract — read it before non-trivial work. `PARKING_LOT.md`
+is the backlog. `docs/PROVISIONING.md` records Apple state, which is invisible
+from inside an agent session.
+
 ## Layout
 
 ```

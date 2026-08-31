@@ -59,11 +59,18 @@ stranded slots lock you out of distribution entirely.
 only makes HTTP calls, so it runs on Ubuntu — don't pay for a macOS runner to
 call an API.
 
-**A second app reuses everything**: same certificate, same `match` branch, same
-secrets. The only new one-time item is its App Store Connect record. That's why
-`MATCH_GIT_URL` is a repository *variable* rather than hardcoded — point it at
-an existing `match` branch to reuse that certificate instead of minting a new
-one against the cap.
+**Tim mints its own certificate.** `MATCH_GIT_URL` defaults to this repo, so the
+`match` branch lives here and Tim is self-contained. The cost of that choice is
+a slot against the ceiling, so the release workflow counts distribution
+certificates before `match` runs and refuses to proceed if the account is
+already at two with nothing stored to reuse.
+
+The alternative, if you ever want it: **a second app reuses everything** — same
+certificate, same `match` branch, same secrets, with only a new App Store
+Connect record. Point `MATCH_GIT_URL` at the repo holding that branch.
+
+Run **Apple account maintenance** before the first release. It lists the
+certificates, and revokes a stranded one by id.
 
 ## Build numbers
 

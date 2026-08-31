@@ -87,11 +87,15 @@ GitHub → Settings → Secrets and variables → Actions → New repository sec
 | `ASC_KEY_P8` | **base64** of the `.p8` — `base64 -i AuthKey_XXXX.p8`. There's no local `base64` on an iPad, so run it in an agent session |
 | `MATCH_PASSWORD` | any passphrase; it encrypts the stored certificate |
 
-And one repository **variable** (Variables tab, not Secrets):
+No repository variable is needed: `match` stores Tim's certificate on a `match`
+branch of this repo by default. Tim keeps its own certificate rather than
+sharing hydive's, which means **check the certificate count before your first
+Release run** — Apple's ceiling is about two per account.
 
-| Variable | Value |
-|---|---|
-| `MATCH_GIT_URL` | the repo whose `match` branch holds the certificate. Point it at an existing one to reuse that certificate — Apple caps distribution certificates at about two per account. [Why](signing.md#the-certificate-ceiling) |
+Actions → **Apple account maintenance** → Run workflow, with the revoke field
+blank. It lists them in seconds, on Ubuntu. The release workflow also refuses to
+run if the account is already at the ceiling with no stored certificate to
+reuse. [Why this matters](signing.md#the-certificate-ceiling)
 
 ### 5. Create the app record
 
