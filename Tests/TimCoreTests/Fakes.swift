@@ -10,6 +10,7 @@ final class FakeStore: TimPersisting {
     var pairedTagUIDs: [String] = []
     var emergencyUses: [Date] = []
     var hasOnboarded = false
+    var syncedSchedules: [RecurringSchedule] = []
 }
 
 /// Records what the engine asked of the shield, and in what order.

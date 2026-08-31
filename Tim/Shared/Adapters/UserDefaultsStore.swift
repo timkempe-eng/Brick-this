@@ -30,10 +30,14 @@ final class UserDefaultsStore: TimPersisting {
         static let pairedTagUIDs = "pairedTagUIDs"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
+        static let syncedSchedules = "syncedSchedules"
     }
 
     var modes: [TimMode] {
-        get { decode([TimMode].self, Key.modes) ?? TimMode.starterModes }
+        // Lenient: a Mode made unreadable by a schema change shouldn't take the
+        // user's other Modes with it. Only a completely absent or non-array
+        // value falls back to the starters.
+        get { decodeArray(TimMode.self, Key.modes) ?? TimMode.starterModes }
         set { encode(newValue, Key.modes) }
     }
 
@@ -43,7 +47,9 @@ final class UserDefaultsStore: TimPersisting {
     }
 
     var history: [TimSession] {
-        get { decode([TimSession].self, Key.history) ?? [] }
+        // Lenient for the same reason, and it matters most here: this is every
+        // streak the user has built.
+        get { decodeArray(TimSession.self, Key.history) ?? [] }
         set { encode(newValue, Key.history) }
     }
 
@@ -57,12 +63,23 @@ final class UserDefaultsStore: TimPersisting {
         set { encode(newValue, Key.emergencyUses) }
     }
 
+    var syncedSchedules: [RecurringSchedule] {
+        get { decode([RecurringSchedule].self, Key.syncedSchedules) ?? [] }
+        set { encode(newValue, Key.syncedSchedules) }
+    }
+
     var hasOnboarded: Bool {
         get { defaults.bool(forKey: Key.hasOnboarded) }
         set { defaults.set(newValue, forKey: Key.hasOnboarded) }
     }
 
     // MARK: - Codable plumbing
+
+    /// Skips unreadable elements rather than discarding the whole array.
+    private func decodeArray<T: Decodable>(_ type: T.Type, _ key: String) -> [T]? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return LenientDecoding.array(T.self, from: data)
+    }
 
     private func decode<T: Decodable>(_ type: T.Type, _ key: String) -> T? {
         guard let data = defaults.data(forKey: key) else { return nil }

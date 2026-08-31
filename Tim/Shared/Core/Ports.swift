@@ -31,7 +31,7 @@ protocol SessionScheduling {
     func setRecurringSchedules(_ schedules: [RecurringSchedule])
 }
 
-struct RecurringSchedule: Equatable, Hashable {
+struct RecurringSchedule: Codable, Equatable, Hashable {
     let modeID: UUID
     let schedule: ModeSchedule
 }
@@ -48,4 +48,8 @@ protocol TimPersisting: AnyObject {
     var pairedTagUIDs: [String] { get set }
     var emergencyUses: [Date] { get set }
     var hasOnboarded: Bool { get set }
+
+    /// The schedule set last handed to the system. Kept so we can tell whether
+    /// a re-registration is actually needed — see `TimEngine.syncSchedules`.
+    var syncedSchedules: [RecurringSchedule] { get set }
 }

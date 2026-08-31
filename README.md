@@ -104,6 +104,7 @@ Tim/
       TimSession       one stretch of being Timmed
       TimStats         streaks, totals, chart data
       ModeSchedule     recurring windows; wall-clock, not instants
+      LenientDecoding  one bad stored record can't cost the whole array
       EmergencyAllowance  five per rolling 30 days
       TimVocabulary    every string carrying the verb, in one place
     Adapters/      the iOS side of each port — thin, no logic worth testing
@@ -125,7 +126,7 @@ adding a file.
 The core loop, the three tap paths, and the stats screen are built. Widgets,
 scheduled Modes and Android are [not done](docs/roadmap.md).
 
-`swift test` passes — 87 tests covering the whole engine state machine,
+`swift test` passes — 97 tests covering the whole engine state machine,
 recurring schedules, the override allowance, and the session/streak maths. The suite is mutation-checked:
 deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
 history bound, the scheduler floor or the reconcile clear each turns it red.

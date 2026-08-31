@@ -191,3 +191,118 @@ final class ScheduleActivityNamingTests: XCTestCase {
         XCTAssertNil(ScheduleActivityNaming.modeID(from: ""))
     }
 }
+
+/// Re-registering a DeviceActivity window tears the old one down first, and
+/// tearing down a window that is currently *open* means its end is never
+/// delivered — the scheduled session would then run forever. `syncSchedules`
+/// is called on every foreground, so doing nothing when nothing changed is a
+/// correctness requirement, not an optimisation.
+final class ScheduleSyncIdempotenceTests: XCTestCase {
+
+    private func nightly() -> ModeSchedule {
+        ModeSchedule(startHour: 22, startMinute: 0, endHour: 7, endMinute: 0,
+                     weekdays: ModeSchedule.everyDay)
+    }
+
+    /// Counts how many times the system was actually asked to re-register.
+    private final class CountingScheduler: SessionScheduling {
+        var setCount = 0
+        var last: [RecurringSchedule] = []
+        func scheduleRelease(at date: Date) {}
+        func cancelScheduledRelease() {}
+        func setRecurringSchedules(_ schedules: [RecurringSchedule]) {
+            setCount += 1
+            last = schedules
+        }
+    }
+
+    private func makeEngine() -> (FakeStore, CountingScheduler, TimEngine) {
+        let store = FakeStore()
+        let scheduler = CountingScheduler()
+        let engine = TimEngine(store: store, shield: SpyShield(),
+                               scheduler: scheduler,
+                               clock: TestClock(Date(timeIntervalSince1970: 1_756_000_000)))
+        return (store, scheduler, engine)
+    }
+
+    private func mode(_ name: String, schedule: ModeSchedule?) -> TimMode {
+        TimMode(name: name, symbol: "circle",
+                blocked: BlockedSelection(payload: Data([1]), appCount: 1),
+                schedule: schedule)
+    }
+
+    func testRepeatedSyncsWithNoChangeTouchTheSystemOnce() {
+        let (store, scheduler, engine) = makeEngine()
+        store.modes = [mode("Sleep", schedule: nightly())]
+
+        engine.syncSchedules()
+        engine.syncSchedules()
+        engine.syncSchedules()
+
+        XCTAssertEqual(scheduler.setCount, 1, "an unchanged set must not be re-registered")
+    }
+
+    func testRepeatedForegroundReconcilesDoNotDisturbALiveWindow() {
+        let (store, scheduler, engine) = makeEngine()
+        store.modes = [mode("Sleep", schedule: nightly())]
+        engine.reconcile()
+        let afterFirst = scheduler.setCount
+
+        for _ in 0..<10 { engine.reconcile() }
+
+        XCTAssertEqual(scheduler.setCount, afterFirst,
+                       "opening the app during a scheduled window must not tear it down")
+    }
+
+    func testAChangedScheduleIsRegistered() {
+        let (store, scheduler, engine) = makeEngine()
+        var sleep = mode("Sleep", schedule: nightly())
+        store.modes = [sleep]
+        engine.syncSchedules()
+
+        sleep.schedule?.startHour = 23
+        store.modes = [sleep]
+        engine.syncSchedules()
+
+        XCTAssertEqual(scheduler.setCount, 2)
+        XCTAssertEqual(scheduler.last.first?.schedule.startHour, 23)
+    }
+
+    func testAddingAndRemovingAModeEachResync() {
+        let (store, scheduler, engine) = makeEngine()
+        let sleep = mode("Sleep", schedule: nightly())
+
+        store.modes = [sleep]
+        engine.syncSchedules()
+        XCTAssertEqual(scheduler.setCount, 1)
+
+        store.modes = []
+        engine.syncSchedules()
+        XCTAssertEqual(scheduler.setCount, 2)
+        XCTAssertTrue(scheduler.last.isEmpty)
+    }
+
+    func testWeekdaySetOrderDoesNotCauseASpuriousResync() {
+        // weekdays is a Set, so a round trip through storage can reorder it.
+        // Comparing sets rather than arrays is what stops that re-registering.
+        let (store, scheduler, engine) = makeEngine()
+        var s = nightly()
+        s.weekdays = [6, 2, 4, 3, 5]
+        store.modes = [mode("Work", schedule: s)]
+        engine.syncSchedules()
+
+        var reordered = s
+        reordered.weekdays = [2, 3, 4, 5, 6]
+        store.modes = [mode2(store, reordered)]
+        engine.syncSchedules()
+
+        XCTAssertEqual(scheduler.setCount, 1, "same days in a different order is the same schedule")
+    }
+
+    /// Rebuilds the stored mode with a new schedule but the same id.
+    private func mode2(_ store: FakeStore, _ schedule: ModeSchedule) -> TimMode {
+        var m = store.modes[0]
+        m.schedule = schedule
+        return m
+    }
+}

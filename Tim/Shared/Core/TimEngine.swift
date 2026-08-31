@@ -135,15 +135,26 @@ struct TimEngine {
 
     // MARK: - Recurring schedules
 
+    var desiredSchedules: [RecurringSchedule] {
+        store.modes
+            .filter(\.hasLiveSchedule)
+            .map { RecurringSchedule(modeID: $0.id, schedule: $0.schedule!) }
+    }
+
     /// Hands the system the full set of live schedules. Declarative, so a Mode
     /// that was deleted or switched off can't leave a schedule behind that
     /// still fires.
+    ///
+    /// Idempotent, and that is load-bearing rather than an optimisation.
+    /// Re-registering tears down every window first, and tearing down a window
+    /// that is currently *open* means the system never delivers its end — so a
+    /// scheduled session would run forever. Since this is called on every
+    /// foreground via `reconcile()`, it must do nothing when nothing changed.
     func syncSchedules() {
-        scheduler.setRecurringSchedules(
-            store.modes
-                .filter(\.hasLiveSchedule)
-                .map { RecurringSchedule(modeID: $0.id, schedule: $0.schedule!) }
-        )
+        let desired = desiredSchedules
+        guard desired != store.syncedSchedules else { return }
+        scheduler.setRecurringSchedules(desired)
+        store.syncedSchedules = desired
     }
 
     /// The system reached the start of a Mode's scheduled window.
