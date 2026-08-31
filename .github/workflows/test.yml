@@ -19,3 +19,8 @@ jobs:
 
       - name: vocabulary lint
         run: ./scripts/lint-vocabulary.sh
+
+      - name: preflight (Xcode wiring)
+        run: |
+          pip install --quiet pyyaml
+          python3 scripts/preflight.py

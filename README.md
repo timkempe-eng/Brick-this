@@ -46,7 +46,13 @@ forms — builds and tests anywhere, no Mac required:
 ```bash
 swift test                      # 98 tests, no Mac required
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
+python3 scripts/preflight.py    # App Groups, principal classes, framework links
 ```
+
+`preflight.py` checks the Xcode wiring that fails *silently* on a device — a
+mismatched App Group leaves the shield showing the wrong Mode while the app
+works fine; a principal-class typo makes an extension never launch. All of it
+is checkable without a Mac, so it is.
 
 Everything touching FamilyControls, ManagedSettings, DeviceActivity, CoreNFC or
 SwiftUI needs Xcode and a real device, and is deliberately kept out of
