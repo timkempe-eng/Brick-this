@@ -17,13 +17,26 @@ struct TimMode: Codable, Identifiable, Hashable {
     /// tapped again.
     var autoUnTimAfter: TimeInterval?
 
+    /// Optional recurring window during which this Mode runs on its own.
+    /// Optional so that Modes stored before schedules existed still decode.
+    var schedule: ModeSchedule?
+
     var blocksAnything: Bool { !blocked.isEmpty }
 
     /// Shown under the name in the Modes list.
     var summary: String {
         var parts = [blocked.summary]
         if isStrict { parts.append("strict") }
+        if let schedule, schedule.isEnabled, schedule.isValid {
+            parts.append(schedule.displayText())
+        }
         return parts.joined(separator: " · ")
+    }
+
+    /// Whether this Mode should be registered with the system scheduler.
+    var hasLiveSchedule: Bool {
+        guard let schedule else { return false }
+        return schedule.isEnabled && schedule.isValid && blocksAnything
     }
 
     static let starterModes: [TimMode] = [

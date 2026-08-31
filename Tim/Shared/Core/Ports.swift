@@ -18,12 +18,22 @@ protocol ShieldControlling {
     func clear()
 }
 
-/// Releasing a timed session with the app closed. Implemented by
-/// DeviceActivity, which is why this deals in an absolute date rather than a
-/// duration — converting to a schedule is the adapter's problem.
+/// Releasing a timed session with the app closed, and running Modes on a
+/// recurring wall-clock schedule. Implemented by DeviceActivity, which is why
+/// the one-shot case deals in an absolute date rather than a duration —
+/// converting to a system schedule is the adapter's problem.
 protocol SessionScheduling {
     func scheduleRelease(at date: Date)
     func cancelScheduledRelease()
+
+    /// Replaces the full set of recurring schedules. Declarative rather than
+    /// add/remove, so the system's registered set can't drift from ours.
+    func setRecurringSchedules(_ schedules: [RecurringSchedule])
+}
+
+struct RecurringSchedule: Equatable, Hashable {
+    let modeID: UUID
+    let schedule: ModeSchedule
 }
 
 /// Everything that has to survive a process death and be visible to the

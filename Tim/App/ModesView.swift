@@ -100,6 +100,8 @@ struct ModeEditorView: View {
                     Text("Chosen with Apple's own picker. Tim receives anonymous tokens, not the names of your apps.")
                 }
 
+                ScheduleSection(mode: $mode)
+
                 Section {
                     Picker("\(Vocab.unVerb) automatically", selection: $mode.autoUnTimAfter) {
                         ForEach(durations) { option in
@@ -122,5 +124,114 @@ struct ModeEditorView: View {
                 }
             }
         }
+    }
+}
+
+
+/// Lets a Mode run on its own — "Sleep, every night, 22:00–07:00".
+///
+/// The schedule is optional on `TimMode`, so the toggle creates and discards
+/// it rather than binding to a field that might not be there.
+private struct ScheduleSection: View {
+    @Binding var mode: TimMode
+
+    private var isOn: Binding<Bool> {
+        Binding(
+            get: { mode.schedule?.isEnabled ?? false },
+            set: { on in
+                if on {
+                    // A sensible default that is already valid, so switching it
+                    // on never leaves a schedule that silently can't fire.
+                    mode.schedule = mode.schedule ?? ModeSchedule(
+                        startHour: 22, startMinute: 0,
+                        endHour: 7, endMinute: 0,
+                        weekdays: ModeSchedule.everyDay
+                    )
+                    mode.schedule?.isEnabled = true
+                } else {
+                    mode.schedule?.isEnabled = false
+                }
+            }
+        )
+    }
+
+    /// Bridges the stored hour/minute components to a `DatePicker`, which wants
+    /// a `Date`. Components are what's stored, deliberately: 22:00 should mean
+    /// 22:00 after a time-zone change, not the instant it once was.
+    private func timeBinding(hour: WritableKeyPath<ModeSchedule, Int>,
+                             minute: WritableKeyPath<ModeSchedule, Int>) -> Binding<Date> {
+        Binding(
+            get: {
+                guard let s = mode.schedule else { return Date() }
+                return Calendar.current.date(bySettingHour: s[keyPath: hour],
+                                             minute: s[keyPath: minute],
+                                             second: 0, of: Date()) ?? Date()
+            },
+            set: { newValue in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                mode.schedule?[keyPath: hour] = parts.hour ?? 0
+                mode.schedule?[keyPath: minute] = parts.minute ?? 0
+            }
+        )
+    }
+
+    var body: some View {
+        Section {
+            Toggle("Run on a schedule", isOn: isOn)
+
+            if let schedule = mode.schedule, schedule.isEnabled {
+                DatePicker("Starts", selection: timeBinding(hour: \.startHour, minute: \.startMinute),
+                           displayedComponents: .hourAndMinute)
+                DatePicker("Ends", selection: timeBinding(hour: \.endHour, minute: \.endMinute),
+                           displayedComponents: .hourAndMinute)
+                WeekdayPicker(weekdays: Binding(
+                    get: { mode.schedule?.weekdays ?? [] },
+                    set: { mode.schedule?.weekdays = $0 }
+                ))
+            }
+        } header: {
+            Text("Schedule")
+        } footer: {
+            if let schedule = mode.schedule, schedule.isEnabled {
+                if schedule.isValid {
+                    Text("\(schedule.displayText()). Your phone \(Vocab.verbGerund.lowercased()) itself, and you can still tap out early.")
+                } else {
+                    Text("This schedule can't run: pick at least one day and a window of 15 minutes or more.")
+                        .foregroundStyle(.orange)
+                }
+            } else {
+                Text("Off. This \(Vocab.modeNoun.lowercased()) only runs when you tap.")
+            }
+        }
+    }
+}
+
+private struct WeekdayPicker: View {
+    @Binding var weekdays: Set<Int>
+
+    /// `Calendar` numbers weekdays from 1 = Sunday, and `veryShortWeekdaySymbols`
+    /// is indexed the same way, offset by one.
+    private let symbols = Calendar.current.veryShortWeekdaySymbols
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...7, id: \.self) { day in
+                let on = weekdays.contains(day)
+                Button {
+                    if on { weekdays.remove(day) } else { weekdays.insert(day) }
+                } label: {
+                    Text(symbols.indices.contains(day - 1) ? symbols[day - 1] : "?")
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(on ? Color.accentColor : Color.secondary.opacity(0.15),
+                                    in: Capsule())
+                        .foregroundStyle(on ? Color.white : Color.primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Calendar.current.weekdaySymbols[day - 1])
+                .accessibilityAddTraits(on ? [.isSelected] : [])
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

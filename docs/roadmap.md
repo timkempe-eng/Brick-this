@@ -15,9 +15,10 @@ Foundation-only and covered by `swift test`.
 inside the app, which is a little absurd for a product about not opening your
 phone. A Live Activity showing the running timer is the natural home for it.
 
-**Scheduled Modes.** `DeviceActivityMonitor` is already wired up for timed
-release; the same extension can start a session on a recurring schedule — Tim
-me every weeknight at 10pm without a tap.
+~~**Scheduled Modes.**~~ Built — `ModeSchedule`, registered declaratively with
+DeviceActivity and driven from both edges of each window. The wall-clock maths
+and the collision rules (a schedule never stomps a session you started by hand)
+are covered by `swift test`.
 
 **Allowance rather than blocking.** Screen Time can also throttle rather than
 forbid. A Mode that grants fifteen minutes of a given app per day is a softer

@@ -32,9 +32,12 @@ final class SpyShield: ShieldControlling {
 final class SpyScheduler: SessionScheduling {
     private(set) var scheduled: [Date] = []
     private(set) var cancelCount = 0
+    /// The most recent full set handed to the system.
+    private(set) var recurring: [RecurringSchedule] = []
 
     func scheduleRelease(at date: Date) { scheduled.append(date) }
     func cancelScheduledRelease() { cancelCount += 1 }
+    func setRecurringSchedules(_ schedules: [RecurringSchedule]) { recurring = schedules }
 }
 
 final class TestClock: Clock {
@@ -63,12 +66,14 @@ struct Harness {
     func addMode(name: String = "Deep Work",
                  apps: Int = 3,
                  strict: Bool = false,
-                 autoRelease: TimeInterval? = nil) -> TimMode {
+                 autoRelease: TimeInterval? = nil,
+                 schedule: ModeSchedule? = nil) -> TimMode {
         let mode = TimMode(name: name,
                            symbol: "circle",
                            blocked: BlockedSelection(payload: Data([1]), appCount: apps),
                            isStrict: strict,
-                           autoUnTimAfter: autoRelease)
+                           autoUnTimAfter: autoRelease,
+                           schedule: schedule)
         store.modes.append(mode)
         return mode
     }

@@ -133,6 +133,37 @@ struct TimEngine {
         EmergencyAllowance.remaining(uses: store.emergencyUses, now: clock.now)
     }
 
+    // MARK: - Recurring schedules
+
+    /// Hands the system the full set of live schedules. Declarative, so a Mode
+    /// that was deleted or switched off can't leave a schedule behind that
+    /// still fires.
+    func syncSchedules() {
+        scheduler.setRecurringSchedules(
+            store.modes
+                .filter(\.hasLiveSchedule)
+                .map { RecurringSchedule(modeID: $0.id, schedule: $0.schedule!) }
+        )
+    }
+
+    /// The system reached the start of a Mode's scheduled window.
+    func beginScheduledSession(modeID: UUID) {
+        // Never stomp a session the user started by hand — theirs wins, and
+        // the scheduled end below won't touch it either.
+        guard store.activeSession == nil else { return }
+        guard let mode = store.modes.first(where: { $0.id == modeID }), mode.hasLiveSchedule else {
+            return
+        }
+        tim(with: mode)
+    }
+
+    /// The system reached the end of a Mode's scheduled window.
+    func endScheduledSession(modeID: UUID) {
+        // Only release the session this schedule is responsible for.
+        guard let active = store.activeSession, active.modeID == modeID else { return }
+        unTim(byEmergency: false)
+    }
+
     // MARK: - Reconciliation
 
     /// Makes the shield agree with the stored session.
@@ -142,6 +173,8 @@ struct TimEngine {
     /// shield back, and a shield with no session gets cleared, so neither a
     /// half-finished start nor a half-finished stop can strand the user.
     func reconcile() {
+        syncSchedules()
+
         if let session = store.activeSession {
             guard let mode = store.modes.first(where: { $0.id == session.modeID }) else {
                 // The Mode was deleted while a session was running. Nothing
@@ -175,10 +208,12 @@ struct TimEngine {
         var all = store.modes
         if let i = all.firstIndex(where: { $0.id == mode.id }) { all[i] = mode } else { all.append(mode) }
         store.modes = all
+        syncSchedules()
     }
 
     func deleteMode(id: UUID) {
         store.modes = store.modes.filter { $0.id != id }
+        syncSchedules()
     }
 
     private func soleUsableMode() -> TimMode? {
