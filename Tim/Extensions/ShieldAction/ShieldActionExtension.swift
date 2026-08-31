@@ -14,7 +14,7 @@ class ShieldActionExtension: ShieldActionDelegate {
         case .primaryButtonPressed:
             completionHandler(.close)
         case .secondaryButtonPressed:
-            if TimEngine.emergencyUnTim() {
+            if TimEngine.live.emergencyUnTim() {
                 // The shield is torn down with the rest of the settings, so
                 // `.defer` leaves the user looking at the app they opened,
                 // now unblocked.

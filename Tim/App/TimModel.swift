@@ -2,8 +2,8 @@ import Foundation
 import SwiftUI
 import FamilyControls
 
-/// View-facing state. `TimStore` is the persisted truth; this republishes it
-/// so SwiftUI redraws, and owns the running clock for the active session.
+/// View-facing state. `TimEngine` is the truth; this republishes it so SwiftUI
+/// redraws, and owns the running clock for the active session.
 @MainActor
 final class TimModel: ObservableObject {
 
@@ -17,15 +17,16 @@ final class TimModel: ObservableObject {
     @Published private(set) var now = Date()
     private var ticker: Timer?
 
-    private let store = TimStore.shared
+    private let engine: TimEngine
 
-    init() {
+    init(engine: TimEngine = .live) {
+        self.engine = engine
         reload()
     }
 
     func reload() {
-        modes = store.modes
-        activeSession = store.activeSession
+        modes = engine.store.modes
+        activeSession = engine.store.activeSession
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
     }
@@ -37,13 +38,13 @@ final class TimModel: ObservableObject {
         return now.timeIntervalSince(session.startedAt).timDurationText
     }
 
-    var emergencyUnTimsRemaining: Int { store.emergencyUnTimsRemaining }
+    var emergencyUnTimsRemaining: Int { engine.emergencyUnTimsRemaining }
 
     /// Recomputed on each access from the stored history — cheap at this size,
     /// and it means the numbers can't go stale behind a cached copy.
-    var stats: TimStats { TimStats(sessions: store.history) }
+    var stats: TimStats { engine.stats }
 
-    var pairedTagCount: Int { store.pairedTagUIDs.count }
+    var pairedTagCount: Int { engine.store.pairedTagUIDs.count }
 
     // MARK: - Authorization
 
@@ -51,7 +52,7 @@ final class TimModel: ObservableObject {
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
             authorization = AuthorizationCenter.shared.authorizationStatus
-            store.hasOnboarded = true
+            engine.store.hasOnboarded = true
         } catch {
             banner = "Screen Time access was declined. Tim can't hide apps without it."
         }
@@ -60,7 +61,7 @@ final class TimModel: ObservableObject {
     // MARK: - Tapping
 
     func tap(tagUID: String? = nil, mode: TimMode? = nil) {
-        switch TimEngine.handleTap(tagUID: tagUID, preferredMode: mode) {
+        switch engine.handleTap(tagUID: tagUID, preferredMode: mode) {
         case .timmed(let mode):
             banner = "\(Vocab.verbPast) — \(mode.name)."
         case .unTimmed(let session):
@@ -74,7 +75,7 @@ final class TimModel: ObservableObject {
     }
 
     func emergencyUnTim() {
-        if TimEngine.emergencyUnTim() {
+        if engine.emergencyUnTim() {
             banner = "\(Vocab.unVerbPast). \(emergencyUnTimsRemaining) emergency overrides left this month."
         } else {
             banner = "No emergency overrides left this month. Go find your tag."
@@ -85,25 +86,25 @@ final class TimModel: ObservableObject {
     // MARK: - Modes
 
     func save(_ mode: TimMode) {
-        store.upsert(mode)
+        engine.upsert(mode)
         reload()
     }
 
     func delete(_ mode: TimMode) {
-        store.deleteMode(id: mode.id)
+        engine.deleteMode(id: mode.id)
         reload()
     }
 
     // MARK: - Tags
 
     func pair(tagUID: String) {
-        store.pair(tagUID: tagUID)
+        engine.pair(tagUID: tagUID)
         banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.verb.lowercased()) your phone."
         reload()
     }
 
     func forgetAllTags() {
-        store.pairedTagUIDs = []
+        engine.store.pairedTagUIDs = []
         reload()
     }
 

@@ -64,9 +64,12 @@ targets:
         INFOPLIST_FILE: Tim/Extensions/ShieldConfiguration/Info.plist
         CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements
     dependencies:
+      # All targets compile the whole Tim/Shared tree, adapters included, so
+      # each needs every framework the adapters import.
       - sdk: ManagedSettings.framework
       - sdk: ManagedSettingsUI.framework
       - sdk: FamilyControls.framework
+      - sdk: DeviceActivity.framework
 
   # Handles the buttons on that screen.
   TimShieldAction:

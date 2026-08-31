@@ -12,7 +12,7 @@ import UIKit
 class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     private func shield() -> ShieldConfiguration {
-        let modeName = TimStore.shared.activeSession?.modeName ?? "focus"
+        let modeName = UserDefaultsStore.shared.activeSession?.modeName ?? "focus"
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,

@@ -20,12 +20,12 @@ struct ToggleTimIntent: AppIntent {
     var modeName: String?
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let store = TimStore.shared
+        let engine = TimEngine.live
         let requested = modeName.flatMap { name in
-            store.modes.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+            engine.store.modes.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
         }
 
-        switch TimEngine.handleTap(tagUID: nil, preferredMode: requested) {
+        switch engine.handleTap(preferredMode: requested) {
         case .timmed(let mode):
             return .result(dialog: "\(Vocab.verbPast). \(mode.name).")
         case .unTimmed(let session):
@@ -48,16 +48,16 @@ struct StartTimIntent: AppIntent {
     var modeName: String?
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let store = TimStore.shared
-        guard !store.isTimmed else {
+        let engine = TimEngine.live
+        guard engine.store.activeSession == nil else {
             return .result(dialog: "Already \(Vocab.verbPast.lowercased()).")
         }
         guard let name = modeName,
-              let mode = store.modes.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }),
+              let mode = engine.store.modes.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }),
               mode.blocksAnything else {
             throw $modeName.needsValueError("Which \(Vocab.modeNoun.lowercased())?")
         }
-        TimEngine.tim(with: mode)
+        engine.tim(with: mode)
         return .result(dialog: "\(Vocab.verbPast). \(mode.name).")
     }
 }
@@ -67,10 +67,9 @@ struct StopTimIntent: AppIntent {
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let active = TimStore.shared.activeSession else {
+        guard let finished = TimEngine.live.unTim(byEmergency: false) else {
             return .result(dialog: "Your phone isn't \(Vocab.verbPast.lowercased()).")
         }
-        let finished = TimEngine.unTim(session: active, byEmergency: false)
         return .result(dialog: "\(Vocab.sessionSummary(duration: finished.duration.timDurationText))")
     }
 }
@@ -80,7 +79,7 @@ struct TimStatusIntent: AppIntent {
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<Bool> {
-        if let session = TimStore.shared.activeSession {
+        if let session = TimEngine.live.store.activeSession {
             return .result(
                 value: true,
                 dialog: "\(Vocab.verbPast) for \(session.duration.timDurationText) — \(session.modeName)."
@@ -94,7 +93,7 @@ struct TimStatusIntent: AppIntent {
 /// automation is a picker rather than typing a string that has to match.
 struct ModeNameOptions: DynamicOptionsProvider {
     func results() async throws -> [String] {
-        TimStore.shared.modes.filter(\.blocksAnything).map(\.name)
+        TimEngine.live.store.modes.filter(\.blocksAnything).map(\.name)
     }
 }
 

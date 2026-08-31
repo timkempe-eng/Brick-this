@@ -36,7 +36,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("Left this month", value: "\(model.emergencyUnTimsRemaining) of \(TimStore.emergencyAllowance)")
+                    LabeledContent("Left this month", value: "\(model.emergencyUnTimsRemaining) of \(EmergencyAllowance.perWindow)")
                 } header: {
                     Text(Vocab.emergencyUnTim)
                 } footer: {

@@ -18,7 +18,7 @@ struct ModesView: View {
                                     .foregroundStyle(Color.accentColor)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(mode.name).foregroundStyle(.primary)
-                                    Text(summary(for: mode))
+                                    Text(mode.summary)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -53,18 +53,6 @@ struct ModesView: View {
         }
     }
 
-    private func summary(for mode: TimMode) -> String {
-        let apps = mode.selection.applicationTokens.count
-        let categories = mode.selection.categoryTokens.count
-        let sites = mode.selection.webDomainTokens.count
-        guard apps + categories + sites > 0 else { return "Nothing blocked yet" }
-        var parts: [String] = []
-        if apps > 0 { parts.append("\(apps) app\(apps == 1 ? "" : "s")") }
-        if categories > 0 { parts.append("\(categories) categor\(categories == 1 ? "y" : "ies")") }
-        if sites > 0 { parts.append("\(sites) site\(sites == 1 ? "" : "s")") }
-        if mode.isStrict { parts.append("strict") }
-        return parts.joined(separator: " · ")
-    }
 }
 
 struct ModeEditorView: View {
@@ -104,7 +92,7 @@ struct ModeEditorView: View {
                         HStack {
                             Text("Apps and sites to hide")
                             Spacer()
-                            Text("\(mode.selection.applicationTokens.count + mode.selection.categoryTokens.count + mode.selection.webDomainTokens.count)")
+                            Text("\(mode.blocked.totalCount)")
                                 .foregroundStyle(.secondary)
                         }
                     }

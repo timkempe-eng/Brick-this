@@ -9,8 +9,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        guard activity == TimEngine.autoUnTimActivity else { return }
-        guard let active = TimStore.shared.activeSession else { return }
-        TimEngine.unTim(session: active, byEmergency: false)
+        guard activity == DeviceActivityScheduler.activityName else { return }
+        TimEngine.live.unTim(byEmergency: false)
     }
 }
