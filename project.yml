@@ -1,0 +1,101 @@
+# XcodeGen spec. Generate the Xcode project with:
+#
+#   brew install xcodegen && xcodegen generate && open Tim.xcodeproj
+#
+# The project file is deliberately not committed — it is generated output, and
+# regenerating it is how you pick up new source files.
+
+name: Tim
+options:
+  bundleIdPrefix: app.tim
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    # Replace with your own Apple Developer Team ID before building on device.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+targets:
+
+  Tim:
+    type: application
+    platform: iOS
+    sources:
+      - Tim/App
+      - Tim/Shared
+      - path: Tim/Resources
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim
+        INFOPLIST_FILE: Tim/App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tim/App/Tim.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - target: TimShieldConfiguration
+      - target: TimShieldAction
+      - target: TimActivityMonitor
+      - sdk: FamilyControls.framework
+      - sdk: ManagedSettings.framework
+      - sdk: DeviceActivity.framework
+      - sdk: CoreNFC.framework
+
+  # Draws the "Timmed." screen over blocked apps.
+  TimShieldConfiguration:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Tim/Extensions/ShieldConfiguration
+      - Tim/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ShieldConfiguration
+        INFOPLIST_FILE: Tim/Extensions/ShieldConfiguration/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements
+    dependencies:
+      - sdk: ManagedSettings.framework
+      - sdk: ManagedSettingsUI.framework
+      - sdk: FamilyControls.framework
+
+  # Handles the buttons on that screen.
+  TimShieldAction:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Tim/Extensions/ShieldAction
+      - Tim/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ShieldAction
+        INFOPLIST_FILE: Tim/Extensions/ShieldAction/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ShieldAction/ShieldAction.entitlements
+    dependencies:
+      - sdk: ManagedSettings.framework
+      - sdk: FamilyControls.framework
+      - sdk: DeviceActivity.framework
+
+  # Ends timed sessions without the app running.
+  TimActivityMonitor:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Tim/Extensions/ActivityMonitor
+      - Tim/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ActivityMonitor
+        INFOPLIST_FILE: Tim/Extensions/ActivityMonitor/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ActivityMonitor/ActivityMonitor.entitlements
+    dependencies:
+      - sdk: DeviceActivity.framework
+      - sdk: ManagedSettings.framework
+      - sdk: FamilyControls.framework

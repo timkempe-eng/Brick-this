@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Tim</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+
+	<!-- Shown in the system NFC scan sheet. -->
+	<key>NFCReaderUsageDescription</key>
+	<string>Tim reads your tag to hide and unhide your apps.</string>
+
+	<!-- Only needed for the optional custom-scheme fallback described in
+	     docs/nfc-and-tags.md; background NFC uses universal links instead. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.tim.Tim</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tim</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
