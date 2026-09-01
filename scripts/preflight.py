@@ -42,6 +42,16 @@ def source_paths(target):
     return out
 
 
+def ships(target):
+    """True for products that get installed and signed.
+
+    A test bundle has no entitlements, no Info.plist of its own, and is never
+    signed by match — so the checks below that guard shipping products would
+    all fire spuriously on it.
+    """
+    return not str(target.get("type", "")).startswith("bundle.")
+
+
 def source_dirs(target):
     return [ROOT / p for p in source_paths(target) if (ROOT / p).is_dir()]
 
@@ -56,6 +66,8 @@ check(m is not None, "UserDefaultsStore has no appGroupID literal")
 group = m.group(1) if m else None
 
 for name, target in targets.items():
+    if not ships(target):
+        continue
     ent_path = target["settings"]["base"].get("CODE_SIGN_ENTITLEMENTS")
     check(ent_path is not None, f"{name}: no CODE_SIGN_ENTITLEMENTS")
     if not ent_path:
@@ -80,7 +92,7 @@ for name, target in targets.items():
 # --- Extension bundle IDs must nest under the app's, or they won't install.
 app_id = targets["Tim"]["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
 for name, target in targets.items():
-    if name == "Tim":
+    if name == "Tim" or not ships(target):
         continue
     bid = target["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
     check(bid.startswith(app_id + "."),
@@ -138,6 +150,8 @@ def compiles(target, file_path):
 adapters = sorted((ROOT / "Tim/Shared/Adapters").glob("*.swift"))
 
 for name, target in targets.items():
+    if not ships(target):
+        continue
     needed = set()
     compiled_any = False
     for adapter in adapters:
@@ -231,9 +245,25 @@ fastfile = ROOT / "fastlane/Fastfile"
 if fastfile.exists():
     signed = set(re.findall(r'"(app\.tim\.[\w.]+)"', fastfile.read_text()))
     for name, target in targets.items():
+        if not ships(target):
+            continue
         bid = target["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
         check(bid in signed,
               f"{name}: '{bid}' is not in the Fastfile's signing list")
+
+# --- A UI test target that no scheme runs is decoration. The whole point is
+#     that CI launches the app, so check the wiring rather than trusting it.
+ui_tests = [n for n, t in targets.items()
+            if str(t.get("type", "")) == "bundle.ui-testing"]
+if ui_tests:
+    scheme_tests = set()
+    for scheme in spec.get("schemes", {}).values():
+        scheme_tests |= set(scheme.get("test", {}).get("targets", []) or [])
+    for name in ui_tests:
+        check(name in scheme_tests,
+              f"{name}: no scheme runs it, so CI would never launch the app")
+        host = targets[name]["settings"]["base"].get("TEST_TARGET_NAME")
+        check(host in targets, f"{name}: TEST_TARGET_NAME '{host}' is not a target")
 
 print(f"preflight: {checks} checks")
 if problems:

@@ -61,3 +61,31 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             | tail -80
+
+      # Compilation proves the code type-checks. This proves it *runs* — the
+      # App Group resolving, SwiftUI surviving a first layout, the extensions
+      # embedding. Screen Time and NFC no-op in the Simulator, so this can
+      # never show that a tap blocks anything; it catches the launch crashes
+      # that would otherwise reach a device unexamined.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          NAME=$(xcrun simctl list devices available \
+            | grep -oE 'iPhone [0-9]+[^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "::error::No iPhone simulator available on this image."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using $NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Launch the app on a simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Tim.xcodeproj \
+            -scheme Tim \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -60

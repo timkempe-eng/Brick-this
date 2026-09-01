@@ -28,10 +28,13 @@ schemes:
     build:
       targets:
         Tim: all
+        TimUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
+      targets:
+        - TimUITests
 
 targets:
 
@@ -148,3 +151,17 @@ targets:
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+
+  # Proves the app launches and renders. Not shipped, not signed by match —
+  # preflight skips test bundles for the checks that only apply to products.
+  TimUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - Tim/UITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.UITests
+        TEST_TARGET_NAME: Tim
+    dependencies:
+      - target: Tim
