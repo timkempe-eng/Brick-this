@@ -82,6 +82,15 @@ final class ScreenTests: XCTestCase {
                        "A Mode that blocks nothing must not promise to Tim your phone.")
     }
 
+    /// `matching`, not `containing`: containing filters by DESCENDANTS, so on a
+    /// static text it matches nothing and the assertion silently passes on the
+    /// existence of any label at all.
+    private func footer(containing text: String) -> XCUIElement {
+        app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] %@", text))
+            .firstMatch
+    }
+
     func testSettingsOpens() {
         app.buttons["Settings"].firstMatch.tap()
         // The pairing action, not the section header: a header's element type
