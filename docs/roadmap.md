@@ -45,6 +45,14 @@ cosmetic, entirely worth it.
 up and renders on a Simulator in CI. Screen Time and NFC still no-op there, so
 the first evidence that a tap actually blocks an app remains TestFlight.
 
+**Nothing in the Simulator can block anything, so nothing there can be fully
+configured either.** `FamilyActivityPicker` returns no apps, which means every
+Mode a UI test can reach blocks nothing, which means no schedule it turns on
+will ever be registered. The app says so — a scheduled Mode that blocks nothing
+tells you what is still missing instead of promising to Tim your phone — and
+that honesty is the deepest a Simulator test can go. Configuring a Mode
+end-to-end is a TestFlight step.
+
 **`DeviceActivitySchedule` pins one weekday per window.** An every-day schedule
 collapses to a single repeating window, but a three-day-a-week Mode costs three.
 The system caps how many activities an app may monitor; hitting the ceiling is
