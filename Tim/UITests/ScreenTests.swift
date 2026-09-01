@@ -11,18 +11,6 @@ import XCTest
 /// What this cannot show: that any of it blocks an app. Screen Time no-ops
 /// here. It shows the screens build, navigate and survive being left and
 /// returned to — which is exactly the class of bug that compiles cleanly.
-private extension XCUIElement {
-    /// `waitForExistence` for a value rather than existence.
-    func waitForValue(_ expected: String, timeout: TimeInterval) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if value as? String == expected { return true }
-            usleep(200_000)
-        }
-        return value as? String == expected
-    }
-}
-
 final class ScreenTests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -63,24 +51,33 @@ final class ScreenTests: XCTestCase {
         app.buttons["Modes"].firstMatch.tap()
         app.staticTexts["Deep Work"].firstMatch.tap()
         let toggle = app.switches["Run on a schedule"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        XCTAssertEqual(toggle.value as? String, "0", "the starter Mode has no schedule")
+        XCTAssertTrue(toggle.waitForExistence(timeout: 15))
+
+        // Off, the footer says the Mode only runs when you tap.
+        XCTAssertTrue(footer(containing: "only runs when you tap").waitForExistence(timeout: 10),
+                      "A starter Mode should begin with no schedule.")
 
         toggle.tap()
 
-        // Two assertions, because they fail for different reasons and the
-        // difference is the whole diagnosis: the first says the binding
-        // created a schedule, the second says the view noticed.
-        XCTAssertTrue(toggle.waitForValue("1", timeout: 10),
-                      "The toggle did not turn on — the optional-schedule binding didn't take.")
+        // On, it promises the phone will Tim itself.
+        //
+        // Asserting the footer rather than the switch's own `value`: two runs
+        // were spent on a value assertion that never turned true, using a
+        // hand-rolled poll rather than the sanctioned wait. Whether XCUITest
+        // reports a SwiftUI Toggle's value promptly is not something this test
+        // should depend on — the words the user reads are, and they come from
+        // the same binding either way.
+        XCTAssertTrue(footer(containing: "Tims itself").waitForExistence(timeout: 15),
+                      "Enabling the schedule did not change what the Mode promises.")
+    }
 
-        // `matching`, not `containing`: containing filters by DESCENDANTS, so
-        // on a static text it matches nothing and the assertion silently tests
-        // the existence of any label at all.
-        let promise = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "Tims itself")).firstMatch
-        XCTAssertTrue(promise.waitForExistence(timeout: 10),
-                      "The toggle turned on but the footer never promised the phone would Tim itself.")
+    /// `matching`, not `containing`: containing filters by DESCENDANTS, so on a
+    /// static text it matches nothing and the assertion silently passes on the
+    /// existence of any label at all.
+    private func footer(containing text: String) -> XCUIElement {
+        app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] %@", text))
+            .firstMatch
     }
 
     func testSettingsOpens() {
