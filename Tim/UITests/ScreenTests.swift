@@ -76,10 +76,28 @@ final class ScreenTests: XCTestCase {
         // reports a SwiftUI Toggle's value promptly is not something this test
         // should depend on. The footer comes from the same binding, and the
         // words are what the user actually acts on.
+        // The failure message carries the screen with it. Asserting a string
+        // and reporting only "it wasn't there" is what turned one bug into
+        // five CI runs of guessing which branch had rendered.
         XCTAssertTrue(footer(containing: "blocks something").waitForExistence(timeout: 15),
-                      "Enabling the schedule did not change what the Mode promises.")
+                      """
+                      Enabling the schedule did not change what the Mode promises.
+                      Switch value: \(String(describing: toggle.value))
+                      On screen: \(visibleText())
+                      """)
         XCTAssertFalse(footer(containing: "itself").exists,
                        "A Mode that blocks nothing must not promise to Tim your phone.")
+    }
+
+    /// Every label currently on screen, for a failure message. A test that says
+    /// what it actually saw costs one run; one that says only "not found" costs
+    /// as many as it takes to guess.
+    private func visibleText() -> String {
+        app.staticTexts.allElementsBoundByIndex
+            .prefix(40)
+            .map(\.label)
+            .filter { !$0.isEmpty }
+            .joined(separator: " | ")
     }
 
     /// `matching`, not `containing`: containing filters by DESCENDANTS, so on a
