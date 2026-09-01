@@ -13,6 +13,12 @@ struct TimSession: Codable, Identifiable, Hashable {
     /// between finishing and bailing.
     var endedByEmergency: Bool = false
 
+    /// True when a scheduled window started this session, so its end boundary
+    /// releases only what it started. Optional, not Bool: a missing key must
+    /// decode as nil rather than fail, or every session recorded before this
+    /// field existed would be dropped by the lenient decoder.
+    var startedBySchedule: Bool?
+
     var isActive: Bool { endedAt == nil }
     var duration: TimeInterval { (endedAt ?? Date()).timeIntervalSince(startedAt) }
 }

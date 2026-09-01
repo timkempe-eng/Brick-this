@@ -46,6 +46,19 @@ add what the work revealed.
   schedule collapses to one window; a part-week Mode costs several against the
   system's activity cap.
 
+## Closed (this sweep)
+
+- [x] Full-codebase review: ten findings, nine fixed, one wired into the UI.
+      The scheduler adapter was the cluster — cross-midnight weekday windows
+      ended a week late, any edit tore down every window including open ones,
+      and registration failures were recorded as success. Window arithmetic
+      and the change-diff now live in Core and are tested; the adapter only
+      maps them onto DeviceActivity.
+- [x] A schedule boundary can no longer end a session you started by hand
+      with the same Mode — sessions carry a started-by-schedule marker.
+- [x] A timed session now ends (or re-arms) at reconcile even if its release
+      registration was lost with the process.
+
 ## Closed
 
 - [x] Engine testable at all — ports and adapters, 98 tests (was 15)

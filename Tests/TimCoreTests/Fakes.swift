@@ -33,12 +33,30 @@ final class SpyShield: ShieldControlling {
 final class SpyScheduler: SessionScheduling {
     private(set) var scheduled: [Date] = []
     private(set) var cancelCount = 0
-    /// The most recent full set handed to the system.
-    private(set) var recurring: [RecurringSchedule] = []
+
+    /// Every window ever started/stopped, in order — so tests can assert not
+    /// just the end state but that an unchanged window was never touched.
+    private(set) var started: [ScheduledWindow] = []
+    private(set) var stopped: [String] = []
+
+    /// Names the spy should report as failing to register.
+    var failingNames: Set<String> = []
+
+    /// What the system would currently be watching.
+    var registered: Set<String> {
+        var names = Set<String>()
+        for w in started where !failingNames.contains(w.name) { names.insert(w.name) }
+        for n in stopped { names.remove(n) }
+        return names
+    }
 
     func scheduleRelease(at date: Date) { scheduled.append(date) }
     func cancelScheduledRelease() { cancelCount += 1 }
-    func setRecurringSchedules(_ schedules: [RecurringSchedule]) { recurring = schedules }
+    func stopWindows(named names: [String]) { stopped += names }
+    func startWindows(_ windows: [ScheduledWindow]) -> [String] {
+        started += windows
+        return windows.map(\.name).filter(failingNames.contains)
+    }
 }
 
 final class TestClock: Clock {

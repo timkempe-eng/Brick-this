@@ -12,12 +12,27 @@ final class ScheduledModeTests: XCTestCase {
 
     // MARK: - Registration
 
-    func testALiveScheduleIsRegisteredWithTheSystem() {
+    func testALiveScheduleRegistersItsWindows() {
         let h = Harness()
         let mode = h.addMode(schedule: nightly())
         h.engine.syncSchedules()
 
-        XCTAssertEqual(h.scheduler.recurring, [RecurringSchedule(modeID: mode.id, schedule: nightly())])
+        XCTAssertEqual(h.scheduler.registered,
+                       [ScheduleActivityNaming.name(modeID: mode.id)],
+                       "an every-day schedule collapses to one daily window")
+    }
+
+    func testAPartWeekScheduleRegistersOneWindowPerDay() {
+        let h = Harness()
+        var s = nightly()
+        s.weekdays = ModeSchedule.weeknights
+        let mode = h.addMode(schedule: s)
+        h.engine.syncSchedules()
+
+        XCTAssertEqual(h.scheduler.registered.count, 5)
+        XCTAssertTrue(h.scheduler.registered.allSatisfy {
+            ScheduleActivityNaming.modeID(from: $0) == mode.id
+        })
     }
 
     func testASwitchedOffScheduleIsNotRegistered() {
@@ -27,7 +42,7 @@ final class ScheduledModeTests: XCTestCase {
         h.addMode(schedule: off)
         h.engine.syncSchedules()
 
-        XCTAssertTrue(h.scheduler.recurring.isEmpty)
+        XCTAssertTrue(h.scheduler.registered.isEmpty)
     }
 
     func testAScheduleOnAModeThatBlocksNothingIsNotRegistered() {
@@ -36,7 +51,7 @@ final class ScheduledModeTests: XCTestCase {
         empty.schedule = nightly()
         h.engine.upsert(empty)
 
-        XCTAssertTrue(h.scheduler.recurring.isEmpty,
+        XCTAssertTrue(h.scheduler.registered.isEmpty,
                       "a schedule that would block nothing must not be registered")
     }
 
@@ -45,28 +60,17 @@ final class ScheduledModeTests: XCTestCase {
         h.addMode(schedule: ModeSchedule(startHour: 9, startMinute: 0,
                                          endHour: 9, endMinute: 5, weekdays: [2]))
         h.engine.syncSchedules()
-        XCTAssertTrue(h.scheduler.recurring.isEmpty, "a 5-minute window can never fire")
+        XCTAssertTrue(h.scheduler.registered.isEmpty, "a 5-minute window can never fire")
     }
 
-    func testDeletingAModeDeregistersItsSchedule() {
+    func testDeletingAModeStopsItsWindows() {
         let h = Harness()
         let mode = h.addMode(schedule: nightly())
         h.engine.upsert(mode)
-        XCTAssertEqual(h.scheduler.recurring.count, 1)
+        XCTAssertEqual(h.scheduler.registered.count, 1)
 
         h.engine.deleteMode(id: mode.id)
-        XCTAssertTrue(h.scheduler.recurring.isEmpty, "a deleted Mode must not keep firing")
-    }
-
-    func testEditingAModeReplacesTheWholeSet() {
-        let h = Harness()
-        var mode = h.addMode(schedule: nightly())
-        h.engine.upsert(mode)
-
-        mode.schedule?.isEnabled = false
-        h.engine.upsert(mode)
-
-        XCTAssertTrue(h.scheduler.recurring.isEmpty)
+        XCTAssertTrue(h.scheduler.registered.isEmpty, "a deleted Mode must not keep firing")
     }
 
     // MARK: - Firing
@@ -78,10 +82,11 @@ final class ScheduledModeTests: XCTestCase {
         h.engine.beginScheduledSession(modeID: mode.id)
 
         XCTAssertEqual(h.store.activeSession?.modeID, mode.id)
+        XCTAssertEqual(h.store.activeSession?.startedBySchedule, true)
         XCTAssertEqual(h.shield.appliedMode, mode.id)
     }
 
-    func testScheduledEndReleasesItsOwnSession() {
+    func testScheduledEndReleasesTheSessionItStarted() {
         let h = Harness()
         let mode = h.addMode(schedule: nightly())
         h.engine.beginScheduledSession(modeID: mode.id)
@@ -109,8 +114,7 @@ final class ScheduledModeTests: XCTestCase {
     }
 
     func testAScheduledEndDoesNotReleaseSomeoneElsesSession() {
-        // Sleep's window ends at 7am while the user is mid Deep Work. Leaving
-        // that alone is the whole point of matching on modeID.
+        // Sleep's window ends at 7am while the user is mid Deep Work.
         let h = Harness()
         let manual = h.addMode(name: "Deep Work")
         let scheduled = h.addMode(name: "Sleep", schedule: nightly())
@@ -120,6 +124,22 @@ final class ScheduledModeTests: XCTestCase {
 
         XCTAssertNotNil(h.store.activeSession, "still Timmed")
         XCTAssertEqual(h.shield.appliedMode, manual.id)
+    }
+
+    func testAScheduledEndDoesNotReleaseAManualSessionOfTheSameMode() {
+        // The subtle one: the user taps at 20:00 and picks Sleep BY HAND,
+        // meaning "until I tap again". Sleep also has a 22:00–07:00 schedule.
+        // Its 07:00 boundary matches on Mode — and must still keep its hands
+        // off, because this session wasn't started by the schedule.
+        let h = Harness()
+        let sleep = h.addMode(name: "Sleep", schedule: nightly())
+        h.engine.tim(with: sleep)
+
+        h.engine.endScheduledSession(modeID: sleep.id)
+
+        XCTAssertNotNil(h.store.activeSession,
+                        "a schedule boundary must never end a session the user started by hand")
+        XCTAssertEqual(h.shield.appliedMode, sleep.id)
     }
 
     func testTappingOutOfAScheduledSessionWorksNormally() {
@@ -147,11 +167,229 @@ final class ScheduledModeTests: XCTestCase {
         XCTAssertTrue(h.shield.calls.isEmpty)
     }
 
-    func testReconcileReRegistersSchedules() {
+    func testReconcileRegistersSchedules() {
         let h = Harness()
         h.addMode(schedule: nightly())
         h.engine.reconcile()
-        XCTAssertEqual(h.scheduler.recurring.count, 1)
+        XCTAssertEqual(h.scheduler.registered.count, 1)
+    }
+
+    // MARK: - Old records still decode
+
+    func testASessionRecordedBeforeTheScheduleMarkerStillDecodes() throws {
+        // startedBySchedule was added after sessions already existed on disk.
+        // A missing key must decode as nil, not fail — a failure would mean
+        // the lenient decoder silently drops every pre-existing session.
+        let old = """
+        {"id":"6F9619FF-8B86-D011-B42D-00CF4FC964FF",
+         "modeID":"6F9619FF-8B86-D011-B42D-00CF4FC964FE",
+         "modeName":"Deep Work","startedAt":700000000,"endedAt":700003600,
+         "endedByEmergency":false}
+        """.data(using: .utf8)!
+
+        let session = try JSONDecoder().decode(TimSession.self, from: old)
+        XCTAssertNil(session.startedBySchedule)
+        XCTAssertEqual(session.duration, 3600)
+    }
+}
+
+/// The window arithmetic and the diff are exactly the logic that used to live
+/// in the untestable adapter — and where both confirmed scheduler bugs were.
+final class ScheduleWindowTests: XCTestCase {
+
+    private func entry(_ id: UUID = UUID(),
+                       start: (Int, Int) = (22, 0),
+                       end: (Int, Int) = (7, 0),
+                       days: Set<Int> = ModeSchedule.everyDay) -> RecurringSchedule {
+        RecurringSchedule(modeID: id, schedule: ModeSchedule(
+            startHour: start.0, startMinute: start.1,
+            endHour: end.0, endMinute: end.1, weekdays: days))
+    }
+
+    // MARK: - The cross-midnight weekday fix
+
+    func testAnOvernightWeekdayWindowEndsTheNextMorningNotNextWeek() {
+        // Monday 22:00–07:00 must end TUESDAY 07:00. Pinning Monday on both
+        // ends would make the next "Monday 07:00" six days out — a phone
+        // Timmed for a week.
+        let windows = ScheduleWindows.windows(for: entry(days: [2]))
+        XCTAssertEqual(windows.count, 1)
+        XCTAssertEqual(windows[0].weekday, 2)
+        XCTAssertEqual(windows[0].endWeekday, 3, "ends the following day")
+    }
+
+    func testSaturdayNightWrapsToSunday() {
+        let windows = ScheduleWindows.windows(for: entry(days: [7]))
+        XCTAssertEqual(windows[0].endWeekday, 1, "weekday 7 wraps to 1, not 8")
+    }
+
+    func testADaytimeWindowEndsOnItsOwnDay() {
+        let windows = ScheduleWindows.windows(for: entry(start: (9, 0), end: (17, 0), days: [2]))
+        XCTAssertEqual(windows[0].endWeekday, 2)
+    }
+
+    func testADailyWindowPinsNoWeekdayAtEitherEnd() {
+        let windows = ScheduleWindows.windows(for: entry())
+        XCTAssertEqual(windows.count, 1, "every-day collapses to one window")
+        XCTAssertNil(windows[0].weekday)
+        XCTAssertNil(windows[0].endWeekday)
+    }
+
+    // MARK: - The diff
+
+    func testAnUnchangedSetProducesNoWork() {
+        let e = entry()
+        let w = ScheduleWindows.windows(for: [e])
+        let (stop, start) = ScheduleWindows.diff(from: w, to: w)
+        XCTAssertTrue(stop.isEmpty)
+        XCTAssertTrue(start.isEmpty)
+    }
+
+    func testAddingAModeTouchesOnlyItsOwnWindows() {
+        // Sleep's window may be OPEN right now. Adding Gym must not stop it —
+        // a stopped open window never delivers its end, and the session runs
+        // forever.
+        let sleep = entry()
+        let gym = entry(start: (17, 0), end: (19, 0), days: [2, 4, 6])
+        let old = ScheduleWindows.windows(for: [sleep])
+        let new = ScheduleWindows.windows(for: [sleep, gym])
+
+        let (stop, start) = ScheduleWindows.diff(from: old, to: new)
+        XCTAssertTrue(stop.isEmpty, "Sleep's live window must not be touched")
+        XCTAssertEqual(Set(start.map(\.name)),
+                       Set(ScheduleWindows.windows(for: gym).map(\.name)))
+    }
+
+    func testRemovingAModeStopsOnlyItsOwnWindows() {
+        let sleep = entry()
+        let gym = entry(start: (17, 0), end: (19, 0), days: [2, 4, 6])
+        let old = ScheduleWindows.windows(for: [sleep, gym])
+        let new = ScheduleWindows.windows(for: [sleep])
+
+        let (stop, start) = ScheduleWindows.diff(from: old, to: new)
+        XCTAssertEqual(Set(stop), Set(ScheduleWindows.windows(for: gym).map(\.name)))
+        XCTAssertTrue(start.isEmpty)
+    }
+
+    func testEditingAScheduleStopsAndRestartsItsWindows() {
+        let id = UUID()
+        let old = ScheduleWindows.windows(for: [entry(id)])
+        var edited = entry(id)
+        edited = RecurringSchedule(modeID: id, schedule: {
+            var s = edited.schedule; s.startHour = 23; return s
+        }())
+        let new = ScheduleWindows.windows(for: [edited])
+
+        let (stop, start) = ScheduleWindows.diff(from: old, to: new)
+        XCTAssertEqual(stop, old.map(\.name))
+        XCTAssertEqual(start.map(\.startHour), [23])
+    }
+}
+
+/// The end-to-end behaviour the diff exists for.
+final class ScheduleSyncTests: XCTestCase {
+
+    private func nightly() -> ModeSchedule {
+        ModeSchedule(startHour: 22, startMinute: 0, endHour: 7, endMinute: 0,
+                     weekdays: ModeSchedule.everyDay)
+    }
+
+    func testRepeatedSyncsWithNoChangeTouchNothing() {
+        let h = Harness()
+        h.addMode(schedule: nightly())
+
+        h.engine.syncSchedules()
+        let (started, stopped) = (h.scheduler.started.count, h.scheduler.stopped.count)
+        h.engine.syncSchedules()
+        h.engine.reconcile()
+        h.engine.reconcile()
+
+        XCTAssertEqual(h.scheduler.started.count, started, "no re-registration")
+        XCTAssertEqual(h.scheduler.stopped.count, stopped, "nothing torn down")
+    }
+
+    func testEditingOneModeNeverTouchesAnothersLiveWindow() {
+        // The confirmed bug this replaces: any change tore down EVERY window,
+        // open ones included.
+        let h = Harness()
+        let sleep = h.addMode(name: "Sleep", schedule: nightly())
+        h.engine.syncSchedules()
+
+        var gym = ModeSchedule(startHour: 17, startMinute: 0,
+                               endHour: 19, endMinute: 0, weekdays: [2, 4, 6])
+        gym.isEnabled = true
+        h.addMode(name: "Gym", schedule: gym)
+        h.engine.syncSchedules()
+
+        let sleepName = ScheduleActivityNaming.name(modeID: sleep.id)
+        XCTAssertFalse(h.scheduler.stopped.contains(sleepName),
+                       "Sleep's possibly-open window was torn down by an unrelated edit")
+        XCTAssertEqual(h.scheduler.started.filter { $0.name == sleepName }.count, 1,
+                       "and was registered exactly once")
+    }
+
+    func testAFailedRegistrationIsNotRecordedAsSynced() {
+        // The system caps monitored activities. When registration fails, the
+        // sync must say so and leave the stored state alone, so the next sync
+        // retries instead of trusting a registration that never happened.
+        let h = Harness()
+        let mode = h.addMode(schedule: nightly())
+        h.scheduler.failingNames = [ScheduleActivityNaming.name(modeID: mode.id)]
+
+        XCTAssertFalse(h.engine.syncSchedules())
+        XCTAssertTrue(h.store.syncedSchedules.isEmpty, "a failed sync is not recorded")
+
+        h.scheduler.failingNames = []
+        XCTAssertTrue(h.engine.syncSchedules(), "the next sync retries and succeeds")
+        XCTAssertEqual(h.store.syncedSchedules.count, 1)
+    }
+}
+
+/// A timed session must end on time even when the process didn't survive to
+/// see it.
+final class TimedReleaseRecoveryTests: XCTestCase {
+
+    func testReconcileEndsAnOverdueTimedSession() {
+        // "Tim me for 15 minutes", process dies, user comes back an hour
+        // later. The session is past its deadline: end it, don't re-shield it.
+        let h = Harness()
+        h.addMode(autoRelease: 15 * 60)
+        h.engine.handleTap()
+        h.clock.advance(3600)
+
+        h.engine.reconcile()
+
+        XCTAssertNil(h.store.activeSession, "an overdue timed session ends at reconcile")
+        XCTAssertNil(h.shield.appliedMode)
+        XCTAssertEqual(h.store.history.count, 1)
+    }
+
+    func testReconcileReArmsAReleaseThatIsStillInTheFuture() {
+        let h = Harness()
+        h.addMode(autoRelease: 60 * 60)
+        h.engine.handleTap()
+        let armedAtStart = h.scheduler.scheduled
+
+        h.clock.advance(10 * 60)
+        h.engine.reconcile()
+
+        XCTAssertNotNil(h.store.activeSession, "still inside the window")
+        XCTAssertEqual(h.scheduler.scheduled.count, armedAtStart.count + 1,
+                       "the release is re-armed in case the first registration was lost")
+        XCTAssertEqual(h.scheduler.scheduled.last, armedAtStart.last,
+                       "at the same deadline — derived from the session start, not from now")
+    }
+
+    func testReconcileLeavesAnUntimedSessionAlone() {
+        let h = Harness()
+        h.addMode(autoRelease: nil)
+        h.engine.handleTap()
+        h.clock.advance(24 * 3600)
+
+        h.engine.reconcile()
+
+        XCTAssertNotNil(h.store.activeSession, "until-I-tap-again means exactly that")
+        XCTAssertTrue(h.scheduler.scheduled.isEmpty)
     }
 }
 
@@ -189,120 +427,5 @@ final class ScheduleActivityNamingTests: XCTestCase {
         XCTAssertNil(ScheduleActivityNaming.modeID(from: "something.else"))
         XCTAssertNil(ScheduleActivityNaming.modeID(from: "tim.schedule.not-a-uuid"))
         XCTAssertNil(ScheduleActivityNaming.modeID(from: ""))
-    }
-}
-
-/// Re-registering a DeviceActivity window tears the old one down first, and
-/// tearing down a window that is currently *open* means its end is never
-/// delivered — the scheduled session would then run forever. `syncSchedules`
-/// is called on every foreground, so doing nothing when nothing changed is a
-/// correctness requirement, not an optimisation.
-final class ScheduleSyncIdempotenceTests: XCTestCase {
-
-    private func nightly() -> ModeSchedule {
-        ModeSchedule(startHour: 22, startMinute: 0, endHour: 7, endMinute: 0,
-                     weekdays: ModeSchedule.everyDay)
-    }
-
-    /// Counts how many times the system was actually asked to re-register.
-    private final class CountingScheduler: SessionScheduling {
-        var setCount = 0
-        var last: [RecurringSchedule] = []
-        func scheduleRelease(at date: Date) {}
-        func cancelScheduledRelease() {}
-        func setRecurringSchedules(_ schedules: [RecurringSchedule]) {
-            setCount += 1
-            last = schedules
-        }
-    }
-
-    private func makeEngine() -> (FakeStore, CountingScheduler, TimEngine) {
-        let store = FakeStore()
-        let scheduler = CountingScheduler()
-        let engine = TimEngine(store: store, shield: SpyShield(),
-                               scheduler: scheduler,
-                               clock: TestClock(Date(timeIntervalSince1970: 1_756_000_000)))
-        return (store, scheduler, engine)
-    }
-
-    private func mode(_ name: String, schedule: ModeSchedule?) -> TimMode {
-        TimMode(name: name, symbol: "circle",
-                blocked: BlockedSelection(payload: Data([1]), appCount: 1),
-                schedule: schedule)
-    }
-
-    func testRepeatedSyncsWithNoChangeTouchTheSystemOnce() {
-        let (store, scheduler, engine) = makeEngine()
-        store.modes = [mode("Sleep", schedule: nightly())]
-
-        engine.syncSchedules()
-        engine.syncSchedules()
-        engine.syncSchedules()
-
-        XCTAssertEqual(scheduler.setCount, 1, "an unchanged set must not be re-registered")
-    }
-
-    func testRepeatedForegroundReconcilesDoNotDisturbALiveWindow() {
-        let (store, scheduler, engine) = makeEngine()
-        store.modes = [mode("Sleep", schedule: nightly())]
-        engine.reconcile()
-        let afterFirst = scheduler.setCount
-
-        for _ in 0..<10 { engine.reconcile() }
-
-        XCTAssertEqual(scheduler.setCount, afterFirst,
-                       "opening the app during a scheduled window must not tear it down")
-    }
-
-    func testAChangedScheduleIsRegistered() {
-        let (store, scheduler, engine) = makeEngine()
-        var sleep = mode("Sleep", schedule: nightly())
-        store.modes = [sleep]
-        engine.syncSchedules()
-
-        sleep.schedule?.startHour = 23
-        store.modes = [sleep]
-        engine.syncSchedules()
-
-        XCTAssertEqual(scheduler.setCount, 2)
-        XCTAssertEqual(scheduler.last.first?.schedule.startHour, 23)
-    }
-
-    func testAddingAndRemovingAModeEachResync() {
-        let (store, scheduler, engine) = makeEngine()
-        let sleep = mode("Sleep", schedule: nightly())
-
-        store.modes = [sleep]
-        engine.syncSchedules()
-        XCTAssertEqual(scheduler.setCount, 1)
-
-        store.modes = []
-        engine.syncSchedules()
-        XCTAssertEqual(scheduler.setCount, 2)
-        XCTAssertTrue(scheduler.last.isEmpty)
-    }
-
-    func testWeekdaySetOrderDoesNotCauseASpuriousResync() {
-        // weekdays is a Set, so a round trip through storage can reorder it.
-        // Comparing sets rather than arrays is what stops that re-registering.
-        let (store, scheduler, engine) = makeEngine()
-        var s = nightly()
-        s.weekdays = [6, 2, 4, 3, 5]
-        store.modes = [mode("Work", schedule: s)]
-        engine.syncSchedules()
-
-        var reordered = s
-        reordered.weekdays = [2, 3, 4, 5, 6]
-        store.modes = [mode2(store, reordered)]
-        engine.syncSchedules()
-
-        XCTAssertEqual(scheduler.setCount, 1, "same days in a different order is the same schedule")
-    }
-
-    /// Rebuilds the stored mode with a new schedule but the same id.
-    private func mode2(_ store: FakeStore, _ schedule: ModeSchedule) -> TimMode {
-        var m = store.modes[0]
-        m.schedule = schedule
-        return m
     }
 }

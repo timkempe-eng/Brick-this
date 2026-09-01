@@ -72,7 +72,7 @@ struct TimEngine {
 
     // MARK: - Starting and stopping
 
-    func tim(with mode: TimMode) {
+    func tim(with mode: TimMode, startedBySchedule: Bool = false) {
         // Starting while a session is running would drop the old one from
         // history without ever ending it. Close it out first so the record
         // stays honest, whoever called us.
@@ -86,7 +86,8 @@ struct TimEngine {
         // in the app able to release it.
         store.activeSession = TimSession(modeID: mode.id,
                                          modeName: mode.name,
-                                         startedAt: clock.now)
+                                         startedAt: clock.now,
+                                         startedBySchedule: startedBySchedule ? true : nil)
         shield.apply(mode)
 
         if let duration = mode.autoUnTimAfter {
@@ -141,20 +142,33 @@ struct TimEngine {
             .map { RecurringSchedule(modeID: $0.id, schedule: $0.schedule!) }
     }
 
-    /// Hands the system the full set of live schedules. Declarative, so a Mode
-    /// that was deleted or switched off can't leave a schedule behind that
-    /// still fires.
+    /// Brings the system's registered windows to the current live set, by
+    /// diffing against what was last synced and touching only what changed.
     ///
-    /// Idempotent, and that is load-bearing rather than an optimisation.
-    /// Re-registering tears down every window first, and tearing down a window
-    /// that is currently *open* means the system never delivers its end — so a
-    /// scheduled session would run forever. Since this is called on every
-    /// foreground via `reconcile()`, it must do nothing when nothing changed.
-    func syncSchedules() {
+    /// The diff is load-bearing, not an optimisation: stopping a window that
+    /// is currently *open* means the system never delivers its end, so a
+    /// scheduled session would run forever. A Mode whose schedule didn't
+    /// change is never touched, even while other Modes are edited around it —
+    /// and a no-change sync (this runs on every foreground) touches nothing.
+    ///
+    /// Returns false when some windows failed to register — the system caps
+    /// how many activities an app may monitor. The synced state is then NOT
+    /// recorded, so the next sync retries instead of believing a registration
+    /// that never happened.
+    @discardableResult
+    func syncSchedules() -> Bool {
         let desired = desiredSchedules
-        guard desired != store.syncedSchedules else { return }
-        scheduler.setRecurringSchedules(desired)
-        store.syncedSchedules = desired
+        let (stop, start) = ScheduleWindows.diff(
+            from: ScheduleWindows.windows(for: store.syncedSchedules),
+            to: ScheduleWindows.windows(for: desired)
+        )
+
+        if !stop.isEmpty { scheduler.stopWindows(named: stop) }
+        let failed = start.isEmpty ? [] : scheduler.startWindows(start)
+
+        guard failed.isEmpty else { return false }
+        if store.syncedSchedules != desired { store.syncedSchedules = desired }
+        return true
     }
 
     /// The system reached the start of a Mode's scheduled window.
@@ -165,13 +179,17 @@ struct TimEngine {
         guard let mode = store.modes.first(where: { $0.id == modeID }), mode.hasLiveSchedule else {
             return
         }
-        tim(with: mode)
+        tim(with: mode, startedBySchedule: true)
     }
 
     /// The system reached the end of a Mode's scheduled window.
     func endScheduledSession(modeID: UUID) {
-        // Only release the session this schedule is responsible for.
-        guard let active = store.activeSession, active.modeID == modeID else { return }
+        // Only release the session this schedule started. Matching on Mode
+        // alone would let Sleep's 07:00 boundary end a session the user
+        // started by hand with Sleep at 20:00, meaning "until I tap again".
+        guard let active = store.activeSession,
+              active.modeID == modeID,
+              active.startedBySchedule == true else { return }
         unTim(byEmergency: false)
     }
 
@@ -194,6 +212,23 @@ struct TimEngine {
                 unTim(byEmergency: false)
                 return
             }
+
+            // A timed session's release can be lost — the process died between
+            // recording the session and registering it, or registration failed
+            // silently. Restoring only the shield would turn "Tim me for 15
+            // minutes" into "until you find the tag". Overdue ends now;
+            // otherwise the release is re-armed (the adapter no-ops when the
+            // window is already registered, so this never disturbs a live one).
+            if let duration = mode.autoUnTimAfter {
+                let release = session.startedAt.addingTimeInterval(
+                    max(duration, Self.minimumScheduledRelease))
+                if clock.now >= release {
+                    unTim(byEmergency: false)
+                    return
+                }
+                scheduler.scheduleRelease(at: release)
+            }
+
             shield.apply(mode)
         } else {
             shield.clear()

@@ -26,9 +26,16 @@ protocol SessionScheduling {
     func scheduleRelease(at date: Date)
     func cancelScheduledRelease()
 
-    /// Replaces the full set of recurring schedules. Declarative rather than
-    /// add/remove, so the system's registered set can't drift from ours.
-    func setRecurringSchedules(_ schedules: [RecurringSchedule])
+    /// Stops exactly these windows, by name. Never called for a window whose
+    /// schedule is unchanged — see `ScheduleWindows.diff`.
+    func stopWindows(named names: [String])
+
+    /// Registers exactly these windows. Returns the names that FAILED to
+    /// register (the system caps how many activities an app may monitor), so
+    /// the engine can refuse to record a sync that didn't fully happen.
+    /// Skips a name that is already registered, which makes retries safe.
+    @discardableResult
+    func startWindows(_ windows: [ScheduledWindow]) -> [String]
 }
 
 struct RecurringSchedule: Codable, Equatable, Hashable {

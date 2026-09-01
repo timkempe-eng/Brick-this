@@ -54,5 +54,6 @@ it; worth a migration path before it ships to anyone else.
 
 **`DeviceActivitySchedule` pins one weekday per window.** An every-day schedule
 collapses to a single repeating window, but a three-day-a-week Mode costs three.
-The system caps how many activities an app may monitor, so a large number of
-scheduled Modes would eventually hit that ceiling.
+The system caps how many activities an app may monitor; hitting the ceiling is
+now reported — the sync refuses to record itself and the editor says so —
+rather than a schedule that looks configured and silently never fires.

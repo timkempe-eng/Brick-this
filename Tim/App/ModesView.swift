@@ -193,11 +193,19 @@ private struct ScheduleSection: View {
             Text("Schedule")
         } footer: {
             if let schedule = mode.schedule, schedule.isEnabled {
-                if schedule.isValid {
-                    Text("\(schedule.displayText()). Your phone \(Vocab.verbThirdPerson) itself, and you can still tap out early.")
-                } else {
+                if !schedule.isValid {
                     Text("This schedule can't run: pick at least one day and a window of 15 minutes or more.")
                         .foregroundStyle(.orange)
+                } else if !mode.blocksAnything {
+                    // A valid schedule on a Mode that blocks nothing is never
+                    // registered — promising "Tims itself" here would be the
+                    // looks-configured-does-nothing failure.
+                    Text("This schedule won't run until the \(Vocab.modeNoun.lowercased()) blocks something — pick apps above.")
+                        .foregroundStyle(.orange)
+                } else if let next = schedule.nextStart(after: Date()) {
+                    Text("\(schedule.displayText()). Next: \(next.formatted(.dateTime.weekday(.wide).hour().minute())). Your phone \(Vocab.verbThirdPerson) itself, and you can still tap out early.")
+                } else {
+                    Text("\(schedule.displayText()). Your phone \(Vocab.verbThirdPerson) itself, and you can still tap out early.")
                 }
             } else {
                 Text("Off. This \(Vocab.modeNoun.lowercased()) only runs when you tap.")

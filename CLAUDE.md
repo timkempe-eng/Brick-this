@@ -53,7 +53,7 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 98 tests, seconds
+swift test                      # 109 tests, seconds
 ./scripts/lint-vocabulary.sh
 python3 scripts/preflight.py    # 59 checks on the Xcode wiring
 ```
@@ -68,7 +68,9 @@ The engine is a state machine over time, so it is tested with fakes and an
 injected clock, not with a device. When you add behaviour, add the test that
 would have caught its absence — and check the suite actually bites by breaking
 the code on purpose. Six mutations were used to validate the original suite;
-every one turned it red.
+every one turned it red. When you mutation-check, build clean or verify the
+rebuild happened — a stale incremental build once reported a surviving mutant
+that a direct run proved dead.
 
 Things the tests deliberately pin down, because they are decisions rather than
 implementation details: a session counts toward the day it *started*; a streak

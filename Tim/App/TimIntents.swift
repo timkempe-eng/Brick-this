@@ -25,6 +25,15 @@ struct ToggleTimIntent: AppIntent {
             engine.store.modes.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
         }
 
+        // A name that no longer matches anything — the Mode was renamed or
+        // deleted after the automation was built — must stop here. Falling
+        // through would let the sole-usable-mode fallback silently Tim with a
+        // *different* Mode's blocklist.
+        if modeName != nil, requested == nil, engine.store.activeSession == nil {
+            throw $modeName.needsValueError(
+                "\"\(modeName ?? "")\" isn't one of your \(Vocab.modeNoun)s any more — which one?")
+        }
+
         switch engine.handleTap(preferredMode: requested) {
         case .timmed(let mode):
             return .result(dialog: "\(Vocab.verbPast). \(mode.name).")

@@ -47,5 +47,13 @@ struct OnboardingView: View {
             .controlSize(.large)
         }
         .padding(28)
+        // The model's banner alerts are otherwise only rendered by HomeView,
+        // which doesn't exist yet while onboarding is on screen.
+        .alert(Vocab.appName, isPresented: Binding(get: { model.banner != nil },
+                                                   set: { if !$0 { model.banner = nil } })) {
+            Button("OK") { model.banner = nil }
+        } message: {
+            Text(model.banner ?? "")
+        }
     }
 }

@@ -148,7 +148,7 @@ adding a file.
 The core loop, the three tap paths, scheduled Modes and the stats screen are
 built. Widgets and Android are [not done](docs/roadmap.md).
 
-`swift test` passes — 98 tests covering the whole engine state machine,
+`swift test` passes — 109 tests covering the whole engine state machine,
 recurring schedules, the override allowance, and the session/streak maths. The suite is mutation-checked:
 deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
 history bound, the scheduler floor or the reconcile clear each turns it red.

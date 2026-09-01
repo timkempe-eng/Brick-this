@@ -64,6 +64,9 @@ final class TimModel: ObservableObject {
             authorization = AuthorizationCenter.shared.authorizationStatus
             engine.store.hasOnboarded = true
         } catch {
+            // Refresh here too: the denied state is what makes OnboardingView
+            // show its explanation instead of looking like a dead button.
+            authorization = AuthorizationCenter.shared.authorizationStatus
             banner = "Screen Time access was declined. Tim can't hide apps without it."
         }
     }
@@ -97,6 +100,12 @@ final class TimModel: ObservableObject {
 
     func save(_ mode: TimMode) {
         engine.upsert(mode)
+        // upsert syncs internally; ask again to learn whether it stuck. The
+        // sync is a no-op diff when it already succeeded, and a retry when it
+        // didn't — a schedule the system refused must not look configured.
+        if !engine.syncSchedules() {
+            banner = "The system couldn't register every schedule — too many scheduled \(Vocab.modeNoun)s. Trim one and save again."
+        }
         reload()
     }
 
