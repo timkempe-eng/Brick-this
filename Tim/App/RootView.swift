@@ -1,11 +1,33 @@
 import SwiftUI
 import FamilyControls
 
+/// Lets the UI tests past the Screen Time gate.
+///
+/// A Simulator never grants Family Controls authorization, so without this
+/// every screen except onboarding is unreachable in CI — six hundred lines of
+/// SwiftUI that only ever run for the first time on someone's phone.
+///
+/// Compiled out of Release entirely, so a shipping build cannot contain the
+/// bypass at all, let alone be talked into it. Launch arguments are not
+/// something a user can set on an installed app in any case; the `#if DEBUG`
+/// is belt as well as braces.
+enum UITestHooks {
+    static let bypassOnboarding = "-TimBypassOnboarding"
+
+    static var isBypassingOnboarding: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains(bypassOnboarding)
+        #else
+        false
+        #endif
+    }
+}
+
 struct RootView: View {
     @EnvironmentObject private var model: TimModel
 
     var body: some View {
-        if model.authorization != .approved {
+        if model.authorization != .approved && !UITestHooks.isBypassingOnboarding {
             OnboardingView()
         } else {
             HomeView()
@@ -98,12 +120,15 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showingModes = true } label: { Image(systemName: "square.grid.2x2") }
+                        .accessibilityLabel("\(Vocab.modeNoun)s")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingStats = true } label: { Image(systemName: "chart.bar") }
+                        .accessibilityLabel("Stats")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingSettings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel("Settings")
                 }
             }
             .nfcErrorAlert($scanner.lastError)

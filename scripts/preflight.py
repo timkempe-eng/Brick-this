@@ -265,6 +265,18 @@ if ui_tests:
         host = targets[name]["settings"]["base"].get("TEST_TARGET_NAME")
         check(host in targets, f"{name}: TEST_TARGET_NAME '{host}' is not a target")
 
+# --- An icon-only button with no accessibility label is unreachable by
+#     VoiceOver, which reads the SF Symbol name or nothing at all. It is also
+#     unfindable by the UI tests, so the two problems arrive together.
+for swift in (ROOT / "Tim/App").glob("*.swift"):
+    text = swift.read_text()
+    for match in re.finditer(
+            r"Button\s*\{[^}]*\}\s*label:\s*\{\s*Image\(systemName:[^}]*\}", text):
+        window = text[match.start():match.end() + 120]
+        check("accessibilityLabel" in window,
+              f"{swift.name}: an icon-only Button has no accessibilityLabel "
+              f"near offset {match.start()}")
+
 print(f"preflight: {checks} checks")
 if problems:
     print("\nFAILED:")
