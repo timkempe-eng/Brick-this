@@ -47,19 +47,8 @@ struct ModesView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
-            .sheet(item: $editing) { _ in
-                // Bind to `editing` itself rather than handing the editor a
-                // copy to keep in its own @State. Those writes did not stick:
-                // the Simulator showed every control in the editor inert —
-                // Strict and the schedule switch both read back off straight
-                // after a tap, while Cancel worked, so taps arrived and actions
-                // ran but the editor's own state did not survive.
-                //
-                // `editing` is a scratch copy that only reaches the store when
-                // Save calls `model.save`, so Cancel still discards.
-                if let mode = Binding($editing) {
-                    ModeEditorView(mode: mode) { model.save($0) }
-                }
+            .sheet(item: $editing) { mode in
+                ModeEditorView(mode: mode) { model.save($0) }
             }
         }
     }
@@ -67,8 +56,7 @@ struct ModesView: View {
 }
 
 struct ModeEditorView: View {
-    /// A binding, not a copy. See the sheet that presents this.
-    @Binding var mode: TimMode
+    @State var mode: TimMode
     let onSave: (TimMode) -> Void
 
     @Environment(\.dismiss) private var dismiss
