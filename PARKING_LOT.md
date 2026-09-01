@@ -47,6 +47,17 @@ add what the work revealed.
 
 ## Closed (this sweep)
 
+- [x] **The schedule toggle was never broken.** Four CI runs chased a
+      "schedule can't be turned on" bug that did not exist. The UI test
+      asserted the footer would promise "your phone Tims itself"; the app
+      refused, because a starter Mode blocks nothing and a Mode that blocks
+      nothing is never registered with the scheduler — so it says what is
+      still missing instead. The app was right every time. Two lessons, both
+      paid for: assert the behaviour the product actually specifies, not the
+      one you assumed; and read *which* assertion failed before theorising —
+      the first one had been passing since run 27, which alone ruled out the
+      binding.
+
 - [x] **Schema versioning.** Stored values now carry the version that wrote
       them, so a future shape change migrates instead of silently resetting
       Modes and history. Data written by a *later* build is detected and

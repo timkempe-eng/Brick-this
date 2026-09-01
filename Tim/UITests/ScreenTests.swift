@@ -47,37 +47,39 @@ final class ScreenTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Deep Work"].waitForExistence(timeout: 10))
     }
 
+    /// Turning the schedule on must change what the Mode says it will do —
+    /// and for a starter Mode, which blocks nothing, what it says must NOT be
+    /// that your phone will Tim itself. A Mode that blocks nothing is never
+    /// registered with the system scheduler, so promising it would be the
+    /// looks-configured-does-nothing failure. That is a decision, not an
+    /// implementation detail, which is why it is pinned here.
+    ///
+    /// Three CI runs were spent failing this test on the promise. The app was
+    /// right to refuse to make it; the test was asserting the wrong sentence.
     func testTurningOnAScheduleChangesWhatTheModePromises() {
         app.buttons["Modes"].firstMatch.tap()
         app.staticTexts["Deep Work"].firstMatch.tap()
         let toggle = app.switches["Run on a schedule"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 15))
 
-        // Off, the footer says the Mode only runs when you tap.
+        // Off, the Mode only runs when you tap.
         XCTAssertTrue(footer(containing: "only runs when you tap").waitForExistence(timeout: 10),
                       "A starter Mode should begin with no schedule.")
 
         toggle.tap()
 
-        // On, it promises the phone will Tim itself.
+        // On, it says what is still missing rather than implying it will run.
         //
-        // Asserting the footer rather than the switch's own `value`: two runs
+        // Asserting the words rather than the switch's own `value`: two runs
         // were spent on a value assertion that never turned true, using a
         // hand-rolled poll rather than the sanctioned wait. Whether XCUITest
         // reports a SwiftUI Toggle's value promptly is not something this test
-        // should depend on — the words the user reads are, and they come from
-        // the same binding either way.
-        XCTAssertTrue(footer(containing: "Tims itself").waitForExistence(timeout: 15),
+        // should depend on. The footer comes from the same binding, and the
+        // words are what the user actually acts on.
+        XCTAssertTrue(footer(containing: "blocks something").waitForExistence(timeout: 15),
                       "Enabling the schedule did not change what the Mode promises.")
-    }
-
-    /// `matching`, not `containing`: containing filters by DESCENDANTS, so on a
-    /// static text it matches nothing and the assertion silently passes on the
-    /// existence of any label at all.
-    private func footer(containing text: String) -> XCUIElement {
-        app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS[c] %@", text))
-            .firstMatch
+        XCTAssertFalse(footer(containing: "itself").exists,
+                       "A Mode that blocks nothing must not promise to Tim your phone.")
     }
 
     func testSettingsOpens() {
