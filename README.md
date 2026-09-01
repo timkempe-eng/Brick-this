@@ -52,7 +52,7 @@ forms — builds and tests anywhere, no Mac required:
 ```bash
 swift test                      # 98 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
-python3 scripts/preflight.py    # 85 checks on the Xcode wiring
+python3 scripts/preflight.py    # 87 checks on the Xcode wiring
 ```
 
 CI runs all three on Linux, plus a fourth job on a macOS runner that actually
@@ -148,7 +148,7 @@ adding a file.
 The core loop, the three tap paths, scheduled Modes and the stats screen are
 built. Widgets and Android are [not done](docs/roadmap.md).
 
-`swift test` passes — 127 tests covering the whole engine state machine,
+`swift test` passes — 138 tests covering the whole engine state machine,
 recurring schedules, the override allowance, and the session/streak maths. The suite is mutation-checked:
 deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
 history bound, the scheduler floor or the reconcile clear each turns it red.

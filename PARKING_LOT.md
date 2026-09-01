@@ -47,6 +47,19 @@ add what the work revealed.
 
 ## Closed (this sweep)
 
+- [x] **Schema versioning.** Stored values now carry the version that wrote
+      them, so a future shape change migrates instead of silently resetting
+      Modes and history. Data written by a *later* build is detected and
+      reported rather than treated as corrupt, so a TestFlight rollback can't
+      destroy what it merely fails to understand. Done now because it costs
+      nothing before the first install and can't be retrofitted cleanly after.
+- [x] **Simulator launch test.** The app provably launches, renders and
+      survives a relaunch — which compilation never showed.
+- [x] Mutation harness (`scripts/mutate.sh`). The hand-rolled loop decided by
+      grepping for "with N failures" and XCTest prints "with 1 failure", so
+      every mutation caught by exactly one test read as a survivor. Blamed on
+      stale builds three times before the regex turned out to be the cause.
+
 - [x] **Lock Screen widget.** Status and a live timer without unlocking. What
       it says lives in Core as `WidgetSnapshot` and is tested; the extension is
       layout. A fifth port, `WidgetRefreshing`, means every process that can

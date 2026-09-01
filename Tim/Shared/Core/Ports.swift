@@ -70,4 +70,11 @@ protocol TimPersisting: AnyObject {
     /// The schedule set last handed to the system. Kept so we can tell whether
     /// a re-registration is actually needed — see `TimEngine.syncSchedules`.
     var syncedSchedules: [RecurringSchedule] { get set }
+
+    /// True when something on disk was written by a later build than this one
+    /// — a TestFlight rollback, or an older build on a second device. The
+    /// values read as their defaults, so without this the user would see empty
+    /// Modes and a lost streak with no explanation, and the first thing they
+    /// did would overwrite the data they still have.
+    var hasDataFromANewerBuild: Bool { get }
 }

@@ -11,6 +11,7 @@ final class FakeStore: TimPersisting {
     var emergencyUses: [Date] = []
     var hasOnboarded = false
     var syncedSchedules: [RecurringSchedule] = []
+    var hasDataFromANewerBuild = false
 }
 
 /// Records what the engine asked of the shield, and in what order.

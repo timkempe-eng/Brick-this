@@ -27,6 +27,17 @@ final class TimModel: ObservableObject {
     init(engine: TimEngine = .live) {
         self.engine = engine
         reload()
+
+        if engine.store.hasDataFromANewerBuild {
+            // Their Modes and history are intact on disk, just unreadable
+            // here. Saying so beats showing an empty app and letting the
+            // first edit overwrite what they still have.
+            banner = """
+                Some of your data was written by a newer version of \(Vocab.appName) \
+                and can't be read by this one. Update to see it again — changes you \
+                make here will replace it.
+                """
+        }
     }
 
     func reload() {

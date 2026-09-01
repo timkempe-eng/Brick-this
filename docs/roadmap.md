@@ -41,15 +41,9 @@ cosmetic, entirely worth it.
 
 ## Known limitations
 
-**Compiled, but never run.** The app and all three extensions build cleanly
-against the iOS SDK in CI, so the code is type-checked and links. Nothing has
-executed on a device: Screen Time and NFC both no-op in the Simulator, so the
-first real evidence that a tap blocks anything comes from TestFlight.
-
-**Stored data has no schema versioning.** Arrays decode leniently, so one bad
-record can't destroy a whole history, but a rename like `TimMode.selection` →
-`TimMode.blocked` still orphans the old key. Fine before anyone is relying on
-it; worth a migration path before it ships to anyone else.
+**Compiled and launched, but never used in anger.** The app now provably comes
+up and renders on a Simulator in CI. Screen Time and NFC still no-op there, so
+the first evidence that a tap actually blocks an app remains TestFlight.
 
 **`DeviceActivitySchedule` pins one weekday per window.** An every-day schedule
 collapses to a single repeating window, but a three-day-a-week Mode costs three.

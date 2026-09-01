@@ -58,9 +58,9 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 127 tests, seconds
+swift test                      # 138 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 85 checks on the Xcode wiring
+python3 scripts/preflight.py    # 87 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group
@@ -73,9 +73,14 @@ The engine is a state machine over time, so it is tested with fakes and an
 injected clock, not with a device. When you add behaviour, add the test that
 would have caught its absence — and check the suite actually bites by breaking
 the code on purpose. Six mutations were used to validate the original suite;
-every one turned it red. When you mutation-check, build clean or verify the
-rebuild happened — a stale incremental build once reported a surviving mutant
-that a direct run proved dead.
+every one turned it red.
+
+Use `scripts/mutate.sh` rather than a hand-rolled loop. Deciding by grepping
+the output for "with N failures" is wrong — XCTest prints "with 1 failure",
+singular, so every mutation caught by exactly one test reads as a survivor.
+That misdiagnosis was blamed on stale incremental builds three times before the
+regex turned out to be the culprit. The script decides by exit code, and tells
+a mutation that failed to compile apart from one that survived.
 
 Things the tests deliberately pin down, because they are decisions rather than
 implementation details: a session counts toward the day it *started*; a streak

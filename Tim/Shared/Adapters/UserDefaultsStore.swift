@@ -54,8 +54,8 @@ final class UserDefaultsStore: TimPersisting {
     }
 
     var pairedTagUIDs: [String] {
-        get { defaults.stringArray(forKey: Key.pairedTagUIDs) ?? [] }
-        set { defaults.set(newValue, forKey: Key.pairedTagUIDs) }
+        get { decodeArray(String.self, Key.pairedTagUIDs) ?? [] }
+        set { encode(newValue, Key.pairedTagUIDs) }
     }
 
     var emergencyUses: [Date] {
@@ -73,21 +73,44 @@ final class UserDefaultsStore: TimPersisting {
         set { defaults.set(newValue, forKey: Key.hasOnboarded) }
     }
 
-    // MARK: - Codable plumbing
+    // MARK: - Storage
 
-    /// Skips unreadable elements rather than discarding the whole array.
-    private func decodeArray<T: Decodable>(_ type: T.Type, _ key: String) -> [T]? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return LenientDecoding.array(T.self, from: data)
+    /// Set by any read that finds a later schema than this build understands.
+    private(set) var hasDataFromANewerBuild = false
+
+    /// Arrays skip unreadable elements rather than discarding the whole array,
+    /// so one bad record cannot cost a whole history.
+    private func decodeArray<T: Decodable & Equatable>(_ type: T.Type, _ key: String) -> [T]? {
+        switch SchemaCoding.readArray(T.self, from: defaults.data(forKey: key)) {
+        case .value(let values):  return values
+        case .missing, .unreadable: return nil
+        case .tooNew(let schema):
+            noteNewerBuild(key: key, schema: schema)
+            return nil
+        }
     }
 
-    private func decode<T: Decodable>(_ type: T.Type, _ key: String) -> T? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
+    private func decode<T: Decodable & Equatable>(_ type: T.Type, _ key: String) -> T? {
+        switch SchemaCoding.read(T.self, from: defaults.data(forKey: key)) {
+        case .value(let value):   return value
+        case .missing, .unreadable: return nil
+        case .tooNew(let schema):
+            noteNewerBuild(key: key, schema: schema)
+            return nil
+        }
     }
 
     private func encode<T: Encodable>(_ value: T?, _ key: String) {
         guard let value else { return defaults.removeObject(forKey: key) }
-        defaults.set(try? JSONEncoder().encode(value), forKey: key)
+        defaults.set(SchemaCoding.encode(value), forKey: key)
+    }
+
+    /// Deliberately does not block the write that will follow.
+    ///
+    /// Refusing to save would leave the app looking broken with no way out.
+    /// Telling the user plainly, and letting them decide whether to go on, is
+    /// the better trade for data they can still recover by updating.
+    private func noteNewerBuild(key: String, schema: Int) {
+        hasDataFromANewerBuild = true
     }
 }
