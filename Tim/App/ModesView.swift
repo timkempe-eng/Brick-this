@@ -135,22 +135,28 @@ struct ModeEditorView: View {
 private struct ScheduleSection: View {
     @Binding var mode: TimMode
 
+    /// A sensible default that is already valid, so switching a schedule on
+    /// never leaves one that silently can't fire.
+    private static let defaultSchedule = ModeSchedule(
+        startHour: 22, startMinute: 0,
+        endHour: 7, endMinute: 0,
+        weekdays: ModeSchedule.everyDay
+    )
+
     private var isOn: Binding<Bool> {
         Binding(
             get: { mode.schedule?.isEnabled ?? false },
             set: { on in
-                if on {
-                    // A sensible default that is already valid, so switching it
-                    // on never leaves a schedule that silently can't fire.
-                    mode.schedule = mode.schedule ?? ModeSchedule(
-                        startHour: 22, startMinute: 0,
-                        endHour: 7, endMinute: 0,
-                        weekdays: ModeSchedule.everyDay
-                    )
-                    mode.schedule?.isEnabled = true
-                } else {
-                    mode.schedule?.isEnabled = false
-                }
+                // Build the whole value, then write it ONCE.
+                //
+                // This used to write `mode.schedule` and then read it straight
+                // back to set `isEnabled`. A read-after-write through a Binding
+                // is not guaranteed to see the write, so the schedule was
+                // created and then never enabled — the toggle sprang back and
+                // a schedule could not be turned on at all.
+                var schedule = mode.schedule ?? Self.defaultSchedule
+                schedule.isEnabled = on
+                mode.schedule = schedule
             }
         )
     }
@@ -168,9 +174,13 @@ private struct ScheduleSection: View {
                                              second: 0, of: Date()) ?? Date()
             },
             set: { newValue in
+                // Same single-write rule as above: two chained writes through a
+                // Binding would leave the minute set from a stale read.
+                guard var schedule = mode.schedule else { return }
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
-                mode.schedule?[keyPath: hour] = parts.hour ?? 0
-                mode.schedule?[keyPath: minute] = parts.minute ?? 0
+                schedule[keyPath: hour] = parts.hour ?? 0
+                schedule[keyPath: minute] = parts.minute ?? 0
+                mode.schedule = schedule
             }
         )
     }
@@ -186,7 +196,11 @@ private struct ScheduleSection: View {
                            displayedComponents: .hourAndMinute)
                 WeekdayPicker(weekdays: Binding(
                     get: { mode.schedule?.weekdays ?? [] },
-                    set: { mode.schedule?.weekdays = $0 }
+                    set: { days in
+                        guard var schedule = mode.schedule else { return }
+                        schedule.weekdays = days
+                        mode.schedule = schedule
+                    }
                 ))
             }
         } header: {
