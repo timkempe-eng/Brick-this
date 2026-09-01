@@ -58,7 +58,9 @@ struct DeviceActivityScheduler: SessionScheduling {
 
     func stopWindows(named names: [String]) {
         guard !names.isEmpty else { return }
-        center.stopMonitoring(names.map(DeviceActivityName.init))
+        // A closure, not `.init`: DeviceActivityName has both init(_:) and
+        // init(rawValue:), and the unapplied reference is ambiguous.
+        center.stopMonitoring(names.map { DeviceActivityName($0) })
     }
 
     func startWindows(_ windows: [ScheduledWindow]) -> [String] {
