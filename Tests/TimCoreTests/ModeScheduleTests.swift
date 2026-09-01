@@ -133,3 +133,72 @@ final class ModeScheduleTests: XCTestCase {
                       "got \(text)")
     }
 }
+
+/// The switch in the Mode editor, as logic rather than as a view.
+///
+/// This is the test that was missing. The behaviour lived in a
+/// `Binding(get:set:)` inside `ScheduleSection`, so the only thing that could
+/// exercise it was a Simulator, and when it broke the Simulator could only say
+/// "the switch reads off" — six CI runs without ever naming the cause.
+final class ScheduleTogglingTests: XCTestCase {
+
+    func testAModeStartsUnscheduled() {
+        XCTAssertFalse(TimMode(name: "Deep Work", symbol: "brain").isScheduled)
+    }
+
+    func testSwitchingOnCreatesAScheduleThatCanActuallyFire() {
+        var mode = TimMode(name: "Deep Work", symbol: "brain")
+        mode.isScheduled = true
+
+        XCTAssertTrue(mode.isScheduled)
+        XCTAssertNotNil(mode.schedule)
+        // The point of a starter window: switching the schedule on must never
+        // leave one that looks set up and silently never fires.
+        XCTAssertTrue(mode.schedule?.isValid == true)
+    }
+
+    func testSwitchingOffKeepsTheWindowSoTurningItBackOnRestoresIt() {
+        var mode = TimMode(name: "Sleep", symbol: "moon")
+        mode.isScheduled = true
+        mode.editableSchedule.startHour = 23
+
+        mode.isScheduled = false
+        XCTAssertFalse(mode.isScheduled)
+
+        mode.isScheduled = true
+        XCTAssertEqual(mode.schedule?.startHour, 23,
+                       "Toggling off and on again discarded the window you had set.")
+    }
+
+    func testSwitchingOnPreservesAnExistingDisabledSchedule() {
+        var mode = TimMode(name: "Gym", symbol: "figure.run")
+        mode.schedule = ModeSchedule(isEnabled: false,
+                                     startHour: 6, startMinute: 30,
+                                     endHour: 8, endMinute: 0,
+                                     weekdays: ModeSchedule.weeknights)
+        mode.isScheduled = true
+
+        XCTAssertEqual(mode.schedule?.startHour, 6)
+        XCTAssertEqual(mode.schedule?.weekdays, ModeSchedule.weeknights)
+    }
+
+    func testEditingThroughTheEditableScheduleStores() {
+        var mode = TimMode(name: "Dinner", symbol: "fork.knife")
+        // Reading before anything is stored yields the starter, and writing it
+        // back stores it — that is what lets every control below the switch
+        // bind directly instead of through an optional.
+        mode.editableSchedule.weekdays = [2, 4]
+        XCTAssertEqual(mode.schedule?.weekdays, [2, 4])
+    }
+
+    func testTheStarterWindowIsValid() {
+        XCTAssertTrue(ModeSchedule.starter.isValid)
+    }
+
+    func testAScheduledModeThatBlocksNothingIsNeverLive() {
+        var mode = TimMode(name: "Deep Work", symbol: "brain")
+        mode.isScheduled = true
+        XCTAssertFalse(mode.hasLiveSchedule,
+                       "A Mode that blocks nothing must never be registered.")
+    }
+}

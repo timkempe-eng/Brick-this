@@ -130,83 +130,52 @@ struct ModeEditorView: View {
 
 /// Lets a Mode run on its own — "Sleep, every night, 22:00–07:00".
 ///
-/// The schedule is optional on `TimMode`, so the toggle creates and discards
-/// it rather than binding to a field that might not be there.
+/// Every control binds DIRECTLY to a property of the Mode. There used to be a
+/// `Binding(get:set:)` built here for each one; the switch bound that way did
+/// not stick — the Simulator showed it reading off immediately after a tap,
+/// with the footer still saying the Mode only runs when you tap. The decision
+/// those closures carried now lives on `TimMode`, where it is tested.
 private struct ScheduleSection: View {
     @Binding var mode: TimMode
 
-    /// A sensible default that is already valid, so switching a schedule on
-    /// never leaves one that silently can't fire.
-    private static let defaultSchedule = ModeSchedule(
-        startHour: 22, startMinute: 0,
-        endHour: 7, endMinute: 0,
-        weekdays: ModeSchedule.everyDay
-    )
-
-    private var isOn: Binding<Bool> {
-        Binding(
-            get: { mode.schedule?.isEnabled ?? false },
-            set: { on in
-                // Build the whole value, then write it ONCE.
-                //
-                // This used to write `mode.schedule` and then read it straight
-                // back to set `isEnabled`. A read-after-write through a Binding
-                // is not guaranteed to see the write, so the schedule was
-                // created and then never enabled — the toggle sprang back and
-                // a schedule could not be turned on at all.
-                var schedule = mode.schedule ?? Self.defaultSchedule
-                schedule.isEnabled = on
-                mode.schedule = schedule
-            }
-        )
-    }
-
-    /// Bridges the stored hour/minute components to a `DatePicker`, which wants
-    /// a `Date`. Components are what's stored, deliberately: 22:00 should mean
+    /// Bridges stored hour/minute components to a `DatePicker`, which wants a
+    /// `Date`. Components are what's stored, deliberately: 22:00 should mean
     /// 22:00 after a time-zone change, not the instant it once was.
-    private func timeBinding(hour: WritableKeyPath<ModeSchedule, Int>,
-                             minute: WritableKeyPath<ModeSchedule, Int>) -> Binding<Date> {
+    private func time(_ hour: WritableKeyPath<ModeSchedule, Int>,
+                      _ minute: WritableKeyPath<ModeSchedule, Int>) -> Binding<Date> {
         Binding(
             get: {
-                guard let s = mode.schedule else { return Date() }
+                let s = mode.editableSchedule
                 return Calendar.current.date(bySettingHour: s[keyPath: hour],
                                              minute: s[keyPath: minute],
                                              second: 0, of: Date()) ?? Date()
             },
             set: { newValue in
-                // Same single-write rule as above: two chained writes through a
-                // Binding would leave the minute set from a stale read.
-                guard var schedule = mode.schedule else { return }
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
-                schedule[keyPath: hour] = parts.hour ?? 0
-                schedule[keyPath: minute] = parts.minute ?? 0
-                mode.schedule = schedule
+                var updated = mode.editableSchedule
+                updated[keyPath: hour] = parts.hour ?? 0
+                updated[keyPath: minute] = parts.minute ?? 0
+                mode.editableSchedule = updated
             }
         )
     }
 
     var body: some View {
         Section {
-            Toggle("Run on a schedule", isOn: isOn)
+            Toggle("Run on a schedule", isOn: $mode.isScheduled)
 
-            if let schedule = mode.schedule, schedule.isEnabled {
-                DatePicker("Starts", selection: timeBinding(hour: \.startHour, minute: \.startMinute),
+            if mode.isScheduled {
+                DatePicker("Starts", selection: time(\.startHour, \.startMinute),
                            displayedComponents: .hourAndMinute)
-                DatePicker("Ends", selection: timeBinding(hour: \.endHour, minute: \.endMinute),
+                DatePicker("Ends", selection: time(\.endHour, \.endMinute),
                            displayedComponents: .hourAndMinute)
-                WeekdayPicker(weekdays: Binding(
-                    get: { mode.schedule?.weekdays ?? [] },
-                    set: { days in
-                        guard var schedule = mode.schedule else { return }
-                        schedule.weekdays = days
-                        mode.schedule = schedule
-                    }
-                ))
+                WeekdayPicker(weekdays: $mode.editableSchedule.weekdays)
             }
         } header: {
             Text("Schedule")
         } footer: {
-            if let schedule = mode.schedule, schedule.isEnabled {
+            if mode.isScheduled {
+                let schedule = mode.editableSchedule
                 if !schedule.isValid {
                     Text("This schedule can't run: pick at least one day and a window of 15 minutes or more.")
                         .foregroundStyle(.orange)

@@ -18,6 +18,15 @@ struct ModeSchedule: Codable, Hashable {
     /// `Calendar`'s convention: 1 = Sunday … 7 = Saturday.
     var weekdays: Set<Int>
 
+    /// The window a Mode gets the moment scheduling is switched on. Already
+    /// valid, so turning the switch on never leaves a schedule that silently
+    /// can't fire.
+    static let starter = ModeSchedule(
+        startHour: 22, startMinute: 0,
+        endHour: 7, endMinute: 0,
+        weekdays: everyDay
+    )
+
     static let everyDay: Set<Int> = [1, 2, 3, 4, 5, 6, 7]
     static let weeknights: Set<Int> = [2, 3, 4, 5, 6]
 

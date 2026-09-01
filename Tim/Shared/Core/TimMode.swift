@@ -21,6 +21,31 @@ struct TimMode: Codable, Identifiable, Hashable {
     /// Optional so that Modes stored before schedules existed still decode.
     var schedule: ModeSchedule?
 
+    /// Whether this Mode runs on a schedule. The editor's switch binds
+    /// straight to this.
+    ///
+    /// It used to build a `Binding(get:set:)` inside the view instead, which
+    /// put the one decision here — switched on with no schedule yet, so make a
+    /// usable one — somewhere no test could reach. A Simulator run showed the
+    /// switch springing back to off and nothing could say why, because the
+    /// logic wasn't anywhere a test could call it.
+    var isScheduled: Bool {
+        get { schedule?.isEnabled ?? false }
+        set {
+            var updated = schedule ?? .starter
+            updated.isEnabled = newValue
+            schedule = updated
+        }
+    }
+
+    /// The schedule the editor edits. Reading yields the starter window when
+    /// none is stored, so every control below the switch can bind directly
+    /// rather than through an optional.
+    var editableSchedule: ModeSchedule {
+        get { schedule ?? .starter }
+        set { schedule = newValue }
+    }
+
     var blocksAnything: Bool { !blocked.isEmpty }
 
     /// Shown under the name in the Modes list.
