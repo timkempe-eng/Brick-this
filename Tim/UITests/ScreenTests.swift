@@ -47,23 +47,36 @@ final class ScreenTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Deep Work"].waitForExistence(timeout: 10))
     }
 
-    func testTurningOnAScheduleRevealsItsControls() {
+    func testTurningOnAScheduleChangesWhatTheModePromises() {
         app.buttons["Modes"].firstMatch.tap()
         app.staticTexts["Deep Work"].firstMatch.tap()
         let toggle = app.switches["Run on a schedule"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 10))
 
+        // Off, the footer says the Mode only runs when you tap.
+        XCTAssertTrue(app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "only runs when you tap")
+        ).firstMatch.waitForExistence(timeout: 10))
+
         toggle.tap()
 
-        // The pickers only exist once a schedule is on, so this exercises the
-        // optional-schedule binding that creates one on demand.
-        XCTAssertTrue(app.datePickers.firstMatch.waitForExistence(timeout: 10),
-                      "Enabling the schedule did not reveal its time pickers.")
+        // On, it promises the phone will Tim itself. Asserting the footer
+        // rather than the presence of a DatePicker: the binding creating a
+        // schedule on demand is the behaviour worth pinning, and which
+        // XCUIElement type SwiftUI gives a compact time picker is not
+        // something this test should care about.
+        XCTAssertTrue(app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "Tims itself")
+        ).firstMatch.waitForExistence(timeout: 10),
+        "Enabling the schedule did not change what the Mode promises.")
     }
 
     func testSettingsOpens() {
         app.buttons["Settings"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Tags"].waitForExistence(timeout: 10))
+        // The pairing action, not the section header: a header's element type
+        // is a SwiftUI implementation detail, and the button is the thing a
+        // user actually needs to find.
+        XCTAssertTrue(app.buttons["Pair a Tim tag"].waitForExistence(timeout: 10))
     }
 
     func testStatsOpensWithNoHistory() {
