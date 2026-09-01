@@ -12,11 +12,15 @@ name: Release to TestFlight
 #   ASC_ISSUER_ID   the issuer id above the key list
 #   ASC_KEY_P8      base64 of AuthKey_XXXX.p8 — NOT the raw file
 #   MATCH_PASSWORD  passphrase for the stored certificates
+#   MATCH_GIT_TOKEN PAT with contents:read on the repo named by MATCH_GIT_URL.
+#                   Only needed when that is NOT this repo — Actions' own
+#                   GITHUB_TOKEN cannot read another repository's branch.
 #
 # Required repository variable:
-#   MATCH_GIT_URL   repo holding the `match` branch. Reuse an existing one to
-#                   reuse its distribution certificate — Apple caps those at
-#                   about two per account. See docs/signing.md.
+#   MATCH_GIT_URL   repo holding the `match` branch. This account already ships
+#                   other apps, so point it at their repo and REUSE that
+#                   distribution certificate: Apple caps them at about two, and
+#                   a second app needs no new one. See docs/signing.md.
 #
 # This cannot succeed until Apple approves Family Controls (Distribution) for
 # all four bundle ids, AND the capability is enabled on each App ID: match does
@@ -71,6 +75,7 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
           MATCH_GIT_BRANCH: ${{ vars.MATCH_GIT_BRANCH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ${{ inputs.notes }}

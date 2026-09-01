@@ -75,6 +75,30 @@ platform :ios do
       is_key_content_base64: true,
     )
 
+    # Where match's certificates live, and what may read them.
+    #
+    # GITHUB_TOKEN is scoped to THIS repository. Reusing another project's
+    # certificate means cloning that project's match branch, which that token
+    # cannot do. Catch it here: the alternative is a permission failure twenty
+    # minutes into a signed build.
+    this_repo = require_env("GITHUB_REPOSITORY", "Provided by Actions.")
+    match_git_url = ENV["MATCH_GIT_URL"].to_s.empty? ?
+      "https://github.com/#{this_repo}" : ENV["MATCH_GIT_URL"]
+    foreign_storage = !match_git_url.downcase.end_with?(this_repo.downcase)
+
+    match_git_token = ENV["MATCH_GIT_TOKEN"].to_s
+    if match_git_token.empty?
+      if foreign_storage
+        UI.user_error!(
+          "MATCH_GIT_URL points at #{match_git_url}, which is not this repository, " \
+          "but MATCH_GIT_TOKEN is not set. Actions' own GITHUB_TOKEN cannot read " \
+          "another repo's match branch. Create a PAT with contents:read on that " \
+          "repo and store it as the MATCH_GIT_TOKEN secret."
+        )
+      end
+      match_git_token = require_env("GITHUB_TOKEN", "Provided by Actions.")
+    end
+
     # Apple caps distribution certificates at roughly two per account, and
     # this project mints its own rather than reusing another app's. A run that
     # creates one and dies before storing it strands that slot permanently, and
@@ -99,14 +123,15 @@ platform :ios do
       api_key: api_key,
       team_id: team_id,
       storage_mode: "git",
-      # Defaults to this repo: Tim keeps its own certificate rather than
-      # sharing hydive's. Override the variable to point at another repo's
-      # match branch if you ever want to reuse a certificate instead.
-      git_url: ENV["MATCH_GIT_URL"].to_s.empty? ?
-        "https://github.com/#{require_env('GITHUB_REPOSITORY', 'Provided by Actions.')}" :
-        ENV["MATCH_GIT_URL"],
+      # PREFER pointing MATCH_GIT_URL at a repo whose match branch already
+      # holds a distribution certificate. Apple caps those at about two per
+      # account, so an account already shipping other apps should reuse, not
+      # mint — a second app reuses the same cert, the same match branch and
+      # the same secrets, and only needs its own App Store Connect record.
+      # Falling back to this repo mints a new certificate and spends a slot.
+      git_url: match_git_url,
       git_branch: ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"],
-      git_basic_authorization: Base64.strict_encode64("x-access-token:#{require_env('GITHUB_TOKEN', 'Provided by Actions.')}"),
+      git_basic_authorization: Base64.strict_encode64("x-access-token:#{match_git_token}"),
       readonly: false,
       # match judges a profile valid by expiry and certificate, not by its
       # capability set, so it will happily reuse one that predates a capability

@@ -12,17 +12,39 @@ re-run the check, it isn't ✅.**
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
 | Core test suite | ✅ | 98 tests, green in CI | `swift test` |
 | Xcode wiring consistent | ✅ | 59 checks green | `python3 scripts/preflight.py` |
-| Apple Developer Program | ❓ | — | developer.apple.com → Membership shows a Team ID |
+| Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | Family Controls (Distribution) | ❓ | — | Certificates, IDs & Profiles → the four App IDs show the capability |
-| App Store Connect API key | ❓ | — | Users and Access → Integrations lists the key id |
-| `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | — | run Release; the Fastfile names any missing one |
-| Distribution certs below the cap | ❓ | — | run Apple account maintenance; expect fewer than 2 |
-| `match` branch + certificate | ❓ | — | the `match` branch exists in this repo after the first Release run |
+| App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Tim | Users and Access → Integrations lists the key id |
+| `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | Values exist (hydive uses them); secrets are **per repo**, so they still have to be copied into this one | run Release; the Fastfile names any missing one |
+| Distribution certs below the cap | ❓ | hydive holds at least one, so there is likely **one slot left** — reuse rather than mint | run Apple account maintenance; expect fewer than 2 |
+| `match` branch + certificate | ❓ | hydive's match branch already holds a usable cert; point `MATCH_GIT_URL` there rather than minting a second | `git ls-remote <MATCH_GIT_URL> match` returns a ref |
 | App Store Connect record | ❓ | — | Connect → Apps shows `app.tim.Tim` |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
 ❓ means unverified, not false.
+
+## What is genuinely new for Tim
+
+This account already ships two apps to TestFlight without a Mac, so most of
+the pipeline is not a blocker — it is a copy. Sorted by how long it takes:
+
+1. **Family Controls (Distribution) approval.** The long pole, and the only
+   item measured in calendar time. It is a manual Apple review, requested per
+   App ID, and nothing about hydive helps: those are Capacitor apps with no
+   Screen Time surface. Request it early; everything else can be done while
+   waiting.
+2. **Five App IDs in the portal**, and the capability enabled on four of them
+   once approved. `match` does not manage capabilities.
+3. **Reuse the certificate, don't mint one.** hydive's match branch already
+   holds a distribution certificate. Apple caps them at about two per account
+   and hydive holds at least one, so minting a second spends the last slot for
+   nothing. Set `MATCH_GIT_URL` to hydive's repo and `MATCH_GIT_TOKEN` to a PAT
+   that can read it — Actions' own `GITHUB_TOKEN` is scoped to this repo and
+   cannot.
+4. **Copy the five secrets into this repo.** The values exist; repository
+   secrets do not cross repositories.
+5. **An App Store Connect record** for `app.tim.Tim`. Minutes.
 
 ## The four bundle ids
 

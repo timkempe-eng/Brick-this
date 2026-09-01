@@ -5,8 +5,13 @@ add what the work revealed.
 
 ## Blocked on Apple (calendar time, not work)
 
-- [ ] Apple Developer Program enrolment
-- [ ] Family Controls (Distribution) approved for all four bundle ids
+- [x] ~~Apple Developer Program enrolment~~ — already active, and already
+      shipping two other apps to TestFlight without a Mac. Listing this as a
+      blocker was an error: the setup playbook said so and it went unread.
+- [ ] **Family Controls (Distribution) approved for all four bundle ids.**
+      The one real long pole — a manual Apple review, and nothing in the
+      existing account helps, since the other apps have no Screen Time
+      surface. Request it first; the rest can be done while waiting.
 - [ ] Capability enabled on each App ID — a separate step from approval, and
       `match` does not do it. After enabling, run Release once with
       `force_profiles: true` or match reuses a profile that predates it.
@@ -19,9 +24,11 @@ add what the work revealed.
 
 - [ ] **Rename the default branch to `main`.** `main` is pushed; flip it in
       Settings → Branches and delete the session branch.
-- [ ] **Run Apple account maintenance before the first Release run.** Tim mints
-      its own distribution certificate, and Apple's ceiling is about two. Know
-      the count before it matters.
+- [ ] **Reuse the existing distribution certificate; do not mint one.** Point
+      `MATCH_GIT_URL` at the repo whose `match` branch already holds it and set
+      `MATCH_GIT_TOKEN` to a PAT that can read it. Apple's ceiling is about two
+      and one is already spent. Run Apple account maintenance first to see the
+      real count.
 - [x] ~~**Live Activity.**~~ Investigated and declined — ActivityKit can only
       start one from the foreground, which is the one path Tim exists to
       avoid. It would appear only when you Timmed by opening the app.
