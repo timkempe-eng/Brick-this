@@ -11,6 +11,18 @@ import XCTest
 /// What this cannot show: that any of it blocks an app. Screen Time no-ops
 /// here. It shows the screens build, navigate and survive being left and
 /// returned to — which is exactly the class of bug that compiles cleanly.
+private extension XCUIElement {
+    /// `waitForExistence` for a value rather than existence.
+    func waitForValue(_ expected: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if value as? String == expected { return true }
+            usleep(200_000)
+        }
+        return value as? String == expected
+    }
+}
+
 final class ScreenTests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -52,23 +64,23 @@ final class ScreenTests: XCTestCase {
         app.staticTexts["Deep Work"].firstMatch.tap()
         let toggle = app.switches["Run on a schedule"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-
-        // Off, the footer says the Mode only runs when you tap.
-        XCTAssertTrue(app.staticTexts.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "only runs when you tap")
-        ).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(toggle.value as? String, "0", "the starter Mode has no schedule")
 
         toggle.tap()
 
-        // On, it promises the phone will Tim itself. Asserting the footer
-        // rather than the presence of a DatePicker: the binding creating a
-        // schedule on demand is the behaviour worth pinning, and which
-        // XCUIElement type SwiftUI gives a compact time picker is not
-        // something this test should care about.
-        XCTAssertTrue(app.staticTexts.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "Tims itself")
-        ).firstMatch.waitForExistence(timeout: 10),
-        "Enabling the schedule did not change what the Mode promises.")
+        // Two assertions, because they fail for different reasons and the
+        // difference is the whole diagnosis: the first says the binding
+        // created a schedule, the second says the view noticed.
+        XCTAssertTrue(toggle.waitForValue("1", timeout: 10),
+                      "The toggle did not turn on — the optional-schedule binding didn't take.")
+
+        // `matching`, not `containing`: containing filters by DESCENDANTS, so
+        // on a static text it matches nothing and the assertion silently tests
+        // the existence of any label at all.
+        let promise = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "Tims itself")).firstMatch
+        XCTAssertTrue(promise.waitForExistence(timeout: 10),
+                      "The toggle turned on but the footer never promised the phone would Tim itself.")
     }
 
     func testSettingsOpens() {
