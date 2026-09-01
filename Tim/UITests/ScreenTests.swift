@@ -100,14 +100,14 @@ final class ScreenTests: XCTestCase {
             .joined(separator: " | ")
     }
 
-    /// Does ANY control in the Mode editor accept a change?
+    /// The Mode editor must accept a change at all.
     ///
-    /// "Strict" is the simplest possible case — `Toggle(isOn: $mode.isStrict)`,
-    /// a direct binding to a non-optional Bool on the editor's own `@State`.
-    /// If even that will not flip, the schedule switch is not the problem and
-    /// the editor's state is; if it flips, the fault is specific to the
-    /// schedule row. The schedule switch failing has already been reproduced
-    /// four times without ever separating those two.
+    /// "Strict" is the simplest control on the screen, and for a while it did
+    /// not work either — which is what proved the fault was the editor's own
+    /// state rather than the schedule row, after four runs of reproducing the
+    /// schedule failure without separating those two. Taps arrived and Cancel
+    /// worked; only the editor's `@State` failed to survive. It holds a
+    /// binding now instead of a copy.
     func testTheEditorAcceptsASimpleToggle() {
         app.buttons["Modes"].firstMatch.tap()
         app.staticTexts["Deep Work"].firstMatch.tap()
@@ -120,8 +120,7 @@ final class ScreenTests: XCTestCase {
 
         XCTAssertEqual(strict.value as? String, "1",
                        """
-                       A plain direct binding did not take either, so the fault \
-                       is the editor's state and not the schedule row.
+                       The editor accepted no change at all.
                        Strict before: \(before)
                        Hittable: \(strict.isHittable)
                        On screen: \(visibleText())
