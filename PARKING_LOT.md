@@ -22,9 +22,10 @@ add what the work revealed.
 - [ ] **Run Apple account maintenance before the first Release run.** Tim mints
       its own distribution certificate, and Apple's ceiling is about two. Know
       the count before it matters.
-- [ ] **Live Activity.** The widget covers the glance; this would add the
-      Dynamic Island and a richer running presentation. `WidgetRefreshing`
-      generalises to it.
+- [x] ~~**Live Activity.**~~ Investigated and declined — ActivityKit can only
+      start one from the foreground, which is the one path Tim exists to
+      avoid. It would appear only when you Timmed by opening the app.
+      [ADR 002](docs/adr/002-no-live-activity.md).
 
 ## Later
 

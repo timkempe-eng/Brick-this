@@ -23,9 +23,9 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Not built
 
-**A Live Activity.** The Lock Screen widget below covers the glance; a Live
-Activity would add the Dynamic Island and a richer running presentation while a
-session is open. The `WidgetRefreshing` port generalises to it.
+**A Live Activity — declined, not pending.** ActivityKit only starts one from
+the foreground, so it could never appear on the tap-and-pocket path the product
+is built around. [ADR 002](adr/002-no-live-activity.md) has the reasoning.
 
 **Allowance rather than blocking.** Screen Time can throttle instead of forbid.
 A Mode granting fifteen minutes of an app per day is a softer tool than a hard
