@@ -1,0 +1,170 @@
+import WidgetKit
+import SwiftUI
+
+/// The Lock Screen widget.
+///
+/// The point of the whole product is not opening your phone, so the status had
+/// no business living only inside the app. This puts "Timmed, 1:24:07, Deep
+/// Work" on the Lock Screen, where a glance settles it.
+///
+/// Deliberately thin. What it says is decided by `WidgetSnapshot` in Core,
+/// where it is tested; this file is layout. It also carries no Family Controls
+/// entitlement — it only reads the session out of the App Group, and an
+/// entitlement it doesn't use would be a fifth bundle id needing Apple's
+/// manual approval.
+
+struct TimEntry: TimelineEntry {
+    let date: Date
+    let snapshot: WidgetSnapshot
+}
+
+struct TimProvider: TimelineProvider {
+
+    func placeholder(in context: Context) -> TimEntry {
+        TimEntry(date: Date(), snapshot: .timmed(modeName: "Deep Work",
+                                                 since: Date().addingTimeInterval(-3600)))
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (TimEntry) -> Void) {
+        completion(TimEntry(date: Date(), snapshot: current()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<TimEntry>) -> Void) {
+        let now = Date()
+        let snapshot = current()
+        let entry = TimEntry(date: now, snapshot: snapshot)
+
+        // One entry either way. While Timmed the elapsed time is drawn by a
+        // self-updating timer view, so there is nothing to reload for — the
+        // engine announces the session ending through WidgetRefreshing. While
+        // free, the streak can lapse at midnight with nothing to announce it.
+        let policy: TimelineReloadPolicy = snapshot.nextRefresh(after: now)
+            .map { .after($0) } ?? .never
+        completion(Timeline(entries: [entry], policy: policy))
+    }
+
+    private func current() -> WidgetSnapshot {
+        let store = UserDefaultsStore.shared
+        return .make(session: store.activeSession,
+                     stats: TimStats(sessions: store.history))
+    }
+}
+
+// MARK: - Views
+
+struct TimWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: TimEntry
+
+    var body: some View {
+        content
+            .widgetURL(IncomingLink.widgetURL)
+            .containerBackground(.fill.tertiary, for: .widget)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch family {
+        case .accessoryInline:      inline
+        case .accessoryCircular:    circular
+        case .accessoryRectangular: rectangular
+        default:                    small
+        }
+    }
+
+    // One line beside the clock — no room for a second.
+    private var inline: some View {
+        Label(entry.snapshot.inlineText, systemImage: entry.snapshot.symbolName)
+    }
+
+    private var circular: some View {
+        VStack(spacing: 1) {
+            Image(systemName: entry.snapshot.symbolName)
+                .font(.title3)
+            if case .free(let streak) = entry.snapshot, streak > 0 {
+                Text("\(streak)")
+                    .font(.caption2.weight(.semibold))
+            }
+        }
+        .widgetAccentable()
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// The main one: the rectangular Lock Screen slot.
+    private var rectangular: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Label(entry.snapshot.headline, systemImage: entry.snapshot.symbolName)
+                .font(.caption.weight(.semibold))
+                .widgetAccentable()
+
+            if case .timmed(_, let since) = entry.snapshot {
+                // Ticks on its own, without the system rebuilding the timeline.
+                Text(since, style: .timer)
+                    .font(.title3.weight(.semibold))
+                    .monospacedDigit()
+            }
+
+            Text(entry.snapshot.detail)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var small: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Image(systemName: entry.snapshot.symbolName)
+                .font(.title2)
+                .foregroundStyle(.tint)
+            Spacer(minLength: 0)
+            Text(entry.snapshot.headline)
+                .font(.headline)
+            if case .timmed(_, let since) = entry.snapshot {
+                Text(since, style: .timer)
+                    .font(.subheadline.weight(.medium))
+                    .monospacedDigit()
+            }
+            Text(entry.snapshot.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// VoiceOver reads the state, not the ticking clock — a timer that
+    /// re-announces every second is unusable.
+    private var accessibilityLabel: String {
+        "\(entry.snapshot.headline). \(entry.snapshot.detail)"
+    }
+}
+
+// MARK: - Configuration
+
+struct TimStatusWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "TimStatus", provider: TimProvider()) { entry in
+            TimWidgetView(entry: entry)
+        }
+        .configurationDisplayName(Vocab.appName)
+        .description("Whether your phone is \(Vocab.verbPast), and for how long.")
+        .supportedFamilies([
+            .accessoryInline,
+            .accessoryCircular,
+            .accessoryRectangular,
+            .systemSmall,
+        ])
+    }
+}
+
+@main
+struct TimWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        TimStatusWidget()
+    }
+}

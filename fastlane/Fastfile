@@ -15,6 +15,7 @@ EXTENSION_IDS = [
   "app.tim.Tim.ShieldConfiguration",
   "app.tim.Tim.ShieldAction",
   "app.tim.Tim.ActivityMonitor",
+  "app.tim.Tim.Widget",
 ].freeze
 ALL_IDS = ([APP_ID] + EXTENSION_IDS).freeze
 

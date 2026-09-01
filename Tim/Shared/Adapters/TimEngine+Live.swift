@@ -7,6 +7,7 @@ extension TimEngine {
         store: UserDefaultsStore.shared,
         shield: ManagedSettingsShield(),
         scheduler: DeviceActivityScheduler(),
-        clock: SystemClock()
+        clock: SystemClock(),
+        widget: WidgetKitRefresher()
     )
 }

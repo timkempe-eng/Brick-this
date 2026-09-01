@@ -46,16 +46,21 @@ locally — there is no locally.
    app's entitlements onto an extension whose profile doesn't authorize them.
 7. **No entitlement without a shipped feature.** Each one is a capability the
    App ID must carry, a review surface, and one more thing that can break
-   signing. Preflight rejects placeholders.
+   signing. Preflight rejects placeholders, and requires a target's
+   entitlements and its linked frameworks to agree in both directions.
+   The widget is the worked example: it only reads the session, so it compiles
+   a narrow source set (Core plus `UserDefaultsStore`) and carries no
+   family-controls entitlement — otherwise it would be a fifth bundle id
+   waiting on Apple's manual approval.
 8. **`main` is the trunk.** A session branch is a scratch vehicle, not a home.
    Land finished, green work on `main` before the session ends.
 
 ## Before you push
 
 ```bash
-swift test                      # 109 tests, seconds
+swift test                      # 127 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 59 checks on the Xcode wiring
+python3 scripts/preflight.py    # 85 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group
@@ -84,3 +89,11 @@ scheduled Mode never stomps a session you began by hand.
   Every ✅ cites evidence and a re-runnable check.
 - `PARKING_LOT.md` — the backlog. Swept after every merge.
 - `docs/roadmap.md` — what is built, what isn't, and the honest limitations.
+
+## A new target is not just a target
+
+It is a new bundle id, which means: a `match` entry in the Fastfile, an App ID
+in the portal, its own entitlements file, and a row wherever bundle ids are
+listed. Preflight checks the Fastfile list against the project's targets,
+because a target `match` never signs fails at export — after the build already
+succeeded.

@@ -16,15 +16,18 @@ struct TimEngine {
     let shield: ShieldControlling
     let scheduler: SessionScheduling
     let clock: Clock
+    let widget: WidgetRefreshing
 
     init(store: TimPersisting,
          shield: ShieldControlling,
          scheduler: SessionScheduling,
-         clock: Clock) {
+         clock: Clock,
+         widget: WidgetRefreshing) {
         self.store = store
         self.shield = shield
         self.scheduler = scheduler
         self.clock = clock
+        self.widget = widget
     }
 
     /// How many finished sessions to keep. The shield extension reads this
@@ -94,6 +97,8 @@ struct TimEngine {
             let release = clock.now.addingTimeInterval(max(duration, Self.minimumScheduledRelease))
             scheduler.scheduleRelease(at: release)
         }
+
+        widget.reload()
     }
 
     /// Ends the active session. Returns the finished session, or `nil` if
@@ -110,6 +115,11 @@ struct TimEngine {
 
         store.activeSession = nil
         archive(session)
+
+        // Whichever process ended this — the app, the shield's emergency
+        // button, the DeviceActivity monitor — the Lock Screen must stop
+        // saying "Timmed".
+        widget.reload()
         return session
     }
 

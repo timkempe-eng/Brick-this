@@ -34,6 +34,11 @@ every one, or the profile won't authorize it:
 - `app.tim.Tim.ShieldAction`
 - `app.tim.Tim.ActivityMonitor`
 
+`app.tim.Tim.Widget` is a fifth App ID for **signing** — it needs a `match`
+profile and an App ID in the portal — but deliberately **not** for Family
+Controls. It only reads the session out of the App Group, so it stays off the
+approval list. Preflight fails if it ever acquires that entitlement.
+
 ## Recurring, and easy to be surprised by
 
 - Distribution certificates expire annually, and profiles with them.

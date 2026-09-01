@@ -56,10 +56,12 @@ targets:
       - target: TimShieldConfiguration
       - target: TimShieldAction
       - target: TimActivityMonitor
+      - target: TimWidget
       - sdk: FamilyControls.framework
       - sdk: ManagedSettings.framework
       - sdk: DeviceActivity.framework
       - sdk: CoreNFC.framework
+      - sdk: WidgetKit.framework
 
   # Draws the "Timmed." screen over blocked apps.
   TimShieldConfiguration:
@@ -81,6 +83,7 @@ targets:
       - sdk: ManagedSettingsUI.framework
       - sdk: FamilyControls.framework
       - sdk: DeviceActivity.framework
+      - sdk: WidgetKit.framework
 
   # Handles the buttons on that screen.
   TimShieldAction:
@@ -99,6 +102,7 @@ targets:
       - sdk: ManagedSettings.framework
       - sdk: FamilyControls.framework
       - sdk: DeviceActivity.framework
+      - sdk: WidgetKit.framework
 
   # Ends timed sessions without the app running.
   TimActivityMonitor:
@@ -117,3 +121,30 @@ targets:
       - sdk: DeviceActivity.framework
       - sdk: ManagedSettings.framework
       - sdk: FamilyControls.framework
+      - sdk: WidgetKit.framework
+
+  # Reads the session and draws it on the Lock Screen.
+  #
+  # Sources are deliberately narrow — Core plus UserDefaultsStore — rather than
+  # the whole Tim/Shared tree the other targets take. Compiling the rest would
+  # drag in FamilyControls, ManagedSettings and DeviceActivity, and with them a
+  # family-controls entitlement this target has no use for and a fifth bundle
+  # id needing Apple's manual approval.
+  TimWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Tim/Widget
+      - Tim/Shared/Core
+      - Tim/Shared/Adapters/UserDefaultsStore.swift
+      - path: Tim/Resources
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.Widget
+        INFOPLIST_FILE: Tim/Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tim/Widget/Widget.entitlements
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework

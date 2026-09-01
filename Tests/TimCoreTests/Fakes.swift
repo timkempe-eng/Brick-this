@@ -59,6 +59,11 @@ final class SpyScheduler: SessionScheduling {
     }
 }
 
+final class SpyWidget: WidgetRefreshing {
+    private(set) var reloadCount = 0
+    func reload() { reloadCount += 1 }
+}
+
 final class TestClock: Clock {
     var now: Date
     init(_ now: Date) { self.now = now }
@@ -72,13 +77,15 @@ struct Harness {
     let store = FakeStore()
     let shield = SpyShield()
     let scheduler = SpyScheduler()
+    let widget = SpyWidget()
     let clock: TestClock
     let engine: TimEngine
 
     init(now: Date = Date(timeIntervalSince1970: 1_756_000_000)) {
         let clock = TestClock(now)
         self.clock = clock
-        self.engine = TimEngine(store: store, shield: shield, scheduler: scheduler, clock: clock)
+        self.engine = TimEngine(store: store, shield: shield, scheduler: scheduler,
+                                clock: clock, widget: widget)
     }
 
     @discardableResult

@@ -134,14 +134,13 @@ final class TimModel: ObservableObject {
     // automation can be explicit if you'd rather it not toggle.
 
     func handleIncoming(url: URL) {
-        switch url.lastPathComponent {
-        case "tim":
-            if !isTimmed { tap() }
-        case "untim":
-            if isTimmed { tap() }
-        default:
-            tap()
+        switch IncomingLink.action(for: url) {
+        case .toggle:            tap()
+        case .tim:               if !isTimmed { tap() }
+        case .unTim:             if isTimmed { tap() }
+        case .open, .none:       break   // the widget, and anything unrecognised
         }
+        reload()
     }
 
     // MARK: -

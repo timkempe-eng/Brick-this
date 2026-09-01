@@ -22,11 +22,9 @@ add what the work revealed.
 - [ ] **Run Apple account maintenance before the first Release run.** Tim mints
       its own distribution certificate, and Apple's ceiling is about two. Know
       the count before it matters.
-- [ ] **Lock Screen widget / Live Activity.** The largest remaining product
-      gap — the status is only visible inside the app, which is absurd for a
-      product about not opening your phone. Do it as a fifth port
-      (`ActivityPresenting`) so the decision to start and stop one stays
-      testable even though ActivityKit isn't.
+- [ ] **Live Activity.** The widget covers the glance; this would add the
+      Dynamic Island and a richer running presentation. `WidgetRefreshing`
+      generalises to it.
 
 ## Later
 
@@ -47,6 +45,15 @@ add what the work revealed.
   system's activity cap.
 
 ## Closed (this sweep)
+
+- [x] **Lock Screen widget.** Status and a live timer without unlocking. What
+      it says lives in Core as `WidgetSnapshot` and is tested; the extension is
+      layout. A fifth port, `WidgetRefreshing`, means every process that can
+      end a session — the app, the shield's emergency button, the
+      DeviceActivity monitor — clears the Lock Screen.
+- [x] An unrecognised deep link no longer toggles. `tim://open` would have
+      fallen through to the toggle default, so tapping the widget to *check*
+      your status would have released a live session.
 
 - [x] Full-codebase review: ten findings, nine fixed, one wired into the UI.
       The scheduler adapter was the cluster — cross-midnight weekday windows

@@ -18,15 +18,14 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 - **Stats and streaks** — `TimStats` plus `StatsView`.
 - **Crash reconciliation** — the shield and the stored session are made to agree
   on every foreground, in both directions.
+- **Lock Screen widget** — status and a live timer without unlocking, in all
+  three accessory families plus a Home Screen tile.
 
 ## Not built
 
-**A Lock Screen widget and Live Activity.** The status is only visible inside
-the app, which is a little absurd for a product about not opening your phone. A
-Live Activity showing the running timer is the natural home for it. Worth doing
-as a fifth port (`ActivityPresenting`) so the *decision* to start and stop one
-stays testable, even though ActivityKit itself won't be. This is the largest
-remaining gap.
+**A Live Activity.** The Lock Screen widget below covers the glance; a Live
+Activity would add the Dynamic Island and a richer running presentation while a
+session is open. The `WidgetRefreshing` port generalises to it.
 
 **Allowance rather than blocking.** Screen Time can throttle instead of forbid.
 A Mode granting fifteen minutes of an app per day is a softer tool than a hard

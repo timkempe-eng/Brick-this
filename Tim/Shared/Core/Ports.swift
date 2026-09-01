@@ -1,6 +1,6 @@
 import Foundation
 
-/// The four things `TimEngine` needs from the outside world.
+/// The five things `TimEngine` needs from the outside world.
 ///
 /// Each one hides a framework or a global that would otherwise make the engine
 /// untestable and Mac-only. The iOS adapters live in `Tim/Shared/Adapters`;
@@ -41,6 +41,17 @@ protocol SessionScheduling {
 struct RecurringSchedule: Codable, Equatable, Hashable {
     let modeID: UUID
     let schedule: ModeSchedule
+}
+
+/// Telling the Lock Screen widget its timeline is stale. Implemented by
+/// WidgetKit.
+///
+/// A port rather than a direct call because the engine ends sessions from
+/// three processes — the app, the shield's emergency button, and the
+/// DeviceActivity monitor — and every one of them must refresh the widget or
+/// it keeps showing "Timmed" after the phone is free.
+protocol WidgetRefreshing {
+    func reload()
 }
 
 /// Everything that has to survive a process death and be visible to the
