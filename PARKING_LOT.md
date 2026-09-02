@@ -22,14 +22,16 @@ add what the work revealed.
 
 ## Next up
 
-- [ ] **Rename the default branch to `main`.** `main` is pushed; flip it in
-      Settings → Branches and delete the session branch.
+- [ ] **Rename the default branch to `main`.** `main` now carries everything
+      and is green; flip it in Settings → Branches and delete the session
+      branch.
 - [ ] **Get the first build onto the phone.** Runbook in
-      [docs/PROVISIONING.md](docs/PROVISIONING.md) — six browser steps, none
-      needing a Mac. Step 1 (Family Controls approval) is the only one
-      measured in days, so it goes first and the rest happen while it is
-      pending. This is also what settles the editor bug above: a Simulator
-      cannot run Screen Time, so it was never going to.
+      [docs/PROVISIONING.md](docs/PROVISIONING.md) — browser steps from an
+      iPad, none needing a Mac. Register the App IDs first, since the
+      entitlement request asks for bundle ids; that request is the only step
+      measured in weeks, so everything else happens while it is pending.
+      Nothing in the app is waiting on it: the suite is green and the only
+      unproven thing left is whether a tap actually hides an app.
 - [ ] **Reuse the existing distribution certificate; do not mint one.** Point
       `MATCH_GIT_URL` at the repo whose `match` branch already holds it and set
       `MATCH_GIT_TOKEN` to a PAT that can read it. Apple's ceiling is about two
@@ -99,6 +101,16 @@ theories.
   system's activity cap.
 
 ## Closed (this sweep)
+
+- [x] **The verb is Dad.** Renamed throughout — code, bundle ids, App Group,
+      docs — while nothing was registered with Apple, which is the only moment
+      the identifiers are free to change. Done with boundary-anchored rules,
+      not a blanket substitution: "tim" is a substring of time, timer,
+      estimate, optimize, and of `timkempe-eng`, which appears in the release
+      workflow and must not move.
+- [x] **CI says what failed.** `xcodebuild` no longer goes through `tail`; the
+      full log and the `.xcresult` are kept as artifacts and the failure is
+      grepped out. This is what ended the editor hunt, and it was one commit.
 
 - [x] **The schedule toggle was never broken.** Four CI runs chased a
       "schedule can't be turned on" bug that did not exist. The UI test
