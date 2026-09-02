@@ -37,14 +37,22 @@ final class ScreenTests: XCTestCase {
         app.buttons["Modes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Deep Work"].waitForExistence(timeout: 10))
 
-        app.staticTexts["Deep Work"].tap()
-        // Both are editor-only, so their presence means the sheet built —
-        // including the schedule section and its weekday picker.
-        XCTAssertTrue(app.switches["Run on a schedule"].waitForExistence(timeout: 10))
+        app.staticTexts["Deep Work"].firstMatch.tap()
+        // An editor-only row, so its presence means the sheet built.
+        let editorOnly = app.staticTexts["Apps and sites to hide"]
+        XCTAssertTrue(editorOnly.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["Cancel"].exists)
 
         app.buttons["Cancel"].tap()
-        XCTAssertTrue(app.staticTexts["Deep Work"].waitForExistence(timeout: 10))
+
+        // Assert the editor GOES AWAY, not that "Deep Work" exists — that
+        // label is also the editor's own navigation title, so the old
+        // assertion passed whether or not Cancel did anything. It was then
+        // cited as proof that taps reach the editor and its actions run,
+        // which narrowed the hunt for the editor bug in the wrong direction.
+        // Nothing yet establishes that a tap on this sheet does anything.
+        XCTAssertTrue(editorOnly.waitForNonExistence(timeout: 10),
+                      "Cancel did not dismiss the editor, so taps may not be reaching it at all.")
     }
 
     /// Turning the schedule on must change what the Mode says it will do —
