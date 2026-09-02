@@ -230,6 +230,15 @@ own store and mints its own certificate.
    **Contents: read and write** on that repo *only*. Write, not read: `match`
    has to store what it mints. Actions' own `GITHUB_TOKEN` is scoped to this
    repository and cannot reach another one.
+
+   **This token is set to never expire.** That is deliberate: an expiring one
+   fails months later as a git auth error that names nothing, on the day you
+   are trying to ship. The trade is acceptable because the scope is one private
+   repo, Contents only, and what it guards is still encrypted with
+   `MATCH_PASSWORD`. It is the only long-lived credential in this project — if
+   it ever needs killing, github.com → Settings → Developer settings →
+   Personal access tokens → Fine-grained tokens → Revoke, then mint a
+   replacement and update the secret. Nothing else changes.
 4. Repository **secret** `MATCH_PASSWORD` → a fresh passphrase. Losing it means
    revoking the certificate and starting over, so put it in the password
    manager now.
