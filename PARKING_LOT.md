@@ -24,6 +24,12 @@ add what the work revealed.
 
 - [ ] **Rename the default branch to `main`.** `main` is pushed; flip it in
       Settings → Branches and delete the session branch.
+- [ ] **Get the first build onto the phone.** Runbook in
+      [docs/PROVISIONING.md](docs/PROVISIONING.md) — six browser steps, none
+      needing a Mac. Step 1 (Family Controls approval) is the only one
+      measured in days, so it goes first and the rest happen while it is
+      pending. This is also what settles the editor bug above: a Simulator
+      cannot run Screen Time, so it was never going to.
 - [ ] **Reuse the existing distribution certificate; do not mint one.** Point
       `MATCH_GIT_URL` at the repo whose `match` branch already holds it and set
       `MATCH_GIT_TOKEN` to a PAT that can read it. Apple's ceiling is about two

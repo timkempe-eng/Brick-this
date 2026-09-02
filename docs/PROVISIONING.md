@@ -61,6 +61,102 @@ profile and an App ID in the portal — but deliberately **not** for Family
 Controls. It only reads the session out of the App Group, so it stays off the
 approval list. Preflight fails if it ever acquires that entitlement.
 
+## Runbook: getting the first build onto the phone
+
+Every step below is browser work on the iPad. Nothing here needs a Mac, and
+nothing here needs a session. Step 1 is the only one measured in days, so do
+it first and do the rest while it is pending.
+
+### 1. Request Family Controls (Distribution) — do this first
+
+The entitlement four of the five targets carry is not self-service for
+distribution builds. It is a manual Apple review, requested per App ID, and
+TestFlight signing will fail without it. The existing apps on this account do
+not help: they are Capacitor apps with no Screen Time surface, so this review
+starts from nothing.
+
+Apple's request form is linked from the Family Controls capability in
+Certificates, Identifiers & Profiles; Apple moves the URL periodically, so
+follow it from the capability rather than a bookmark. Name all four ids:
+
+- `app.tim.Tim`
+- `app.tim.Tim.ShieldConfiguration`
+- `app.tim.Tim.ShieldAction`
+- `app.tim.Tim.ActivityMonitor`
+
+`app.tim.Tim.Widget` is deliberately **not** on this list.
+
+### 2. Register the App IDs and the App Group
+
+App Group: `group.app.tim.shared` — all five targets share it, and a mismatch
+shows up as the shield displaying the wrong Mode while the app looks fine.
+
+| App ID | Capabilities |
+|---|---|
+| `app.tim.Tim` | Family Controls, App Groups, **NFC Tag Reading** |
+| `app.tim.Tim.ShieldConfiguration` | Family Controls, App Groups |
+| `app.tim.Tim.ShieldAction` | Family Controls, App Groups |
+| `app.tim.Tim.ActivityMonitor` | Family Controls, App Groups |
+| `app.tim.Tim.Widget` | App Groups only |
+
+Enabling a capability is separate from having it approved, and `match` does
+not do it. After enabling, the first Release run needs
+`force_profiles: true`, or `match` reuses a profile minted before the
+capability existed and the export fails after the build succeeded.
+
+### 3. Reuse the existing certificate — do not mint a new one
+
+Apple caps distribution certificates at about two per account and the other
+apps already hold at least one. A second app needs no new certificate.
+
+Set the repository **variable** `MATCH_GIT_URL` to the repo whose `match`
+branch already holds it, and the **secret** `MATCH_GIT_TOKEN` to a personal
+access token with `contents:read` on that repo — Actions' own `GITHUB_TOKEN`
+is scoped to this repository and cannot read another one's branch. Set
+`MATCH_GIT_BRANCH` too if that branch is not called `match`.
+
+Before the first run, run the **Apple account maintenance** workflow to see
+the real certificate count. The `beta` lane also refuses to start if the
+account is at the ceiling with no stored branch to reuse.
+
+### 4. Copy the secrets into this repository
+
+The values already exist; repository secrets do not cross repositories.
+
+| Secret | Where it comes from |
+|---|---|
+| `APPLE_TEAM_ID` | Developer account → Membership, 10 characters |
+| `ASC_KEY_ID` | App Store Connect → Users and Access → Integrations |
+| `ASC_ISSUER_ID` | Same page, above the key list |
+| `ASC_KEY_P8` | **base64** of `AuthKey_XXXX.p8`, not the raw file |
+| `MATCH_PASSWORD` | The passphrase the stored certificates use |
+
+`ASC_KEY_P8` must be base64: the lane rejects anything not starting `LS0t`
+rather than failing twenty minutes later as an opaque signing error.
+
+### 5. Create the App Store Connect record
+
+Connect → Apps → new app, bundle id `app.tim.Tim`. Minutes.
+
+### 6. Run Release to TestFlight
+
+Actions → *Release to TestFlight* → Run workflow. Pick the branch, set
+`force_profiles: true` for the first run after enabling capabilities.
+
+**Run it from `claude/tim-phone-focus-device-tbu04b`**, not `main`: the
+certificate-reuse support (`MATCH_GIT_TOKEN`) only exists there. `main` would
+try to mint a certificate.
+
+### What the first build will and will not show
+
+It answers the question no Simulator can: whether tapping a tag actually
+hides an app.
+
+It will also settle the open editor bug above. If Modes cannot be configured
+on the device either, that bug is real and blocking. If they configure
+normally, it was a Simulator artifact and the two failing UI tests should be
+deleted rather than fixed.
+
 ## Recurring, and easy to be surprised by
 
 - Distribution certificates expire annually, and profiles with them.
