@@ -77,8 +77,23 @@ of these five.
 The entitlement request form asks for bundle ids, and approval is granted per
 id, so these have to exist first.
 
-App Group: `group.app.dad.shared` — all five targets share it, and a mismatch
-shows up as the shield displaying the wrong Mode while the app looks fine.
+**Register the App Group first.** Identifiers → + → **App Groups** →
+`group.app.dad.shared`. The App Groups capability on an App ID is a picker over
+groups that already exist, so doing this second means five trips back. All five
+targets share it, and a mismatch shows up as the shield displaying the wrong
+Mode while the app looks fine.
+
+Then five App IDs (Identifiers → + → **App IDs** → **App**):
+
+- **Explicit, never Wildcard.** A wildcard App ID cannot carry App Groups or
+  Family Controls at all, and the radio button is easy to skim past.
+- **The bundle id is case-sensitive.** `app.dad.Dad`, capital D — it must match
+  `PRODUCT_BUNDLE_IDENTIFIER` in `project.yml` character for character, and
+  there is no rename afterwards.
+- **Description takes letters, numbers and spaces only.** Apple rejects dots and
+  hyphens, so "Dad Shield Configuration", not the bundle id.
+- **App Groups is two clicks.** Ticking it is not enough — use Edit/Configure
+  beside the row and actually select the group.
 
 | App ID | Capabilities |
 |---|---|
