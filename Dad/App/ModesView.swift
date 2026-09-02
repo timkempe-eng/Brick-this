@@ -132,7 +132,7 @@ struct ModeEditorView: View {
         }
         .navigationTitle(mode.name)
         .navigationBarTitleDisplayMode(.inline)
-        .familyActivityPicker(isPresented: $showingPicker, selection: $selection)
+        .modifier(AppPickerPresentation(isPresented: $showingPicker, selection: $selection))
         .onAppear { selection = mode.selection }
         // Take what was chosen when the picker closes. Keyed on the Bool
         // rather than on the selection itself, which need not be Equatable.
@@ -215,6 +215,33 @@ private struct ScheduleSection: View {
             } else {
                 Text("Off. This \(Vocab.modeNoun.lowercased()) only runs when you tap.")
             }
+        }
+    }
+}
+
+/// Applies `familyActivityPicker` only when the app is running for real.
+///
+/// The picker is backed by a system service that a Simulator never authorizes,
+/// and the Mode editor — the only screen carrying it — is the only screen in
+/// the app where no control accepts a change. Four fixes aimed at bindings,
+/// at the editor's state, and at how the screen is presented all failed
+/// identically, and none of them removed this modifier. This is the variable
+/// that has never been eliminated.
+///
+/// Skipping it under the UI-test flag stands on its own even so: the picker
+/// cannot return an app there, so the screen behind it is all a UI test was
+/// ever exercising. `isBypassingOnboarding` is false in Release, so a shipping
+/// build always carries the picker.
+private struct AppPickerPresentation: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var selection: FamilyActivitySelection
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if UITestHooks.isBypassingOnboarding {
+            content
+        } else {
+            content.familyActivityPicker(isPresented: $isPresented, selection: $selection)
         }
     }
 }
