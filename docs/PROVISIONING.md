@@ -105,6 +105,13 @@ Three things that will bounce or delay a request:
   report 31–33 days. Nothing else in this runbook depends on it, so submit it
   and carry on.
 
+The usual advice for the wait is to use the *development* entitlement, which
+works immediately, and test on a device from Xcode. **That does not apply to
+this project.** Installing a development build needs a Mac, and there isn't
+one — see the machines table in CLAUDE.md. So approval is not only the gate on
+shipping, it is the gate on the app reaching a phone at all, and on every
+question a Simulator cannot answer.
+
 Approval is not the same as *enabled*. Afterwards, go to each App ID's
 **Additional Capabilities** tab and switch on Family Controls (Distribution),
 then run Release once with `force_profiles: true` — `match` judges a profile
