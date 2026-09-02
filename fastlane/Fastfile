@@ -148,16 +148,24 @@ platform :ios do
     end
     UI.important("match storage: #{match_git_url} (#{storage ? 'reachable' : 'not readable with this token — the clone may fail'})")
 
-    # Apple caps distribution certificates per account — commonly reported as
-    # three for a standard account, two for enterprise, and not documented
-    # precisely enough to bet a locked-out account on. Dad mints its own into
-    # its own private store rather than sharing another app's, which spends a
-    # slot. A run that creates one and dies before storing it strands that slot
-    # permanently. So look before leaping, every time — it is one API call.
-    # The threshold here is deliberately conservative.
+    # Apple caps distribution certificates per account and will not say where.
+    # Its own support page talks about one of each *type*, which cannot be right
+    # — this account holds two of the same type. Reports say three for a
+    # standard account, two for enterprise.
+    #
+    # As of 2026-09-02 both existing certificates are live: W58S72X6S2 signs
+    # com.oxfordswimclub.staff and YQTXHB5NT6 signs the hydive apps. Neither can
+    # be revoked, so Dad needs a third and the ceiling is being tested
+    # deliberately. If Apple refuses, it refuses before creating anything.
+    #
+    # The failure that actually matters is a run that mints a certificate and
+    # dies before storing it, stranding a slot. The `certs` lane now prints
+    # which profiles reference each certificate, so a stranded one shows as
+    # "no profile references it" and can be revoked. Look before leaping — it
+    # is one API call.
     existing = distribution_certificate_count
     UI.important("#{existing} distribution certificate(s) on this account.")
-    if existing >= 2 && !match_branch_exists?(git_url: match_git_url, token: match_git_token)
+    if existing >= 3 && !match_branch_exists?(git_url: match_git_url, token: match_git_token)
       UI.user_error!(
         "This account already has #{existing} distribution certificates and no stored " \
         "match branch at #{match_git_url} to reuse, so match would try to mint one " \
