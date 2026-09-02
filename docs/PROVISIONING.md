@@ -14,7 +14,7 @@ re-run the check, it isn't ✅.**
 | Xcode wiring consistent | ✅ | 91 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
-| Family Controls (Distribution) | ❓ | — | Certificates, IDs & Profiles → the four App IDs show the capability |
+| Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement | Certificates, IDs & Profiles → the four App IDs show a Family Controls row that is not development-only |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | Values exist (hydive uses them); secrets are **per repo**, so they still have to be copied into this one | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ❓ | hydive holds at least one, so there is likely **one slot left** — reuse rather than mint | run Apple account maintenance; expect fewer than 2 |
@@ -23,7 +23,7 @@ re-run the check, it isn't ✅.**
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
-❓ means unverified, not false.
+❓ means unverified, not false. ⏳ means waiting on someone else.
 
 ## What is genuinely new for Dad
 
@@ -124,23 +124,32 @@ key *missing*, which would break signing for every target we have.
 ### 2. Request Family Controls (Distribution) — the long pole
 
 <https://developer.apple.com/contact/request/family-controls-distribution>,
-signed in.
+signed in. **Submitted 2026-09-02.**
 
-Three things that will bounce or delay a request:
+**The form is shorter than every write-up says it is.** As of September 2026 it
+collects profile details only — no bundle id field, no app name, no free-text
+box explaining the use case. Earlier guidance in this file said to name all
+four bundle ids and paste a justification; that was wrong, and it was wrong
+because it came from second-hand accounts of an older form rather than from
+looking at the current one. Only the Account Holder can submit it.
 
-- **The Account Holder must submit it.** Not a team member with developer
-  access.
-- **Each bundle id needs its own approval.** The app and every extension using
-  Family Controls are approved separately, so name all four. Not the Widget:
-  it carries no family-controls entitlement, which is the point of keeping its
-  source set narrow.
-- **Budget a month, not a week.** Apple says up to a week; developers commonly
-  report 31–33 days. Nothing else in this runbook depends on it, so submit it
-  and carry on.
+Two consequences worth holding lightly, because neither is verified:
 
-The form's free-text field is where requests get bounced, because Apple is
-screening for covert monitoring of other people. Dad is the opposite of that
-and the answer should say so plainly:
+- **Approval scope is unknown.** Developer reports still describe per-bundle-id
+  approval, with extensions approved separately and sometimes days apart. A
+  profile-only form is hard to square with that. Assume nothing; the check
+  below is what settles it.
+- **There is no case id and no status page.** Apple sends no acknowledgement,
+  so the only honest way to know is to look at the App IDs.
+
+**How we will find out it landed:** Certificates, Identifiers & Profiles → the
+four App IDs show a Family Controls row that is no longer development-only.
+Failing that, a Release run that gets past export. Nothing in this repo can
+poll it.
+
+If Apple replies asking what the app does — a likely follow-up given how little
+the form collects — this is the answer, and it leads with the thing they are
+actually screening for:
 
 > Dad is a single-user focus tool. The person installing it is the only person
 > it applies to: they choose which of their own apps to hide, and they hide
@@ -161,15 +170,14 @@ and the answer should say so plainly:
 > sessions. Three extensions need the entitlement alongside the app —
 > ShieldConfiguration draws the shield, ShieldAction handles its buttons, and
 > ActivityMonitor (DeviceActivityMonitor) applies and lifts the schedule.
+>
+> Bundle ids: `app.dad.Dad`, `app.dad.Dad.ShieldConfiguration`,
+> `app.dad.Dad.ShieldAction`, `app.dad.Dad.ActivityMonitor`. The widget target
+> reads the session only and carries no Family Controls entitlement.
 
-Bundle ids to list — four, not five:
-
-```
-app.dad.Dad
-app.dad.Dad.ShieldConfiguration
-app.dad.Dad.ShieldAction
-app.dad.Dad.ActivityMonitor
-```
+**Budget a month, not a week.** Apple says days; reports range from one day for
+the main app to several months with no reply at all. Nothing else in this
+runbook depends on it, so it is submitted and the rest carries on.
 
 The usual advice for the wait is to use the *development* entitlement, which
 works immediately, and test on a device from Xcode. **That does not apply to
