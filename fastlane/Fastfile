@@ -26,8 +26,34 @@ def require_env(name, how)
   value
 end
 
-def distribution_certificate_count(api_key:)
-  Spaceship::ConnectAPI.token = api_key[:key] if api_key[:key]
+# The App Store Connect key, and Spaceship authenticated with it.
+#
+# `app_store_connect_api_key` returns a HASH that carries the key content
+# alongside the is_key_content_base64 flag saying whether it is still encoded.
+# Passing only key_id/issuer_id/key to Spaceship drops that flag, so Spaceship
+# hands the base64 straight to OpenSSL, which sees a string that is not PEM and
+# assumes it must be a curve name: `invalid curve name (OpenSSL::PKey::ECError)`,
+# with nothing in it about base64. Token.from_hash reads the whole hash and
+# decodes. Never slice this hash.
+def connect_api_key
+  key_p8 = require_env("ASC_KEY_P8", "base64 of AuthKey_XXXX.p8 — it downloads once.")
+  unless key_p8.start_with?("LS0t")
+    # base64 of "-----BEGIN" starts LS0t. Catch a raw .p8 paste here rather
+    # than as an opaque signing failure twenty minutes in.
+    UI.user_error!("ASC_KEY_P8 doesn't look base64-encoded. Store `base64 -i AuthKey_XXXX.p8`, not the raw file.")
+  end
+
+  api_key = app_store_connect_api_key(
+    key_id: require_env("ASC_KEY_ID", "App Store Connect → Users and Access → Integrations."),
+    issuer_id: require_env("ASC_ISSUER_ID", "Same page, above the key list."),
+    key_content: key_p8,
+    is_key_content_base64: true,
+  )
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from_hash(api_key)
+  api_key
+end
+
+def distribution_certificate_count
   Spaceship::ConnectAPI::Certificate.all.count do |c|
     c.certificate_type.to_s.include?("DISTRIBUTION")
   end
@@ -75,23 +101,8 @@ platform :ios do
 
   desc "Build and upload to TestFlight"
   lane :beta do |options|
-    key_id    = require_env("ASC_KEY_ID", "App Store Connect → Users and Access → Integrations.")
-    issuer_id = require_env("ASC_ISSUER_ID", "Same page, above the key list.")
-    key_p8    = require_env("ASC_KEY_P8", "base64 of AuthKey_XXXX.p8 — it downloads once.")
-    team_id   = require_env("APPLE_TEAM_ID", "Developer account → Membership, 10 characters.")
-
-    unless key_p8.start_with?("LS0t")
-      # base64 of "-----BEGIN" starts LS0t. Catch a raw .p8 paste here rather
-      # than as an opaque signing failure twenty minutes in.
-      UI.user_error!("ASC_KEY_P8 doesn't look base64-encoded. Store `base64 -i AuthKey_XXXX.p8`, not the raw file.")
-    end
-
-    api_key = app_store_connect_api_key(
-      key_id: key_id,
-      issuer_id: issuer_id,
-      key_content: key_p8,
-      is_key_content_base64: true,
-    )
+    api_key = connect_api_key
+    team_id = require_env("APPLE_TEAM_ID", "Developer account → Membership, 10 characters.")
 
     # Where match's certificates live, and what may read them.
     #
@@ -145,7 +156,7 @@ platform :ios do
     # slot. A run that creates one and dies before storing it strands that slot
     # permanently. So look before leaping, every time — it is one API call.
     # The threshold here is deliberately conservative.
-    existing = distribution_certificate_count(api_key: api_key)
+    existing = distribution_certificate_count
     UI.important("#{existing} distribution certificate(s) on this account.")
     if existing >= 2 && !match_branch_exists?(git_url: match_git_url, token: match_git_token)
       UI.user_error!(
@@ -220,13 +231,7 @@ platform :ios do
 
   desc "List and revoke distribution certificates. Apple caps them at about two."
   lane :certs do |options|
-    api_key = app_store_connect_api_key(
-      key_id: require_env("ASC_KEY_ID", "See the beta lane."),
-      issuer_id: require_env("ASC_ISSUER_ID", "See the beta lane."),
-      key_content: require_env("ASC_KEY_P8", "See the beta lane."),
-      is_key_content_base64: true,
-    )
-    Spaceship::ConnectAPI.auth(**api_key.slice(:key_id, :issuer_id, :key)) rescue Spaceship::ConnectAPI.token = api_key
+    connect_api_key
 
     certs = Spaceship::ConnectAPI::Certificate.all.select do |c|
       c.certificate_type.to_s.include?("DISTRIBUTION")
