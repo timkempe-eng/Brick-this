@@ -69,6 +69,15 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      # apply_signing.py needs pyyaml. The runner's system Python is externally
+      # managed (PEP 668) and refuses `pip3 install` outright, so bring our own.
+      # test.yml has always done this and release.yml never did — a difference
+      # that could only show up on a signing run, which is the run you least
+      # want to spend on a dependency.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Build and upload
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -83,7 +92,7 @@ jobs:
           RELEASE_NOTES: ${{ inputs.notes }}
           FASTLANE_SKIP_UPDATE_CHECK: "1"
         run: |
-          pip3 install --quiet pyyaml
+          python3 -m pip install --quiet pyyaml
           bundle exec fastlane ios beta force_profiles:${{ inputs.force_profiles }} \
             || fastlane ios beta force_profiles:${{ inputs.force_profiles }}
 
