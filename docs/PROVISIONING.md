@@ -10,9 +10,10 @@ re-run the check, it isn't ✅.**
 | Item | State | Evidence | Re-runnable check |
 |---|---|---|---|
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
-| Core test suite | ✅ | 98 tests, green in CI | `swift test` |
-| Xcode wiring consistent | ✅ | 59 checks green | `python3 scripts/preflight.py` |
+| Core test suite | ✅ | 145 tests, green in CI | `swift test` |
+| Xcode wiring consistent | ✅ | 91 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
+| App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Family Controls (Distribution) | ❓ | — | Certificates, IDs & Profiles → the four App IDs show the capability |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | Values exist (hydive uses them); secrets are **per repo**, so they still have to be copied into this one | run Release; the Fastfile names any missing one |
@@ -136,6 +137,39 @@ Three things that will bounce or delay a request:
 - **Budget a month, not a week.** Apple says up to a week; developers commonly
   report 31–33 days. Nothing else in this runbook depends on it, so submit it
   and carry on.
+
+The form's free-text field is where requests get bounced, because Apple is
+screening for covert monitoring of other people. Dad is the opposite of that
+and the answer should say so plainly:
+
+> Dad is a single-user focus tool. The person installing it is the only person
+> it applies to: they choose which of their own apps to hide, and they hide
+> them from themselves. There is no second account, no parent or child role, no
+> remote administration, and nothing to observe another person with.
+>
+> The release is triggered by a physical NFC sticker. Getting your apps back
+> means walking to the tag and tapping it, which is the entire point — the
+> friction is the feature.
+>
+> Everything stays on the device. There is no server, no account, no network
+> call and no analytics. The app never learns which apps were selected: the
+> FamilyActivitySelection is held as opaque tokens, persisted through an App
+> Group, and passed straight back to ManagedSettings without being decoded.
+>
+> APIs used: FamilyControls for authorization and selection; ManagedSettings
+> to apply and clear the shield; DeviceActivity to start and end scheduled
+> sessions. Three extensions need the entitlement alongside the app —
+> ShieldConfiguration draws the shield, ShieldAction handles its buttons, and
+> ActivityMonitor (DeviceActivityMonitor) applies and lifts the schedule.
+
+Bundle ids to list — four, not five:
+
+```
+app.dad.Dad
+app.dad.Dad.ShieldConfiguration
+app.dad.Dad.ShieldAction
+app.dad.Dad.ActivityMonitor
+```
 
 The usual advice for the wait is to use the *development* entitlement, which
 works immediately, and test on a device from Xcode. **That does not apply to
