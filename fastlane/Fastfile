@@ -235,8 +235,28 @@ platform :ios do
     certs = Spaceship::ConnectAPI::Certificate.all.select do |c|
       c.certificate_type.to_s.include?("DISTRIBUTION")
     end
-    certs.each { |c| UI.important("#{c.id}  #{c.certificate_type}  expires #{c.expiration_date}  #{c.display_name}") }
-    UI.important("#{certs.count} distribution certificate(s). Apple's ceiling is about two.")
+    # Which profiles reference which certificate. Without this the list is two
+    # indistinguishable rows and "revoke one" is a coin flip that can break
+    # another project's releases. A certificate no profile references is either
+    # stranded by a half-finished run or belongs to a store we cannot see —
+    # check the other project's match branch before revoking either way.
+    profiles = begin
+      Spaceship::ConnectAPI::Profile.all(includes: "bundleId,certificates")
+    rescue StandardError => e
+      UI.important("Could not list profiles (#{e.class}); showing certificates only.")
+      []
+    end
+
+    certs.each do |c|
+      UI.important("#{c.id}  #{c.certificate_type}  expires #{c.expiration_date}  #{c.display_name}")
+      users = profiles.select { |pr| pr.certificates.to_a.any? { |pc| pc.id == c.id } }
+      if users.empty?
+        UI.important("    no profile references it")
+      else
+        users.each { |pr| UI.important("    #{pr.bundle_id&.identifier || '?'}  (#{pr.name}, #{pr.profile_state})") }
+      end
+    end
+    UI.important("#{certs.count} distribution certificate(s). Apple's ceiling is two or three; treat two as full.")
 
     target = options[:revoke_id].to_s
     unless target.empty?
