@@ -67,26 +67,10 @@ Every step below is browser work on the iPad. Nothing here needs a Mac, and
 nothing here needs a session. Step 1 is the only one measured in days, so do
 it first and do the rest while it is pending.
 
-### 1. Request Family Controls (Distribution) — do this first
+### 1. Register the App IDs and the App Group — before the request
 
-The entitlement four of the five targets carry is not self-service for
-distribution builds. It is a manual Apple review, requested per App ID, and
-TestFlight signing will fail without it. The existing apps on this account do
-not help: they are Capacitor apps with no Screen Time surface, so this review
-starts from nothing.
-
-Apple's request form is linked from the Family Controls capability in
-Certificates, Identifiers & Profiles; Apple moves the URL periodically, so
-follow it from the capability rather than a bookmark. Name all four ids:
-
-- `app.dad.Dad`
-- `app.dad.Dad.ShieldConfiguration`
-- `app.dad.Dad.ShieldAction`
-- `app.dad.Dad.ActivityMonitor`
-
-`app.dad.Dad.Widget` is deliberately **not** on this list.
-
-### 2. Register the App IDs and the App Group
+The entitlement request form asks for bundle ids, and approval is granted per
+id, so these have to exist first.
 
 App Group: `group.app.dad.shared` — all five targets share it, and a mismatch
 shows up as the shield displaying the wrong Mode while the app looks fine.
@@ -99,10 +83,28 @@ shows up as the shield displaying the wrong Mode while the app looks fine.
 | `app.dad.Dad.ActivityMonitor` | Family Controls, App Groups |
 | `app.dad.Dad.Widget` | App Groups only |
 
-Enabling a capability is separate from having it approved, and `match` does
-not do it. After enabling, the first Release run needs
-`force_profiles: true`, or `match` reuses a profile minted before the
-capability existed and the export fails after the build succeeded.
+### 2. Request Family Controls (Distribution) — the long pole
+
+<https://developer.apple.com/contact/request/family-controls-distribution>,
+signed in.
+
+Three things that will bounce or delay a request:
+
+- **The Account Holder must submit it.** Not a team member with developer
+  access.
+- **Each bundle id needs its own approval.** The app and every extension using
+  Family Controls are approved separately, so name all four. Not the Widget:
+  it carries no family-controls entitlement, which is the point of keeping its
+  source set narrow.
+- **Budget a month, not a week.** Apple says up to a week; developers commonly
+  report 31–33 days. Nothing else in this runbook depends on it, so submit it
+  and carry on.
+
+Approval is not the same as *enabled*. Afterwards, go to each App ID's
+**Additional Capabilities** tab and switch on Family Controls (Distribution),
+then run Release once with `force_profiles: true` — `match` judges a profile
+by expiry and certificate, not by capability set, so it will happily reuse one
+minted before the capability existed.
 
 ### 3. Reuse the existing certificate — do not mint a new one
 
