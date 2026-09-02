@@ -69,6 +69,11 @@ it first and do the rest while it is pending.
 
 ### 1. Register the App IDs and the App Group — before the request
 
+**developer.apple.com** → Certificates, Identifiers & Profiles → Identifiers.
+Not App Store Connect: they are separate sites and only one of them knows what
+an App ID is. App Store Connect comes later, at step 5, and wants exactly one
+of these five.
+
 The entitlement request form asks for bundle ids, and approval is granted per
 id, so these have to exist first.
 
@@ -138,7 +143,11 @@ rather than failing twenty minutes later as an opaque signing error.
 
 ### 5. Create the App Store Connect record
 
-Connect → Apps → new app, bundle id `app.dad.Dad`. Minutes.
+**appstoreconnect.apple.com** → My Apps → new app, bundle id `app.dad.Dad`.
+Minutes.
+
+Only the app. The four extensions never get their own record — they ship
+inside the app bundle. Five App IDs, one app record.
 
 ### 6. Run Release to TestFlight
 
