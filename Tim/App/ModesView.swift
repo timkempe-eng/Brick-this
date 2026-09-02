@@ -62,6 +62,17 @@ struct ModeEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingPicker = false
 
+    /// The picker gets its own state rather than a binding into the Mode.
+    ///
+    /// It used to bind `$mode.selection`, a computed bridge whose getter
+    /// JSON-decodes a fresh FamilyActivitySelection on every read and whose
+    /// setter JSON-encodes back into `mode`. Anything the picker modifier
+    /// wrote during a render therefore mutated the Mode, and every other
+    /// edit on this screen was lost: the Simulator showed Strict and the
+    /// schedule switch both reading back off immediately after a tap, while
+    /// Cancel — the one control that does not touch `mode` — worked.
+    @State private var selection = FamilyActivitySelection()
+
     /// Offered auto-release lengths. `DeviceActivitySchedule` won't monitor an
     /// interval under 15 minutes, so the shortest option is 15.
     private struct AutoRelease: Identifiable {
@@ -115,7 +126,13 @@ struct ModeEditorView: View {
             }
             .navigationTitle(mode.name)
             .navigationBarTitleDisplayMode(.inline)
-            .familyActivityPicker(isPresented: $showingPicker, selection: $mode.selection)
+            .familyActivityPicker(isPresented: $showingPicker, selection: $selection)
+            .onAppear { selection = mode.selection }
+            // Take what was chosen when the picker closes. Keyed on the Bool
+            // rather than on the selection itself, which need not be Equatable.
+            .onChange(of: showingPicker) { _, isShowing in
+                if !isShowing { mode.selection = selection }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {

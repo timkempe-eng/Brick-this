@@ -58,9 +58,9 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 138 tests, seconds
+swift test                      # 145 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 87 checks on the Xcode wiring
+python3 scripts/preflight.py    # 91 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group
