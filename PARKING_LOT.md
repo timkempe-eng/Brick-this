@@ -47,57 +47,45 @@ add what the work revealed.
       and blocking via `AccessibilityService` is meaningfully weaker.
 - [ ] 3D-printed puck with a magnet, instead of a bare sticker.
 
-## Open bug: the Mode editor accepts no edits (blocking)
+## Closed: the Mode editor was never broken
 
-**Nothing about a Mode can be changed.** In the Simulator, tapping `Strict`
-or `Run on a schedule` leaves both reading off and the schedule footer
-unchanged. If this also happens on a device, the app cannot be configured at
-all, so it can never block anything, and it must not ship.
+Runs 27 to 51. The editor accepted edits the whole time. `ScreenTests` tapped
+`app.switches["Strict"]`, and XCUITest reports a SwiftUI `Toggle` in a `Form`
+as one element spanning the whole row — so `tap()` landed on the label, and
+nothing was ever flipped. Tapping at 92% across the row fixed it and the suite
+went green.
 
-Reproduced on runs 27–39. Read the whole of this before touching it: three
-plausible fixes have already failed and the cost was about two hours.
+Everything the failure "showed" follows from the switch never moving: the
+value stayed at 0, the schedule footer never changed branch, and `Cancel`
+worked throughout because a `Button` responds anywhere in its bounds. That
+last one was read as proof that taps reached the editor and only its state was
+broken, which sent the search into the app and kept it there.
 
-**Proven**
+Five app-side fixes were attempted and all five failed identically — the
+custom `Binding(get:set:)`, the editor's own `@State` copy, the picker's
+binding, the nested-sheet presentation, and the `familyActivityPicker`
+modifier itself. Five unrelated changes with an unmoved symptom was the signal
+that the app was not at fault, and it took all five to notice.
 
-- The editor sheet presents, and every screen renders.
-- Taps reach it and its actions run: `Cancel` genuinely dismisses (assert
-  that an editor-only row *disappears* — "Deep Work" is also the editor's
-  navigation title, so asserting its presence proves nothing, and that
-  mistake sent the first search in the wrong direction).
-- `Strict` is `Toggle(isOn: $mode.isStrict)` — the simplest possible case —
-  and reports `Hittable: true`, value `0` before and after a tap.
-- The schedule footer never changes branch, so the model really is unchanged.
-  This is independent of whatever XCUITest reports for a switch's `value`.
-- The toggle *logic* is correct: `DadMode.isScheduled` is covered by seven
-  Core tests that pass.
+What actually cost the time was not the wrong theories. It was:
 
-**Disproven — do not try these again**
+- **A diagnostic channel that hid the answer.** `xcodebuild` was piped through
+  `tail -60`, so a compile error in the test target read as an assertion
+  failure for four runs. Fixing the log found the real cause in one look.
+- **Assertions that could not fail.** `testAModeEditorOpensAndCloses` ended by
+  asserting "Deep Work" still existed after Cancel — also the editor's
+  navigation title, so it passed either way. An earlier one used `containing`
+  on a static text, which matches by descendants and so matches nothing.
+- **Never questioning the instrument.** Every hypothesis was about the app.
+  The tap itself went unexamined until five fixes had failed.
 
-1. *The custom `Binding(get:set:)` in `ScheduleSection`.* Replaced with a
-   direct binding to `DadMode.isScheduled`. Identical failure.
-2. *The editor holding its own copy in `@State`.* Bound it to `editing`
-   instead via `Binding($editing)`. Worse — the sheet stopped presenting at
-   all. Reverted in 0f1a79a.
-3. *`familyActivityPicker` binding `$mode.selection` and clobbering the Mode
-   during render.* Gave the picker its own `@State`. Identical failure. That
-   change is kept because avoiding a JSON round-trip per render is worth
-   having, but it fixed nothing.
-
-**Best remaining hypothesis, untested**
-
-The editor's body never re-renders after presentation. That fits every
-observation at once — the switch never redraws, the footer never changes
-branch, and `Cancel` still works because dismissing is not a re-render. It
-points at sheet-within-sheet presentation (`HomeView` → `ModesView` →
-`ModeEditorView`) rather than at any binding. Worth testing by presenting
-the editor with a `NavigationLink` instead of a nested sheet.
-
-**How to settle it fastest**
-
-On a device, via TestFlight. The Simulator cannot run Screen Time, and every
-Mode reachable there blocks nothing, so it was never going to answer a
-question about this app's real behaviour. Ten CI runs went into an
-environment that structurally could not resolve it.
+Kept from the attempts, on their own merits rather than as fixes:
+`DadMode.isScheduled` and `editableSchedule` with seven Core tests, because
+that logic belongs in Core and was previously reachable only from a Simulator;
+and the app picker holding its own state instead of a computed bridge that
+JSON round-trips on every render. Reverted: the nested-sheet-to-push change
+and gating the picker behind the UI-test flag, both made purely on failed
+theories.
 
 ## Known limitations, carried deliberately
 

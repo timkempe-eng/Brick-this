@@ -47,14 +47,7 @@ struct ModesView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
-            // PUSHED, not presented. ModesView is itself a sheet over
-            // HomeView, so the editor used to be a sheet inside a sheet — and
-            // in that arrangement no control in it accepted a change. Taps
-            // arrived and Cancel dismissed, but the switches never redrew and
-            // the schedule footer never changed branch, which is what a body
-            // that never re-renders looks like. Three fixes aimed at bindings
-            // and at state both missed. See PARKING_LOT.md.
-            .navigationDestination(item: $editing) { mode in
+            .sheet(item: $editing) { mode in
                 ModeEditorView(mode: mode) { model.save($0) }
             }
         }
@@ -97,53 +90,55 @@ struct ModeEditorView: View {
     ]
 
     var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $mode.name)
-            }
-
-            Section {
-                Button {
-                    showingPicker = true
-                } label: {
-                    HStack {
-                        Text("Apps and sites to hide")
-                        Spacer()
-                        Text("\(mode.blocked.totalCount)")
-                            .foregroundStyle(.secondary)
-                    }
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name", text: $mode.name)
                 }
-            } footer: {
-                Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps.")
-            }
 
-            ScheduleSection(mode: $mode)
-
-            Section {
-                Picker("\(Vocab.unVerb) automatically", selection: $mode.autoUnDadAfter) {
-                    ForEach(durations) { option in
-                        Text(option.id).tag(option.seconds)
+                Section {
+                    Button {
+                        showingPicker = true
+                    } label: {
+                        HStack {
+                            Text("Apps and sites to hide")
+                            Spacer()
+                            Text("\(mode.blocked.totalCount)")
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                } footer: {
+                    Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps.")
                 }
-                Toggle("Strict", isOn: $mode.isStrict)
-            } footer: {
-                Text("Strict stops Dad being deleted while your phone is \(Vocab.verbPast) — the fastest way to cheat.")
+
+                ScheduleSection(mode: $mode)
+
+                Section {
+                    Picker("\(Vocab.unVerb) automatically", selection: $mode.autoUnDadAfter) {
+                        ForEach(durations) { option in
+                            Text(option.id).tag(option.seconds)
+                        }
+                    }
+                    Toggle("Strict", isOn: $mode.isStrict)
+                } footer: {
+                    Text("Strict stops Dad being deleted while your phone is \(Vocab.verbPast) — the fastest way to cheat.")
+                }
             }
-        }
-        .navigationTitle(mode.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .modifier(AppPickerPresentation(isPresented: $showingPicker, selection: $selection))
-        .onAppear { selection = mode.selection }
-        // Take what was chosen when the picker closes. Keyed on the Bool
-        // rather than on the selection itself, which need not be Equatable.
-        .onChange(of: showingPicker) { _, isShowing in
-            if !isShowing { mode.selection = selection }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") { onSave(mode); dismiss() }
-                    .disabled(mode.name.trimmingCharacters(in: .whitespaces).isEmpty)
+            .navigationTitle(mode.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .familyActivityPicker(isPresented: $showingPicker, selection: $selection)
+            .onAppear { selection = mode.selection }
+            // Take what was chosen when the picker closes. Keyed on the Bool
+            // rather than on the selection itself, which need not be Equatable.
+            .onChange(of: showingPicker) { _, isShowing in
+                if !isShowing { mode.selection = selection }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") { onSave(mode); dismiss() }
+                        .disabled(mode.name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
             }
         }
     }
@@ -215,33 +210,6 @@ private struct ScheduleSection: View {
             } else {
                 Text("Off. This \(Vocab.modeNoun.lowercased()) only runs when you tap.")
             }
-        }
-    }
-}
-
-/// Applies `familyActivityPicker` only when the app is running for real.
-///
-/// The picker is backed by a system service that a Simulator never authorizes,
-/// and the Mode editor — the only screen carrying it — is the only screen in
-/// the app where no control accepts a change. Four fixes aimed at bindings,
-/// at the editor's state, and at how the screen is presented all failed
-/// identically, and none of them removed this modifier. This is the variable
-/// that has never been eliminated.
-///
-/// Skipping it under the UI-test flag stands on its own even so: the picker
-/// cannot return an app there, so the screen behind it is all a UI test was
-/// ever exercising. `isBypassingOnboarding` is false in Release, so a shipping
-/// build always carries the picker.
-private struct AppPickerPresentation: ViewModifier {
-    @Binding var isPresented: Bool
-    @Binding var selection: FamilyActivitySelection
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if UITestHooks.isBypassingOnboarding {
-            content
-        } else {
-            content.familyActivityPicker(isPresented: $isPresented, selection: $selection)
         }
     }
 }
