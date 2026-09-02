@@ -40,275 +40,302 @@ add what the work revealed.
       avoid. It would appear only when you Dadded by opening the app.
       [ADR 002](docs/adr/002-no-live-activity.md).
 
-## Feature gaps — what Brick users actually ask for, ranked
+## Feature gaps — the family product, ranked
 
-Research sprint, Sept 2026: App Store reviews, long-form reviews (NBC News,
-Forbes, Consumer Reports, Marie Claire, Apartment Therapy, WhistleOut, The AU
-Review), Brick's own FAQ and help centre, competitor teardowns (Unpluq, Opal,
-Focus Phone, AppBlock, SelfBlock, BlockerHero, Sheppie), and the Apple developer
-and parenting threads on how teenagers get around Screen Time. Sources at the
-end of the section.
+Research sprint, Sept 2026, rerun against the actual hook: **a parent teaching
+healthy device habits, and a teenager who should be able to earn something for
+making good decisions.** Sources at the end.
 
-**Ranked by usefulness to someone building healthy habits — their own, and a
-teenager's.** Not by cost, and not by how loudly it was asked for. Two things
-moved items up: whether it prevents the failure that makes people *stop using
-the product*, and whether it works when the person being restrained did not
-choose the restraint. Cost is stated per item because some of the best ones are
-nearly free here and some are a new entitlement.
+Ranked by usefulness to that pair — the parent setting the boundary and the
+teenager living under it. Not by cost. The top of this list is now the most
+expensive part of it, which is what happens when the hook changes: Dad is
+currently a self-discipline tool that a household can share, and a family
+product is a different shape.
 
-One caveat on sourcing, since it changes how much weight these deserve: the
-search index returned almost no Reddit. What follows is drawn from App Store
-review text, published reviews, and competitors' feature matrices, which
-over-represent people who wrote things down and under-represents the quiet
-majority. Treat the ordering as a considered argument, not a measurement. The
-first four are the ones worth acting on without further evidence.
+### Two findings that should shape the design before anything is built
 
-### 1. Timed Un-Dad — release on a leash
+**Do not pay for good behaviour in screen time.** This is the strongest and
+most counter-intuitive result in the corpus, and it invalidates the obvious
+build. A whole category exists — ScreenCoach, Chore Champ, Carrots&Cake, EarnIt,
+Zenvy — where chores and homework buy minutes. Child development researchers
+find it backfires: screens become the thing "worth working for", other
+activities start to feel like barriers to the reward, and cooperation turns
+into negotiation — "what do I get for this?". The explicit recommendation is to
+avoid tying screen access to grades, chores or daily behaviour.
 
-- [ ] **Un-Dad for fifteen minutes, then Dad again by itself.** Every review
-      describes the same failure: you release to check one thing and the phone
-      stays open for an hour. Brick has no answer — "once you Unbrick your
-      phone, you're back to full access". Unpluq does, and reviewers name it as
-      the reason they switched.
+Dad is not stuck with that trap, because of a distinction worth stating
+plainly: **the good decision here *is* the healthy habit.** Those apps pay for
+unrelated behaviour with the thing they are trying to limit. Dad rewards
+choosing to Dad. So the design rule is — reward the habit, but never denominate
+the reward in the thing being limited. Earned minutes are the one currency
+Dad should not mint.
 
-      Top of the list because it is the everyday tool, it fixes the most common
-      way a session is lost, and for a teenager it turns "can I have my phone"
-      from an argument into a grant that closes itself.
+**Surveillance backfires too, and Dad is already built to avoid it.** Teens
+whose parents used control apps experienced *more* online risk, not less, and
+the apps correlate with authoritarian parenting and eroded trust. What does
+work: rules the teenager helped write, transparent tools they know exist, and a
+visible path to more independence. Bark and Qustodio read messages; Dad
+structurally cannot, because rule 3 means the app never learns what was blocked,
+let alone what was said. That is a real position in this market — *Dad is a
+boundary, not a spy* — and it is worth saying out loud in the README rather than
+leaving it as an implementation detail.
 
-      Nearly free structurally: `SessionScheduling.scheduleRelease(at:)` already
-      exists and this is its mirror — a scheduled *re-*apply. `DadMode` already
-      carries `autoUnDadAfter` for the other direction. Core work is a new
-      session state and its tests; the adapter is a second DeviceActivity
-      one-shot.
+One caveat on evidence: a widely-repeated "40% higher compliance for
+co-created rules" figure traces back to a secondary blog and I could not find
+the primary study. The *direction* is well supported — adolescent involvement in
+screen decisions is associated with better compliance and greater prosociality —
+but do not ship that number.
 
-### 2. Essential apps no Mode can ever take
+### 1. A parent and a teenager are different people
 
-- [ ] **A never-block list, set once, that every Mode is intersected against.**
-      The most-repeated concrete complaint in the entire corpus: a tester
-      "accidentally locked themselves out of an incoming phone call from their
-      family"; another "forgot to permit some infrequently used but essential
-      tools like ride-sharing or banking apps and had to unbrick to edit
-      settings again". Brick hard-codes exactly one exception — it refuses to
-      block the Phone app — and stops there.
+- [ ] **Two roles, and the child authorization that makes them real.** Nothing
+      else on this list means anything without it. Today Dad authorizes with
+      Family Controls *individual* authorization: the phone's owner controls it,
+      which is correct for an adult and useless for a teenager, who can revoke
+      it in Settings.
 
-      Second because it does not add capability, it prevents abandonment. Being
-      locked out of your bank at an airport once is enough to make someone quit
-      a habit tool for good, and it is the specific fear that stops a parent
-      putting this on a teenager's phone at all.
+      Apple provides the other path. `AuthorizationCenter.requestAuthorization(for: .child)`
+      grants genuine parental control — but only on a device signed into a
+      child's iCloud account inside an iCloud Family, and not MDM-enrolled. That
+      constraint is the whole product decision: it is Apple's blessed route, the
+      teenager cannot undo it alone, and it forces the household onto Family
+      Sharing.
 
-      Respects rule 3: the never-block list is a second `BlockedSelection`,
-      opaque everywhere except `DadMode+FamilyControls`, which is the only place
-      the subtraction can happen. Core stores and versions it; Core never looks
-      inside. Pair it with a warning in the editor when a Mode's selection
-      overlaps it.
+      First because it is a prerequisite, not a feature, and because it also
+      subsumes most of the tamper problem that ranked 5th under the old framing.
+      Verify the entitlement story before committing — same Family Controls
+      entitlement, but a materially different request to Apple, and the
+      Distribution approval is already the long pole.
 
-### 3. Accountability release — someone else holds the key
+### 2. Earned autonomy — the incentive, done the way the evidence supports
 
-- [ ] **A release secret held by another person.** The clearest gap between
-      Brick and its competitors: AppBlock, SelfBlock, BlockerHero and Sheppie
-      all ship some form of "a trusted person must approve the unlock", and
-      Brick ships none. Brick's answer is physical — hide the puck — which
-      reviewers do use for teenagers ("her kids can't access social media or
-      games without physically reaching the device she holds onto"), but it
-      falls apart the moment the child finds the Emergency Unbrick, which
-      reviewers explicitly warn about.
+- [ ] **A visible ladder where consistency buys freedom, never minutes.** The
+      teenager can see every rung, what it costs, and what it unlocks: set your
+      own Sleep window inside a range the parent picked; edit your own Modes;
+      more emergency overrides; eventually the tag lives in your room and the
+      parent stops holding it.
 
-      Third rather than first because Dad already has most of it: the tag *is*
-      the key and a parent can already hold it. The actual hole is that the
-      emergency allowance is a private escape hatch the phone's owner controls
-      alone.
+      Second, and it is the heart of the hook. This is what "incentivize good
+      decisions" should mean here — the reward is self-determination, which is
+      the thing the research says teenagers actually respond to and the thing a
+      parent is trying to hand over anyway. It also gives the product an ending:
+      a teenager who tops the ladder is running Dad the way an adult does, which
+      is the goal.
 
-      Cheap version, and the one to build: a Mode may require a PIN to spend an
-      emergency override, and the PIN is set by whoever holds the tag. Pure
-      Core, no network, no new entitlement — `EmergencyAllowance.consume` grows
-      a precondition. The expensive version — a real remote-approval round trip
-      — needs a server and an account system, which this app deliberately does
-      not have, and should stay out of scope until the cheap one proves
-      insufficient.
+      Two design constraints that decide whether it works. The ladder must
+      **ratchet slowly and never silently drop a rung** — losing a level over one
+      bad night is exactly what makes a teenager stop caring. And every rung
+      must be legible in advance; a reward you cannot predict is not an
+      incentive. Core work is real but ordinary: a level, its rules, and the
+      arithmetic from history, all testable without a Mac.
 
-### 4. Allowlist Modes — "only these", not "not those"
+### 3. The rules get written by both people
 
-- [ ] **Invert a Mode: name the handful of apps that stay, block the rest.**
-      Opal ships "blocklists and allowlists"; Brick is blocklist-only, and
-      reviewers describe the consequence — a Sleep or School Mode is only ever
-      as good as your memory of everything you should have listed, and every new
-      app installed is a hole that opens silently.
+- [ ] **A setup flow that is a negotiation, not a configuration screen.** Both
+      people present, each Mode proposed and agreed, the reasoning recorded next
+      to it, and a scheduled point where it gets renegotiated as trust grows.
 
-      Fourth because it is the strongest available shape for exactly the two
-      Modes that matter most for a teenager — sleep and school hours — and
-      because it is the only one of these that gets *better* over time instead
-      of decaying as new apps arrive.
+      Third because it is cheap — it is mostly copy, flow and a stored rationale
+      string — and because it is the single best-supported intervention in the
+      literature. It also changes what the app *is* from the teenager's side: a
+      deal they are party to rather than a restriction that appeared on their
+      phone.
 
-      `FamilyActivitySelection` supports this natively, so the cost is a flag on
-      `DadMode`, an editor branch, and the shield adapter reading it. Core
-      treats the payload as opaque as before; only the flag is Core's business.
+### 4. The teenager sees exactly what the parent sees
 
-### 5. Say when the shield went missing
+- [ ] **One dashboard, no hidden view.** Same streaks, same history, same
+      ladder position, same record of every override. In a 2020 trial of an app
+      that showed the child the identical dashboard the parent saw, most
+      parent-child pairs rated it more useful and less corrosive of trust than a
+      stricter tool.
 
-- [ ] **Record and surface every gap between what Dad thinks is blocking and
-      what iOS is actually enforcing.** Reviewers found the hole directly: "if
-      you go into Screen Time and tap the turn off button for brick, it
-      automatically removes the restrictions". The parenting and Apple developer
-      threads catalogue the rest — toggling the blocker off inside Screen Time
-      settings, moving the system date, re-downloading a deleted app from the
-      cloud icon.
+      Fourth because it is nearly free — Dad has no separate parent data to hide
+      — and because committing to it now stops a monitoring surface being added
+      later by accident. Write it down as a rule, the way rule 3 is written down.
 
-      Fifth, and it would rank higher if Dad could *prevent* any of it. It
-      cannot, and neither can Brick: on iOS a determined holder of the Screen
-      Time passcode wins. What Dad can do is refuse to lie about it. Crash
-      reconciliation already compares the shield against the stored session on
-      every foreground; this is that comparison, kept as history and shown
-      honestly, so a streak reflects what happened rather than what was
-      configured. For a teenager's phone that difference is the whole product.
+### 5. Request and grant
 
-      Cost is small and mostly Core. Be careful what it claims: a gap is
-      evidence of a gap, not proof of intent, and the copy has to say so.
+- [ ] **The teenager asks for a release; the parent grants a bounded one.**
+      Apple's own "ask for more time" is the proven pattern and parents report it
+      as unreliable, which is the opening. The grant must be bounded by
+      construction — fifteen minutes, then it re-Dads — so that saying yes is
+      not the same as giving up for the evening.
 
-### 6. A tag per Mode — the place is the Mode
+      Fifth because it is the everyday interaction of a family product, and
+      because it converts the most common household argument into a two-tap
+      exchange with a defined end. Depends on #6 for its mechanism.
 
-- [ ] **Map each paired tag to the Mode it starts.** Sticker on the kitchen
-      table starts Dinner; sticker on the desk starts Deep Work; sticker in the
-      bedroom starts Sleep. Brick sells this as a hardware upsell — "one phone
-      can work with multiple Bricks if you'd like to have one in your home, car,
-      or work" — and at $59 a puck. Here the tags cost thirty cents, which
-      makes it the cheapest real feature on this list and the one that best
-      suits the DIY premise.
+### 6. Timed Un-Dad — release on a leash
 
-      `DadPersisting.pairedTagUIDs` is a flat `[String]` today, checked only for
-      membership in `DadEngine`. This is `[String: UUID]` and a Mode picker at
-      pairing time — genuinely a small change, and it makes choosing a Mode a
-      physical act rather than a screen you have to open first.
+- [ ] **Un-Dad for fifteen minutes, then Dad again by itself.** Ranked first
+      under the old framing and still here on its own merits: every review
+      describes releasing to check one thing and losing an hour, and Brick has no
+      answer — "once you Unbrick your phone, you're back to full access".
 
-### 7. Warn before a scheduled Mode starts
+      Now it is also the primitive under #5, which raises its value: the parent's
+      grant and the teenager's own timed release are the same mechanism. Nearly
+      free structurally — `SessionScheduling.scheduleRelease(at:)` exists and
+      this is its mirror, a scheduled re-apply.
 
-- [ ] **"Sleep Mode in ten minutes."** A schedule that lands mid-sentence gets
-      resented, then disabled. The wind-down warning is standard across the
-      category and is the one piece here with actual evidence behind it: limiting
-      evening screen use for a week had teenagers falling asleep about twenty
-      minutes earlier.
+### 7. Essential apps no Mode can ever take
 
-      Costs a notification and a second DeviceActivity window offset before the
-      real one — the window arithmetic already lives in Core and is tested.
-      Ranked below the structural items because it changes compliance, not
-      capability.
+- [ ] **A never-block list every Mode is intersected against.** The
+      most-repeated complaint in the review corpus — a tester "accidentally
+      locked themselves out of an incoming phone call from their family";
+      another forgot to permit banking and ride-sharing and had to unbrick to
+      fix it. Brick hard-codes one exception, the Phone app, and stops.
 
-### 8. Skip tonight
+      Seventh rather than second because the family framing changes who it
+      protects: this is now the thing that lets a parent say yes to putting Dad
+      on a teenager's phone at all, and the thing that stops a blocked maps app
+      becoming a safety argument. Respects rule 3 — the list is a second opaque
+      `BlockedSelection`, subtracted only inside `DadMode+FamilyControls`.
 
-- [ ] **Pause a scheduled Mode for one occurrence without deleting it.**
-      Unpluq lets you "pause a schedule *just for today*"; Brick makes you
-      dismantle the schedule and remember to rebuild it, and reviewers report
-      exactly that — schedules turned off "temporarily" and never restored.
+### 8. Allowlist Modes — "only these", not "not those"
 
-      A one-shot suppression date on `ModeSchedule`, honoured by the window
-      diff. Small, and it protects the schedules that already work from being
-      thrown away for one dinner out.
+- [ ] **Invert a Mode: name the few apps that stay.** Opal ships allowlists;
+      Brick is blocklist-only, so a Sleep or School Mode is only as good as your
+      memory, and every newly installed app is a silent hole. The strongest
+      available shape for exactly the two Modes a household cares most about,
+      and the only item here that improves with time instead of decaying.
+      `FamilyActivitySelection` supports it natively.
 
-### 9. Allowance Modes — throttle instead of forbid
+### 9. Rewards the parent defines, paid in anything but minutes
 
-- [ ] **Fifteen minutes of an app per day, rather than none.** *Moved here from
-      "Later" — it is a researched gap, not just an idea.* Screen Time can do
-      it; Brick cannot, and the all-or-nothing shape is the most common reason
-      reviewers describe a Mode as too blunt to leave on.
+- [ ] **A small ledger: the teenager earns, the parent settles up.** Pocket
+      money, a lift somewhere, a later weekend curfew, choosing dinner. The app
+      tracks what was earned and what was redeemed; it does not try to be a
+      payments product.
 
-      For a teenager it is the difference between a rule that gets negotiated
-      and one that gets circumvented. Ranked ninth only because it is the
-      largest build in the top half: a different Screen Time mechanism
-      (`ManagedSettings` limits rather than a shield), a different notion of a
-      session, and stats that count minutes rather than windows.
+      Ninth, deliberately below earned autonomy, and constrained by the finding
+      above: the rewards are real-world, never screen time. Worth building
+      because #2 alone is abstract for a younger teenager and a concrete reward
+      bridges to it — but if only one of the two ships, ship #2.
 
-### 10. A weekly review worth reading
+### 10. The parent Dads too
+
+- [ ] **Shared streaks and household goals, with the parent's own phone in
+      them.** A parent's own device habits are among the strongest predictors of
+      their child's, and the fastest way to make Dad feel like a punishment is
+      for it to run on exactly one phone in the house.
+
+      Tenth because it is motivational rather than structural, but it is cheap —
+      Dad already has streaks and a shared physical tag — and it changes the
+      product's tone more than its cost suggests.
+
+### 11. A weekly review both people read
 
 - [ ] **Per-Mode time reclaimed, time of day, best and worst days.** The one
       thing every comparison grants Opal over Brick: Brick "tracks usage but
-      doesn't offer comparable analytical depth". `DadStats` and streaks already
-      exist, so this is presentation over data Dad mostly has.
+      doesn't offer comparable analytical depth". `DadStats` exists, so this is
+      mostly presentation.
 
-      Tenth because it changes motivation rather than behaviour, and because
-      shared honestly it is a good conversation to have with a teenager — which
-      is the version worth building. Avoid the judgemental register; a reviewer
-      abandoned a competitor because it felt "annoying and intrusive and
-      somewhat judgmental".
+      Aim it at a conversation, not a report card, and keep it out of the
+      judgemental register — a reviewer abandoned a competitor for feeling
+      "annoying and intrusive and somewhat judgmental", which is precisely how a
+      teenager stops reading something.
 
-### 11. What you missed while Dadded
+### 12–15. Mechanics, unchanged in value and now cheaper to justify
 
-- [ ] **A digest, on release, of who tried to reach you.** Reviewers report the
-      real cost of blocking: while bricked "users can see notifications but
-      can't access them", and losing an important message is the thing that
-      makes people stop trusting the tool overnight.
+- [ ] **A tag per Mode.** `pairedTagUIDs` is a flat `[String]` today; make it
+      `[String: UUID]`. Kitchen tag starts Dinner, desk tag starts Deep Work.
+      Brick charges $59 a puck for this; here the stickers are thirty cents,
+      which makes it the best value on the list.
+- [ ] **Warn before a scheduled Mode starts.** "Sleep Mode in ten minutes." A
+      schedule that lands mid-sentence gets resented, then disabled. The one item
+      with direct evidence behind it: a week of limited evening screen use had
+      teenagers falling asleep about twenty minutes earlier.
+- [ ] **Skip tonight.** Pause one occurrence without dismantling the schedule.
+      Unpluq has it; Brick makes you delete and rebuild, so schedules get turned
+      off "temporarily" and never restored.
+- [ ] **Allowance Modes — throttle instead of forbid.** *Was in "Later".* Fifteen
+      minutes of an app a day rather than none. For a teenager it is the
+      difference between a rule that gets negotiated and one that gets
+      circumvented. Largest build in this group: a different Screen Time
+      mechanism entirely.
 
-      Worth checking before committing: iOS may not expose enough for a
-      third-party app to assemble this honestly, and a half-true digest is worse
-      than none. Investigate, then decide — the honest outcome may be an ADR
-      declining it, as with the Live Activity.
+### 16–18. Real, and correctly last
 
-### 12. Modes that start when you arrive somewhere
+- [ ] **Say when the shield went missing.** Largely subsumed by #1, which is why
+      it fell from 5th. Still needed as the honest fallback for households that
+      cannot use child authorization, and the copy must not overclaim: a gap is
+      evidence of a gap, not proof of intent.
+- [ ] **What you missed while Dadded.** Reviewers report losing important
+      messages. Check feasibility first — iOS may not expose enough to build this
+      honestly, and a half-true digest is worse than none. The honest outcome may
+      be an ADR declining it, as with the Live Activity.
+- [ ] **The second device.** The teenager whose phone is Dadded picks up the
+      iPad, and Brick cannot help — iPads have no NFC. Last because of cost: a
+      new bundle id, a `match` entry, another Family Controls approval, and
+      cross-device state the app has no mechanism for.
 
-- [ ] **Arrive at the gym, Dad starts; leave, it ends.** Focus Phone's
-      differentiator and a real Brick limitation — "a standard session remains
-      active until you return to the Brick", so a session can only ever end
-      where it began.
+### The architectural fork this creates
 
-      Ranked low deliberately, and against rule 7 it is the most expensive item
-      here: always-on location is a new entitlement, a review surface, a battery
-      cost, and a privacy story that sits badly beside a product whose current
-      claim is that it never learns anything about you. The physical tag already
-      solves the same problem with no entitlement at all. Do not build this
-      until something the tag genuinely cannot do turns up.
+Two roles need shared state, and Dad currently has none — no accounts, no
+network, no step of a tap that touches the internet. That property is a genuine
+advantage over Brick, which every comparison notes "doesn't work without an
+internet connection". Do not spend it casually.
 
-### 13. The second device
+**Start in-person, tag-mediated.** The parent already holds the tag; a grant can
+be a tag tap plus a PIN entered on the teenager's phone. Zero infrastructure, no
+accounts, privacy model intact, and it works on a plane. **Then CloudKit, only
+when remote grant proves necessary** — iCloud Family Sharing is already a
+prerequisite of #1, so CloudKit is the Apple-native answer and still needs no
+server of ours. Both beat inventing a backend.
 
-- [ ] **Dadding the iPad.** Brick cannot: iPads have no NFC, and Brick's FAQ
-      says so. For a household this is the obvious hole — the teenager whose
-      phone is Dadded picks up the iPad — and Freedom's cross-device blocking is
-      the standing comparison.
-
-      Last because of what it costs here. A new target is a new bundle id, a
-      `match` entry, an App ID, its own entitlements file, and another
-      Family Controls approval waiting on Apple. It also needs shared state
-      across devices, which means iCloud or a server, which the app currently
-      does not have in any form. Real, valuable, and correctly the last thing on
-      this list.
+- [ ] **Reposition the README and roadmap around the family hook.** They
+      currently pitch a DIY Brick for one adult. If family and teens is the hook,
+      the pitch, the naming rationale and `docs/roadmap.md` all describe a
+      different product than the one being built. Cheap, and it should happen
+      before the feature work so the features get designed for the right user.
 
 ### Researched and deliberately not added
 
-- **Alternative unlock frictions** — shake, tap a pattern, walk a hundred steps
-  (Unpluq). The tag is already the friction, and it is a better one because it
-  is somewhere else in the house. A second, weaker gate in the same app only
-  gives you a way around the first.
-- **AI usage analysis** (Opal). Requires the app to learn what you use, which
-  rule 3 exists to prevent. Declining this is the privacy model working.
-- **Desktop blocking** (Freedom). A different product.
-- **Removing the internet requirement** — listed as a Brick weakness in every
-  comparison ("Brick doesn't work without an internet connection"). Nothing to
-  do: Dad is local-only already, Screen Time plus App Group `UserDefaults`, and
-  no step of a tap touches a network. Worth saying out loud in the README,
-  because it is a genuine advantage over the $59 product and nobody would guess
-  it.
-- **Refreshing the emergency allowance** — Brick makes you email support. Dad's
-  five per rolling 30 days already restore themselves, on purpose. Already
-  better; nothing to build.
+- **Screen time as chore currency** (ScreenCoach, Chore Champ, Carrots&Cake,
+  EarnIt, Zenvy). The single biggest thing in this market and the research says
+  it backfires. Declining it is the product's opinion, and #2 and #9 are the
+  same intent built the way the evidence supports.
+- **Message and content monitoring** (Bark, Qustodio). Rule 3 forbids it and the
+  research says it damages the thing it is meant to protect. This is the privacy
+  model working, not a gap.
+- **Location tracking of the child.** Same reasoning. Every family app ships it;
+  it is surveillance, reviewers report it as unreliable anyway, and it needs an
+  always-on entitlement against rule 7. The tag solves the same problems with no
+  entitlement at all.
+- **Alternative unlock frictions** — shake, pattern, walk (Unpluq). The tag is a
+  better friction because it is somewhere else in the house; a second, weaker
+  gate only routes around the first.
+- **AI usage analysis** (Opal). Requires learning what the user does, which rule
+  3 exists to prevent.
+- **Refreshing the emergency allowance.** Brick makes you email support; Dad's
+  five per rolling 30 days already restore themselves. Already better.
 
 ### Sources
 
-App Store reviews for *Brick — Ditch Distractions*
-(`apps.apple.com/us/app/brick-ditch-distractions/id6448794069`) ·
 [Brick FAQ](https://getbrick.com/pages/faq) ·
+App Store reviews for *Brick — Ditch Distractions* ·
 [Unpluq vs Brick](https://whatifididnt.com/blog/unpluq-vs-brick/) ·
 [A year with Brick](https://whatifididnt.com/blog/brick-phone-app/) ·
 [Brick alternatives](https://www.getfocusphone.com/articles/brick-alternatives/) ·
-[Brick vs Opal](https://www.getfaithlock.com/resources/brick-vs-opal) ·
 [NBC News two-week test](https://www.nbcnews.com/select/shopping/brick-phone-app-blocker-review-rcna259740) ·
-[Marie Claire UK](https://www.marieclaire.co.uk/life/health-fitness/brick-phone-detox-device-review) ·
-[The AU Review](https://www.theaureview.com/technology/brick-review/) ·
-[WhistleOut](https://www.whistleout.com/CellPhones/Apps/brick-for-phone-limits-app-review) ·
-[AppBlock on accountability partners](https://appblock.app/tired-of-breaking-your-own-phone-rules-try-an-accountability-partner/) ·
-[How kids bypass Screen Time](https://jelliesapp.com/blog/kids-bypassing-screen-time/) ·
-[Apple Developer Forums thread 773598](https://developer.apple.com/forums/thread/773598) ·
-[Tech Lockdown on Screen Time gaps](https://www.techlockdown.com/articles/screen-time-not-working)
+[Apple: AuthorizationCenter](https://developer.apple.com/documentation/familycontrols/authorizationcenter) ·
+[Apple: requestAuthorization(for:)](https://developer.apple.com/documentation/familycontrols/authorizationcenter/requestauthorization(for:)) ·
+[WWDC22: What's new in Screen Time API](https://developer.apple.com/videos/play/wwdc2022/110336/) ·
+[Apple: respond to a Screen Time request](https://support.apple.com/guide/iphone/respond-to-a-screen-time-request-iph74e434e84/ios) ·
+[UCF: parental-control apps may be counterproductive](https://www.ucf.edu/news/apps-keep-children-safe-online-may-counterproductive/) ·
+[Beyond parental control (arXiv 2503.22995)](https://arxiv.org/html/2503.22995) ·
+[MIT Tech Review: child-monitoring apps need a reboot](https://www.technologyreview.com/2026/08/19/1141623/child-monitoring-apps-need-reboot/) ·
+[AAP: monitoring vs independence by age](https://www.aap.org/en/patient-care/media-and-children/center-of-excellence-on-social-media-and-youth-mental-health/qa-portal/qa-portal-library/qa-portal-library-questions/balancing-online-safety-and-independence-parental-monitoring-by-age/) ·
+[Psychology Today: when we use screens to reward kids](https://www.psychologytoday.com/us/blog/the-art-of-talking-with-children/202407/when-we-use-screens-to-reward-kids-they-use-screens) ·
+[Why screen time as a reward can backfire](https://kesq.com/stacker-parenting-family/2026/08/04/does-screen-time-affect-behavior-why-using-it-as-a-reward-can-backfire/) ·
+[Adolescent involvement in screen decisions (PMC11016903)](https://pmc.ncbi.nlm.nih.gov/articles/PMC11016903/) ·
+[Children and Screens: all in the family](https://www.childrenandscreens.org/learn-explore/research/all-in-the-family/) ·
+[OurPact review](https://timily.app/guides/ourpact-review/) ·
+[Earn-screen-time app roundup](https://timily.app/guides/earn-screen-time-app/)
 
 ## Later
 
-- [ ] Allowance-based Modes — *moved up into the ranked gaps above (#9)*.
+- [ ] Allowance-based Modes — *moved up into the ranked gaps above*.
 - [ ] Android. `Dad/Shared/Core` would port nearly as-is; every adapter is new,
       and blocking via `AccessibilityService` is meaningfully weaker.
 - [ ] 3D-printed puck with a magnet, instead of a bare sticker.
