@@ -74,7 +74,7 @@ final class ScreenTests: XCTestCase {
         XCTAssertTrue(footer(containing: "only runs when you tap").waitForExistence(timeout: 10),
                       "A starter Mode should begin with no schedule.")
 
-        toggle.tap()
+        flip(toggle)
 
         // On, it says what is still missing rather than implying it will run.
         //
@@ -124,7 +124,7 @@ final class ScreenTests: XCTestCase {
         XCTAssertTrue(strict.waitForExistence(timeout: 15))
         let before = String(describing: strict.value)
 
-        strict.tap()
+        flip(strict)
 
         XCTAssertEqual(strict.value as? String, "1",
                        """
@@ -134,6 +134,19 @@ final class ScreenTests: XCTestCase {
                        Hittable: \(strict.isHittable)
                        On screen: \(visibleText())
                        """)
+    }
+
+    /// Taps the switch itself rather than the middle of its row.
+    ///
+    /// XCUITest reports a SwiftUI `Toggle` in a `Form` as a single element
+    /// spanning the whole row, so `tap()` lands on the label, not the control,
+    /// and nothing happens. Five app-side fixes were spent on a switch that
+    /// was never being flipped: the binding, the editor's state, the picker's
+    /// binding, the nested-sheet presentation, and the picker modifier itself
+    /// all changed, and the symptom never moved — because the app was not the
+    /// thing at fault.
+    private func flip(_ toggle: XCUIElement) {
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
     }
 
     /// `matching`, not `containing`: containing filters by DESCENDANTS, so on a
