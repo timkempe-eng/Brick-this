@@ -107,10 +107,27 @@ Three things that will bounce or delay a request:
 
 The usual advice for the wait is to use the *development* entitlement, which
 works immediately, and test on a device from Xcode. **That does not apply to
-this project.** Installing a development build needs a Mac, and there isn't
-one — see the machines table in CLAUDE.md. So approval is not only the gate on
-shipping, it is the gate on the app reaching a phone at all, and on every
-question a Simulator cannot answer.
+this project**, and the reason is worth writing down because the obvious
+workaround is a dead end too:
+
+| Profile | Family Controls without approval | Installs without a Mac |
+|---|---|---|
+| Development | yes, the development variant | **no** — OTA install is not supported for development-signed builds |
+| Ad-hoc | **no** — profiles come back without the entitlement, development variant included | yes, over the air |
+| App Store | no | yes, via TestFlight |
+
+The two halves never meet: the profile that carries the entitlement cannot be
+installed without a Mac, and the one that can be installed does not carry it.
+So approval gates the app reaching a phone **at all**, not just shipping, and
+with it every question a Simulator cannot answer.
+
+What this does leave open: a build carrying **no** Family Controls entitlement
+is not gated by any of this, and ad-hoc plus an over-the-air install needs no
+Apple review whatsoever — a distribution certificate, the phone's UDID
+registered, and the `.ipa` and a `manifest.plist` served over HTTPS, which
+public GitHub Release assets are. That is the only route to a real device
+before approval, and it costs the three Screen Time extensions, since they
+exist for nothing else.
 
 Approval is not the same as *enabled*. Afterwards, go to each App ID's
 **Additional Capabilities** tab and switch on Family Controls (Distribution),
