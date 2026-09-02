@@ -12,15 +12,17 @@ name: Release to TestFlight
 #   ASC_ISSUER_ID   the issuer id above the key list
 #   ASC_KEY_P8      base64 of AuthKey_XXXX.p8 — NOT the raw file
 #   MATCH_PASSWORD  passphrase for the stored certificates
-#   MATCH_GIT_TOKEN PAT with contents:read on the repo named by MATCH_GIT_URL.
-#                   Only needed when that is NOT this repo — Actions' own
-#                   GITHUB_TOKEN cannot read another repository's branch.
+#   MATCH_GIT_TOKEN Fine-grained PAT with Contents read AND WRITE on the repo
+#                   named by MATCH_GIT_URL. Actions' own GITHUB_TOKEN is scoped
+#                   to this repository and cannot reach another one.
 #
 # Required repository variable:
-#   MATCH_GIT_URL   repo holding the `match` branch. This account already ships
-#                   other apps, so point it at their repo and REUSE that
-#                   distribution certificate: Apple caps them at about two, and
-#                   a second app needs no new one. See docs/signing.md.
+#   MATCH_GIT_URL   An empty PRIVATE repo for match to store the encrypted
+#                   certificate and key in. It must not be this repo, which is
+#                   public; the lane refuses a public store. Dad keeps its own
+#                   store rather than sharing another project's, so that a
+#                   revoked cert on either side cannot break the other.
+#                   See docs/signing.md.
 #
 # This cannot succeed until Apple approves Family Controls (Distribution) for
 # all four bundle ids, AND the capability is enabled on each App ID: match does

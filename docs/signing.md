@@ -59,15 +59,19 @@ stranded slots lock you out of distribution entirely.
 only makes HTTP calls, so it runs on Ubuntu — don't pay for a macOS runner to
 call an API.
 
-**Dad mints its own certificate.** `MATCH_GIT_URL` defaults to this repo, so the
-`match` branch lives here and Dad is self-contained. The cost of that choice is
-a slot against the ceiling, so the release workflow counts distribution
-certificates before `match` runs and refuses to proceed if the account is
-already at two with nothing stored to reuse.
+**The store must be a private repo, and it is not this one.** `match` commits
+an encrypted certificate and private key; this repo is public, because that is
+what makes the macOS runners free. `MATCH_GIT_URL` is therefore required — it
+has no default — and the lane refuses if it names a public repo. Both checks
+exist because the earlier default was *this repo*, which would have published
+the key on the first release.
 
-The alternative, if you ever want it: **a second app reuses everything** — same
-certificate, same `match` branch, same secrets, with only a new App Store
-Connect record. Point `MATCH_GIT_URL` at the repo holding that branch.
+**Dad mints its own certificate into its own store.** Sharing another project's
+`match` branch would save a slot against the ceiling, and is not worth it: a
+`match nuke` or a revoked certificate on either side breaks releases in both,
+and the failure gives no hint that the other project caused it. The release
+workflow counts distribution certificates before `match` runs and refuses to
+proceed if the account is at the ceiling with nothing stored to reuse.
 
 Run **Apple account maintenance** before the first release. It lists the
 certificates, and revokes a stranded one by id.

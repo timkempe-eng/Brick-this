@@ -37,20 +37,38 @@ rescue StandardError => e
   0
 end
 
-def match_branch_exists?
-  branch = ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"]
-  repo = ENV["GITHUB_REPOSITORY"].to_s
-  token = ENV["GITHUB_TOKEN"].to_s
-  return false if repo.empty? || token.empty?
+# owner/repo out of an https git url, with or without a trailing .git.
+def repo_slug(git_url)
+  m = git_url.to_s.match(%r{github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?/?\z})
+  m && "#{m[1]}/#{m[2]}"
+end
+
+def github_api(path, token)
   require "net/http"
-  uri = URI("https://api.github.com/repos/#{repo}/branches/#{branch}")
+  uri = URI("https://api.github.com#{path}")
   req = Net::HTTP::Get.new(uri)
-  req["Authorization"] = "Bearer #{token}"
+  req["Authorization"] = "Bearer #{token}" unless token.to_s.empty?
   req["Accept"] = "application/vnd.github+json"
   res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
-  res.code == "200"
+  return nil unless res.code == "200"
+  require "json"
+  JSON.parse(res.body)
 rescue StandardError
-  false
+  nil
+end
+
+# Does the storage repo already hold a match branch to reuse?
+#
+# This asks about the repo named by MATCH_GIT_URL, using MATCH_GIT_TOKEN.
+# An earlier version asked about GITHUB_REPOSITORY with GITHUB_TOKEN, which
+# is the wrong repo the moment storage lives anywhere else — it reported "no
+# branch" for a store that did hold a certificate, and the cap guard below
+# then refused a release that would have worked.
+def match_branch_exists?(git_url:, token:)
+  slug = repo_slug(git_url)
+  return false if slug.nil?
+  branch = ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"]
+  !github_api("/repos/#{slug}/branches/#{branch}", token).nil?
 end
 
 platform :ios do
@@ -77,13 +95,21 @@ platform :ios do
 
     # Where match's certificates live, and what may read them.
     #
-    # GITHUB_TOKEN is scoped to THIS repository. Reusing another project's
-    # certificate means cloning that project's match branch, which that token
-    # cannot do. Catch it here: the alternative is a permission failure twenty
-    # minutes into a signed build.
+    # match stores an ENCRYPTED distribution certificate and private key. The
+    # store must be a PRIVATE repo. This repo is public — that is deliberate,
+    # it is what makes the macOS runners free — so it can never be the store,
+    # and the guard below enforces that rather than trusting a comment.
+    #
+    # GITHUB_TOKEN is scoped to THIS repository, so a store anywhere else needs
+    # its own PAT. Catch that here: the alternative is a permission failure
+    # twenty minutes into a signed build.
     this_repo = require_env("GITHUB_REPOSITORY", "Provided by Actions.")
-    match_git_url = ENV["MATCH_GIT_URL"].to_s.empty? ?
-      "https://github.com/#{this_repo}" : ENV["MATCH_GIT_URL"]
+    match_git_url = require_env(
+      "MATCH_GIT_URL",
+      "Repository variable naming a PRIVATE repo for match to store the " \
+      "certificate in, e.g. https://github.com/#{this_repo.split('/').first}/dad-certificates. " \
+      "It must not be this repo, which is public."
+    )
     foreign_storage = !match_git_url.downcase.end_with?(this_repo.downcase)
 
     match_git_token = ENV["MATCH_GIT_TOKEN"].to_s
@@ -91,27 +117,42 @@ platform :ios do
       if foreign_storage
         UI.user_error!(
           "MATCH_GIT_URL points at #{match_git_url}, which is not this repository, " \
-          "but MATCH_GIT_TOKEN is not set. Actions' own GITHUB_TOKEN cannot read " \
-          "another repo's match branch. Create a PAT with contents:read on that " \
-          "repo and store it as the MATCH_GIT_TOKEN secret."
+          "but MATCH_GIT_TOKEN is not set. Actions' own GITHUB_TOKEN cannot read or " \
+          "write another repo's match branch. Create a PAT with contents:read+write " \
+          "on that repo and store it as the MATCH_GIT_TOKEN secret."
         )
       end
       match_git_token = require_env("GITHUB_TOKEN", "Provided by Actions.")
     end
 
-    # Apple caps distribution certificates at roughly two per account, and
-    # this project mints its own rather than reusing another app's. A run that
-    # creates one and dies before storing it strands that slot permanently, and
-    # two stranded slots lock the account out of distribution entirely. So look
-    # before leaping, every time — it is one API call.
+    # A public store would publish the encrypted certificate to the world.
+    # MATCH_PASSWORD is then the only thing between a reader and the ability to
+    # sign as this team, which is not a position to be in by accident.
+    storage = github_api("/repos/#{repo_slug(match_git_url)}", match_git_token)
+    if storage && storage["private"] == false
+      UI.user_error!(
+        "MATCH_GIT_URL points at #{match_git_url}, which is PUBLIC. match would " \
+        "commit this team's encrypted distribution certificate and private key " \
+        "there for anyone to fetch. Point it at a private repo."
+      )
+    end
+    UI.important("match storage: #{match_git_url} (#{storage ? 'reachable' : 'not readable with this token — the clone may fail'})")
+
+    # Apple caps distribution certificates per account — commonly reported as
+    # three for a standard account, two for enterprise, and not documented
+    # precisely enough to bet a locked-out account on. Dad mints its own into
+    # its own private store rather than sharing another app's, which spends a
+    # slot. A run that creates one and dies before storing it strands that slot
+    # permanently. So look before leaping, every time — it is one API call.
+    # The threshold here is deliberately conservative.
     existing = distribution_certificate_count(api_key: api_key)
     UI.important("#{existing} distribution certificate(s) on this account.")
-    if existing >= 2 && !match_branch_exists?
+    if existing >= 2 && !match_branch_exists?(git_url: match_git_url, token: match_git_token)
       UI.user_error!(
         "This account already has #{existing} distribution certificates and no stored " \
-        "match branch to reuse, so match would try to mint one past Apple's ceiling. " \
-        "Run the 'Apple account maintenance' workflow to list them and revoke a stranded " \
-        "one, or point MATCH_GIT_URL at a repo whose match branch already holds a cert."
+        "match branch at #{match_git_url} to reuse, so match would try to mint one " \
+        "toward Apple's ceiling. Run the 'Apple account maintenance' workflow to list " \
+        "them and revoke a stranded one first."
       )
     end
 
@@ -123,12 +164,10 @@ platform :ios do
       api_key: api_key,
       team_id: team_id,
       storage_mode: "git",
-      # PREFER pointing MATCH_GIT_URL at a repo whose match branch already
-      # holds a distribution certificate. Apple caps those at about two per
-      # account, so an account already shipping other apps should reuse, not
-      # mint — a second app reuses the same cert, the same match branch and
-      # the same secrets, and only needs its own App Store Connect record.
-      # Falling back to this repo mints a new certificate and spends a slot.
+      # MATCH_GIT_URL is required and must be private; see the guard above.
+      # Dad keeps its own store and its own certificate rather than sharing
+      # another project's: a shared store means a `match nuke` or a revoked
+      # cert in either project silently breaks releases in the other.
       git_url: match_git_url,
       git_branch: ENV["MATCH_GIT_BRANCH"].to_s.empty? ? "match" : ENV["MATCH_GIT_BRANCH"],
       git_basic_authorization: Base64.strict_encode64("x-access-token:#{match_git_token}"),

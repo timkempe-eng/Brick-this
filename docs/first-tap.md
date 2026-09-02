@@ -87,10 +87,13 @@ GitHub → Settings → Secrets and variables → Actions → New repository sec
 | `ASC_KEY_P8` | **base64** of the `.p8` — `base64 -i AuthKey_XXXX.p8`. There's no local `base64` on an iPad, so run it in an agent session |
 | `MATCH_PASSWORD` | any passphrase; it encrypts the stored certificate |
 
-No repository variable is needed: `match` stores Dad's certificate on a `match`
-branch of this repo by default. Dad keeps its own certificate rather than
-sharing hydive's, which means **check the certificate count before your first
-Release run** — Apple's ceiling is about two per account.
+One repository **variable** is needed: `MATCH_GIT_URL`, pointing at an empty
+**private** repo for `match` to store the encrypted certificate in — this repo
+is public, so it cannot hold one, and the lane refuses if you try. Plus the
+secret `MATCH_GIT_TOKEN`, a fine-grained PAT with Contents read **and write**
+on that repo. Dad keeps its own certificate rather than sharing another
+project's, which means **check the certificate count before your first Release
+run** — Apple's ceiling is two or three per account, depending who you ask.
 
 Actions → **Apple account maintenance** → Run workflow, with the revoke field
 blank. It lists them in seconds, on Ubuntu. The release workflow also refuses to

@@ -17,8 +17,8 @@ re-run the check, it isn't ✅.**
 | Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement | Certificates, IDs & Profiles → the four App IDs show a Family Controls row that is not development-only |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | Values exist (hydive uses them); secrets are **per repo**, so they still have to be copied into this one | run Release; the Fastfile names any missing one |
-| Distribution certs below the cap | ❓ | hydive holds at least one, so there is likely **one slot left** — reuse rather than mint | run Apple account maintenance; expect fewer than 2 |
-| `match` branch + certificate | ❓ | hydive's match branch already holds a usable cert; point `MATCH_GIT_URL` there rather than minting a second | `git ls-remote <MATCH_GIT_URL> match` returns a ref |
+| Distribution certs below the cap | ❓ | The other apps hold at least one; Dad mints its own, so there has to be room | run Apple account maintenance; it prints the count |
+| Private `match` store | ❓ | Needs a private repo of its own — this one is public and cannot hold a signing key | `git ls-remote <MATCH_GIT_URL> match` returns a ref |
 | App Store Connect record | ❓ | — | Connect → Apps shows `app.dad.Dad` |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
@@ -37,12 +37,12 @@ the pipeline is not a blocker — it is a copy. Sorted by how long it takes:
    waiting.
 2. **Five App IDs in the portal**, and the capability enabled on four of them
    once approved. `match` does not manage capabilities.
-3. **Reuse the certificate, don't mint one.** hydive's match branch already
-   holds a distribution certificate. Apple caps them at about two per account
-   and hydive holds at least one, so minting a second spends the last slot for
-   nothing. Set `MATCH_GIT_URL` to hydive's repo and `MATCH_GIT_TOKEN` to a PAT
-   that can read it — Actions' own `GITHUB_TOKEN` is scoped to this repo and
-   cannot.
+3. **A private repo for `match` to store the certificate in.** This repo is
+   public — that is what makes the macOS runners free — so it cannot hold an
+   encrypted signing key. Dad gets its own store rather than sharing another
+   project's, so that a revoked certificate or a `match nuke` on either side
+   cannot silently break the other. Costs one distribution slot; the account
+   has room.
 4. **Copy the five secrets into this repo.** The values exist; repository
    secrets do not cross repositories.
 5. **An App Store Connect record** for `app.dad.Dad`. Minutes.
@@ -209,20 +209,38 @@ then run Release once with `force_profiles: true` — `match` judges a profile
 by expiry and certificate, not by capability set, so it will happily reuse one
 minted before the capability existed.
 
-### 3. Reuse the existing certificate — do not mint a new one
+### 3. Give `match` a private repo of its own
 
-Apple caps distribution certificates at about two per account and the other
-apps already hold at least one. A second app needs no new certificate.
+`match` commits an **encrypted distribution certificate and private key**.
+`MATCH_PASSWORD` is the only thing protecting it, so the store has to be
+private. **This repo is public** — deliberately, it is what makes the macOS
+runners free — so it can never be the store. The `beta` lane now requires
+`MATCH_GIT_URL` and refuses outright if it names a public repo.
 
-Set the repository **variable** `MATCH_GIT_URL` to the repo whose `match`
-branch already holds it, and the **secret** `MATCH_GIT_TOKEN` to a personal
-access token with `contents:read` on that repo — Actions' own `GITHUB_TOKEN`
-is scoped to this repository and cannot read another one's branch. Set
-`MATCH_GIT_BRANCH` too if that branch is not called `match`.
+Sharing another project's store is the other option and it is not taken here:
+one `match nuke`, or one revoked certificate, would break releases in both
+projects with no obvious connection between cause and effect. Dad keeps its
+own store and mints its own certificate.
 
-Before the first run, run the **Apple account maintenance** workflow to see
-the real certificate count. The `beta` lane also refuses to start if the
-account is at the ceiling with no stored branch to reuse.
+1. Create an empty **private** repo — `timkempe-eng/dad-certificates` reads
+   well. It needs no contents; `match` creates the branch.
+2. Repository **variable** `MATCH_GIT_URL` → `https://github.com/timkempe-eng/dad-certificates`.
+   (Set `MATCH_GIT_BRANCH` too, only if you want a branch other than `match`.)
+3. Repository **secret** `MATCH_GIT_TOKEN` → a fine-grained PAT with
+   **Contents: read and write** on that repo *only*. Write, not read: `match`
+   has to store what it mints. Actions' own `GITHUB_TOKEN` is scoped to this
+   repository and cannot reach another one.
+4. Repository **secret** `MATCH_PASSWORD` → a fresh passphrase. Losing it means
+   revoking the certificate and starting over, so put it in the password
+   manager now.
+
+Nothing is stored in, or read from, any other project's repository.
+
+Minting spends one of Apple's distribution slots — commonly reported as three
+per standard account, two for enterprise, and not documented precisely enough
+to gamble on. Run the **Apple account maintenance** workflow first to see the
+real count. The `beta` lane also refuses to start if the account is at the
+ceiling with nothing stored to reuse.
 
 ### 4. Copy the secrets into this repository
 
