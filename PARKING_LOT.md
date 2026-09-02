@@ -41,6 +41,58 @@ add what the work revealed.
       and blocking via `AccessibilityService` is meaningfully weaker.
 - [ ] 3D-printed puck with a magnet, instead of a bare sticker.
 
+## Open bug: the Mode editor accepts no edits (blocking)
+
+**Nothing about a Mode can be changed.** In the Simulator, tapping `Strict`
+or `Run on a schedule` leaves both reading off and the schedule footer
+unchanged. If this also happens on a device, the app cannot be configured at
+all, so it can never block anything, and it must not ship.
+
+Reproduced on runs 27–39. Read the whole of this before touching it: three
+plausible fixes have already failed and the cost was about two hours.
+
+**Proven**
+
+- The editor sheet presents, and every screen renders.
+- Taps reach it and its actions run: `Cancel` genuinely dismisses (assert
+  that an editor-only row *disappears* — "Deep Work" is also the editor's
+  navigation title, so asserting its presence proves nothing, and that
+  mistake sent the first search in the wrong direction).
+- `Strict` is `Toggle(isOn: $mode.isStrict)` — the simplest possible case —
+  and reports `Hittable: true`, value `0` before and after a tap.
+- The schedule footer never changes branch, so the model really is unchanged.
+  This is independent of whatever XCUITest reports for a switch's `value`.
+- The toggle *logic* is correct: `TimMode.isScheduled` is covered by seven
+  Core tests that pass.
+
+**Disproven — do not try these again**
+
+1. *The custom `Binding(get:set:)` in `ScheduleSection`.* Replaced with a
+   direct binding to `TimMode.isScheduled`. Identical failure.
+2. *The editor holding its own copy in `@State`.* Bound it to `editing`
+   instead via `Binding($editing)`. Worse — the sheet stopped presenting at
+   all. Reverted in 0f1a79a.
+3. *`familyActivityPicker` binding `$mode.selection` and clobbering the Mode
+   during render.* Gave the picker its own `@State`. Identical failure. That
+   change is kept because avoiding a JSON round-trip per render is worth
+   having, but it fixed nothing.
+
+**Best remaining hypothesis, untested**
+
+The editor's body never re-renders after presentation. That fits every
+observation at once — the switch never redraws, the footer never changes
+branch, and `Cancel` still works because dismissing is not a re-render. It
+points at sheet-within-sheet presentation (`HomeView` → `ModesView` →
+`ModeEditorView`) rather than at any binding. Worth testing by presenting
+the editor with a `NavigationLink` instead of a nested sheet.
+
+**How to settle it fastest**
+
+On a device, via TestFlight. The Simulator cannot run Screen Time, and every
+Mode reachable there blocks nothing, so it was never going to answer a
+question about this app's real behaviour. Ten CI runs went into an
+environment that structurally could not resolve it.
+
 ## Known limitations, carried deliberately
 
 - **Compiled, never run.** Screen Time and NFC both no-op in the Simulator, so
