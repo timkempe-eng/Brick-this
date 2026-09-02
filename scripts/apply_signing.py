@@ -5,7 +5,7 @@ Called by the Fastfile with the team id and the profile names match actually
 produced — never hardcoded names, because match auto-suffixes a timestamp when
 the default is already taken by an earlier partial run.
 
-    apply_signing.py TEAMID app.tim.Tim "Tim AppStore" app.tim.Tim.ShieldAction "..."
+    apply_signing.py TEAMID app.dad.Dad "Dad AppStore" app.dad.Dad.ShieldAction "..."
 
 Sets signing per target. CODE_SIGN_ENTITLEMENTS is deliberately left alone: it
 is already per-target in the spec, and a global value forces the app's

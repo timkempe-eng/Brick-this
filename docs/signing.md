@@ -59,8 +59,8 @@ stranded slots lock you out of distribution entirely.
 only makes HTTP calls, so it runs on Ubuntu — don't pay for a macOS runner to
 call an API.
 
-**Tim mints its own certificate.** `MATCH_GIT_URL` defaults to this repo, so the
-`match` branch lives here and Tim is self-contained. The cost of that choice is
+**Dad mints its own certificate.** `MATCH_GIT_URL` defaults to this repo, so the
+`match` branch lives here and Dad is self-contained. The cost of that choice is
 a slot against the ceiling, so the release workflow counts distribution
 certificates before `match` runs and refuses to proceed if the account is
 already at two with nothing stored to reuse.

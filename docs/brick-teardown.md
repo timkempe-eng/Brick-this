@@ -1,6 +1,6 @@
 # How Brick actually works
 
-Research notes from before building Tim. Everything here is from Brick's own
+Research notes from before building Dad. Everything here is from Brick's own
 materials, published reviews, and Apple's developer documentation.
 
 ## The product
@@ -71,15 +71,15 @@ different mechanisms and only one of them feels like Brick.
    `apple-app-site-association` file on it. This is what a shipping product
    does. It costs you a domain.
 
-Tim implements all three. See [nfc-and-tags.md](nfc-and-tags.md).
+Dad implements all three. See [nfc-and-tags.md](nfc-and-tags.md).
 
 ## Feature inventory
 
-What Brick ships, and where Tim stands:
+What Brick ships, and where Dad stands:
 
-| Brick | Tim |
+| Brick | Dad |
 |---|---|
-| Modes / packs (Work, Sleep, Gym…) | ✅ `TimMode`, with starter set |
+| Modes / packs (Work, Sleep, Gym…) | ✅ `DadMode`, with starter set |
 | App + category + website blocking | ✅ (websites are iOS-only in Brick too) |
 | Tap to toggle | ✅ all three tap paths |
 | Session timer on the home screen | ✅ live counter |

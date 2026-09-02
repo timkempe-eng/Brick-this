@@ -20,22 +20,22 @@ activity from the background; only the start is gated.
 
 ## Why that is fatal here, specifically
 
-Tim's whole point is not opening the app. Sessions begin on three paths:
+Dad's whole point is not opening the app. Sessions begin on three paths:
 
 | Path | Process | Can start a Live Activity |
 |---|---|---|
-| Shortcuts NFC automation → `ToggleTimIntent` | background | **No** |
+| Shortcuts NFC automation → `ToggleDadIntent` | background | **No** |
 | A scheduled Mode's window | DeviceActivity extension | **No** |
 | The in-app button | foreground | Yes |
 
 The primary path — the one the product is built around, tap the tag and pocket
 the phone — is the one that cannot start it. A Live Activity would therefore
-appear only when you Timmed your phone by *opening the app*, which is the
-behaviour Tim exists to make unnecessary.
+appear only when you Dadded your phone by *opening the app*, which is the
+behaviour Dad exists to make unnecessary.
 
 That is worse than not having it. A status presentation that shows up on the
 rare path and is absent on the common one teaches the user it cannot be
-trusted, and "was I Timmed?" becomes a question again — the exact question the
+trusted, and "was I Dadded?" becomes a question again — the exact question the
 widget was built to answer.
 
 ## Alternatives considered

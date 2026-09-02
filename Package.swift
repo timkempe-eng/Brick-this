@@ -1,7 +1,7 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-/// This package exists purely to test `Tim/Shared/Core` — the parts of the app
+/// This package exists purely to test `Dad/Shared/Core` — the parts of the app
 /// that are Foundation-only and therefore compile and run anywhere, including
 /// CI on Linux.
 ///
@@ -12,12 +12,12 @@ import PackageDescription
 ///
 ///     swift test
 let package = Package(
-    name: "TimCore",
+    name: "DadCore",
     products: [
-        .library(name: "TimCore", targets: ["TimCore"]),
+        .library(name: "DadCore", targets: ["DadCore"]),
     ],
     targets: [
-        .target(name: "TimCore", path: "Tim/Shared/Core"),
-        .testTarget(name: "TimCoreTests", dependencies: ["TimCore"], path: "Tests/TimCoreTests"),
+        .target(name: "DadCore", path: "Dad/Shared/Core"),
+        .testTarget(name: "DadCoreTests", dependencies: ["DadCore"], path: "Tests/DadCoreTests"),
     ]
 )

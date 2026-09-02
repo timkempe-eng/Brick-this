@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The verb is the product. docs/naming.md says capital T throughout, including
-# mid-sentence — "Tim your phone", never "tim your phone". Lowercasing it makes
+# mid-sentence — "Dad your phone", never "dad your phone". Lowercasing it makes
 # the whole conceit read like a typo, and it had crept into eight call sites
 # before this check existed.
 #
@@ -8,7 +8,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-hits=$(grep -rn "Vocab\.\(verb\|verbThirdPerson\|verbPast\|verbGerund\|unVerb\|unVerbPast\|appName\|tagNoun\|sessionNoun\|streakNoun\)\.lowercased()" Tim/ || true)
+hits=$(grep -rn "Vocab\.\(verb\|verbThirdPerson\|verbPast\|verbGerund\|unVerb\|unVerbPast\|appName\|tagNoun\|sessionNoun\|streakNoun\)\.lowercased()" Dad/ || true)
 
 if [ -n "$hits" ]; then
   echo "Vocabulary lint failed — these lowercase a proper form of the verb:"

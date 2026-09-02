@@ -1,4 +1,4 @@
-# From a GitHub repo to a Timmed phone, with no Mac
+# From a GitHub repo to a Dadded phone, with no Mac
 
 You have an iPhone, an iPad and a GitHub account. No Mac, no Xcode. That is
 enough — but the route is different from the usual one, and one part of it
@@ -27,7 +27,7 @@ way around it:
 - Sideloading tools (AltStore and friends) can't grant the Family Controls
   entitlement, which is the whole app.
 - Swift Playgrounds on iPad can build and submit apps, but **not app
-  extensions**, and Tim needs three of them. It cannot build this project.
+  extensions**, and Dad needs three of them. It cannot build this project.
 
 So: TestFlight is the only Mac-free way onto the phone, and TestFlight requires
 the paid program. If that's a dealbreaker, stop here rather than after buying
@@ -53,10 +53,10 @@ several weeks, so file it the day you enrol.
 
 You need it for all four ids:
 
-- `app.tim.Tim`
-- `app.tim.Tim.ShieldConfiguration`
-- `app.tim.Tim.ShieldAction`
-- `app.tim.Tim.ActivityMonitor`
+- `app.dad.Dad`
+- `app.dad.Dad.ShieldConfiguration`
+- `app.dad.Dad.ShieldAction`
+- `app.dad.Dad.ActivityMonitor`
 
 Say plainly that it's a personal digital-wellbeing app that hides your own apps
 at your own request, that the tap mechanic is NFC, and that the app never
@@ -87,8 +87,8 @@ GitHub → Settings → Secrets and variables → Actions → New repository sec
 | `ASC_KEY_P8` | **base64** of the `.p8` — `base64 -i AuthKey_XXXX.p8`. There's no local `base64` on an iPad, so run it in an agent session |
 | `MATCH_PASSWORD` | any passphrase; it encrypts the stored certificate |
 
-No repository variable is needed: `match` stores Tim's certificate on a `match`
-branch of this repo by default. Tim keeps its own certificate rather than
+No repository variable is needed: `match` stores Dad's certificate on a `match`
+branch of this repo by default. Dad keeps its own certificate rather than
 sharing hydive's, which means **check the certificate count before your first
 Release run** — Apple's ceiling is about two per account.
 
@@ -99,7 +99,7 @@ reuse. [Why this matters](signing.md#the-certificate-ceiling)
 
 ### 5. Create the app record
 
-App Store Connect → Apps → **+** → New App, bundle id `app.tim.Tim`. TestFlight
+App Store Connect → Apps → **+** → New App, bundle id `app.dad.Dad`. TestFlight
 needs somewhere to put the build.
 
 ### 6. Run the Release workflow
@@ -109,21 +109,21 @@ Actions tab → **Release to TestFlight** → Run workflow. Ten minutes or so.
 ### 7. Install from TestFlight
 
 Install Apple's TestFlight app on the iPhone, accept the invite for your own
-build, install Tim.
+build, install Dad.
 
 ## When the tags arrive
 
-1. **Open Tim, grant Screen Time access.** One system prompt.
+1. **Open Dad, grant Screen Time access.** One system prompt.
 2. **Build a Mode.** Start with one — "Deep Work" — and three or four apps you
    actually lose time to. Blocking thirty on day one is how people quit this
    after a week.
-3. **Pair a tag.** Settings → Pair a Tim tag. Until you pair one, any tag works.
-4. **Test it in-app.** Press "Tim my phone", then try to open a blocked app. You
-   should get the "Timmed." shield.
+3. **Pair a tag.** Settings → Pair a Dad tag. Until you pair one, any tag works.
+4. **Test it in-app.** Press "Dad my phone", then try to open a blocked app. You
+   should get the "Dadded." shield.
 5. **Optionally give a Mode a schedule.** Sleep, every night, 22:00–07:00, and
-   the phone Tims itself. A schedule never overrides a session you started by
+   the phone Dads itself. A schedule never overrides a session you started by
    hand, and you can always tap out early.
-6. **Set up the Shortcuts automation** so a tap works with Tim closed —
+6. **Set up the Shortcuts automation** so a tap works with Dad closed —
    [three lines of setup](nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
    This is all on the iPhone, no computer involved.
 7. **Stick the tag somewhere inconvenient.** This is the actual product. A
@@ -153,7 +153,7 @@ off. NFC personal automations need iPhone XS or later.
 
 **"Tag not found."** Is it on metal? Even a laptop lid detunes the antenna.
 
-**Apps aren't blocked but the app says Timmed.** The Mode has nothing selected,
+**Apps aren't blocked but the app says Dadded.** The Mode has nothing selected,
 or Screen Time authorization was declined.
 
 **A scheduled Mode never fires.** It needs at least one day and a window of 15

@@ -10,12 +10,12 @@
 
 require "base64"
 
-APP_ID       = "app.tim.Tim"
+APP_ID       = "app.dad.Dad"
 EXTENSION_IDS = [
-  "app.tim.Tim.ShieldConfiguration",
-  "app.tim.Tim.ShieldAction",
-  "app.tim.Tim.ActivityMonitor",
-  "app.tim.Tim.Widget",
+  "app.dad.Dad.ShieldConfiguration",
+  "app.dad.Dad.ShieldAction",
+  "app.dad.Dad.ActivityMonitor",
+  "app.dad.Dad.Widget",
 ].freeze
 ALL_IDS = ([APP_ID] + EXTENSION_IDS).freeze
 
@@ -159,8 +159,8 @@ platform :ios do
     sh("xcodegen", "generate", "--spec", "../project.yml", "--project", "..")
 
     build_app(
-      project: "../Tim.xcodeproj",
-      scheme: "Tim",
+      project: "../Dad.xcodeproj",
+      scheme: "Dad",
       configuration: "Release",
       export_method: "app-store",
       export_options: {

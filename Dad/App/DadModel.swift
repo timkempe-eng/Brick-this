@@ -1,0 +1,166 @@
+import Foundation
+import SwiftUI
+import FamilyControls
+
+/// View-facing state. `DadEngine` is the truth; this republishes it so SwiftUI
+/// redraws, and owns the running clock for the active session.
+@MainActor
+final class DadModel: ObservableObject {
+
+    @Published private(set) var activeSession: DadSession?
+    @Published private(set) var modes: [DadMode] = []
+
+    /// Snapshotted rather than computed on demand: reading it walks the whole
+    /// session history out of `UserDefaults` and back through JSON, and the
+    /// stats screen touches it a dozen times per render.
+    @Published private(set) var stats = DadStats(sessions: [])
+    @Published var authorization: AuthorizationStatus = AuthorizationCenter.shared.authorizationStatus
+    @Published var banner: String?
+    @Published var pendingModeChoice = false
+
+    /// Ticks once a second while Dadded so the counter on the home screen moves.
+    @Published private(set) var now = Date()
+    private var ticker: Timer?
+
+    private let engine: DadEngine
+
+    init(engine: DadEngine = .live) {
+        self.engine = engine
+        reload()
+
+        if engine.store.hasDataFromANewerBuild {
+            // Their Modes and history are intact on disk, just unreadable
+            // here. Saying so beats showing an empty app and letting the
+            // first edit overwrite what they still have.
+            banner = """
+                Some of your data was written by a newer version of \(Vocab.appName) \
+                and can't be read by this one. Update to see it again — changes you \
+                make here will replace it.
+                """
+        }
+    }
+
+    func reload() {
+        modes = engine.store.modes
+        activeSession = engine.store.activeSession
+        stats = engine.stats
+        authorization = AuthorizationCenter.shared.authorizationStatus
+        updateTicker()
+    }
+
+    /// Makes the shield agree with the stored session. Called at launch and
+    /// whenever the app comes back to the foreground, so a session interrupted
+    /// by a crash or a kill can't leave the two out of step.
+    func reconcile() {
+        engine.reconcile()
+        reload()
+    }
+
+    var isDadded: Bool { activeSession != nil }
+
+    var elapsedText: String {
+        guard let session = activeSession else { return "" }
+        return now.timeIntervalSince(session.startedAt).dadDurationText
+    }
+
+    var emergencyUnDadsRemaining: Int { engine.emergencyUnDadsRemaining }
+
+    var pairedTagCount: Int { engine.store.pairedTagUIDs.count }
+
+    // MARK: - Authorization
+
+    func requestAuthorization() async {
+        do {
+            try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            authorization = AuthorizationCenter.shared.authorizationStatus
+            engine.store.hasOnboarded = true
+        } catch {
+            // Refresh here too: the denied state is what makes OnboardingView
+            // show its explanation instead of looking like a dead button.
+            authorization = AuthorizationCenter.shared.authorizationStatus
+            banner = "Screen Time access was declined. Dad can't hide apps without it."
+        }
+    }
+
+    // MARK: - Tapping
+
+    func tap(tagUID: String? = nil, mode: DadMode? = nil) {
+        switch engine.handleTap(tagUID: tagUID, preferredMode: mode) {
+        case .dadded(let mode):
+            banner = "\(Vocab.verbPast) — \(mode.name)."
+        case .unDadded(let session):
+            banner = Vocab.sessionSummary(duration: session.duration.dadDurationText)
+        case .needsModeChoice:
+            pendingModeChoice = true
+        case .unknownTag:
+            banner = "That isn't one of your \(Vocab.tagNoun)s."
+        }
+        reload()
+    }
+
+    func emergencyUnDad() {
+        if engine.emergencyUnDad() {
+            banner = "\(Vocab.unVerbPast). \(emergencyUnDadsRemaining) emergency overrides left this month."
+        } else {
+            banner = "No emergency overrides left this month. Go find your tag."
+        }
+        reload()
+    }
+
+    // MARK: - Modes
+
+    func save(_ mode: DadMode) {
+        engine.upsert(mode)
+        // upsert syncs internally; ask again to learn whether it stuck. The
+        // sync is a no-op diff when it already succeeded, and a retry when it
+        // didn't — a schedule the system refused must not look configured.
+        if !engine.syncSchedules() {
+            banner = "The system couldn't register every schedule — too many scheduled \(Vocab.modeNoun)s. Trim one and save again."
+        }
+        reload()
+    }
+
+    func delete(_ mode: DadMode) {
+        engine.deleteMode(id: mode.id)
+        reload()
+    }
+
+    // MARK: - Tags
+
+    func pair(tagUID: String) {
+        engine.pair(tagUID: tagUID)
+        banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.verb) your phone."
+        reload()
+    }
+
+    func forgetAllTags() {
+        engine.store.pairedTagUIDs = []
+        reload()
+    }
+
+    // MARK: - Incoming links
+    //
+    // Both the background-NFC universal link and the Shortcuts automation land
+    // here. `/tap` toggles; `/dad` and `/undad` are one-directional so an
+    // automation can be explicit if you'd rather it not toggle.
+
+    func handleIncoming(url: URL) {
+        switch IncomingLink.action(for: url) {
+        case .toggle:            tap()
+        case .dad:               if !isDadded { tap() }
+        case .unDad:             if isDadded { tap() }
+        case .open, .none:       break   // the widget, and anything unrecognised
+        }
+        reload()
+    }
+
+    // MARK: -
+
+    private func updateTicker() {
+        ticker?.invalidate()
+        guard isDadded else { return }
+        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.now = Date() }
+        }
+    }
+}

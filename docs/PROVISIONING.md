@@ -14,17 +14,17 @@ re-run the check, it isn't ✅.**
 | Xcode wiring consistent | ✅ | 59 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | Family Controls (Distribution) | ❓ | — | Certificates, IDs & Profiles → the four App IDs show the capability |
-| App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Tim | Users and Access → Integrations lists the key id |
+| App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | Values exist (hydive uses them); secrets are **per repo**, so they still have to be copied into this one | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ❓ | hydive holds at least one, so there is likely **one slot left** — reuse rather than mint | run Apple account maintenance; expect fewer than 2 |
 | `match` branch + certificate | ❓ | hydive's match branch already holds a usable cert; point `MATCH_GIT_URL` there rather than minting a second | `git ls-remote <MATCH_GIT_URL> match` returns a ref |
-| App Store Connect record | ❓ | — | Connect → Apps shows `app.tim.Tim` |
+| App Store Connect record | ❓ | — | Connect → Apps shows `app.dad.Dad` |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
 ❓ means unverified, not false.
 
-## What is genuinely new for Tim
+## What is genuinely new for Dad
 
 This account already ships two apps to TestFlight without a Mac, so most of
 the pipeline is not a blocker — it is a copy. Sorted by how long it takes:
@@ -44,19 +44,19 @@ the pipeline is not a blocker — it is a copy. Sorted by how long it takes:
    cannot.
 4. **Copy the five secrets into this repo.** The values exist; repository
    secrets do not cross repositories.
-5. **An App Store Connect record** for `app.tim.Tim`. Minutes.
+5. **An App Store Connect record** for `app.dad.Dad`. Minutes.
 
 ## The four bundle ids
 
 Family Controls (Distribution) must be approved and the capability enabled for
 every one, or the profile won't authorize it:
 
-- `app.tim.Tim`
-- `app.tim.Tim.ShieldConfiguration`
-- `app.tim.Tim.ShieldAction`
-- `app.tim.Tim.ActivityMonitor`
+- `app.dad.Dad`
+- `app.dad.Dad.ShieldConfiguration`
+- `app.dad.Dad.ShieldAction`
+- `app.dad.Dad.ActivityMonitor`
 
-`app.tim.Tim.Widget` is a fifth App ID for **signing** — it needs a `match`
+`app.dad.Dad.Widget` is a fifth App ID for **signing** — it needs a `match`
 profile and an App ID in the portal — but deliberately **not** for Family
 Controls. It only reads the session out of the App Group, so it stays off the
 approval list. Preflight fails if it ever acquires that entitlement.
@@ -79,25 +79,25 @@ Apple's request form is linked from the Family Controls capability in
 Certificates, Identifiers & Profiles; Apple moves the URL periodically, so
 follow it from the capability rather than a bookmark. Name all four ids:
 
-- `app.tim.Tim`
-- `app.tim.Tim.ShieldConfiguration`
-- `app.tim.Tim.ShieldAction`
-- `app.tim.Tim.ActivityMonitor`
+- `app.dad.Dad`
+- `app.dad.Dad.ShieldConfiguration`
+- `app.dad.Dad.ShieldAction`
+- `app.dad.Dad.ActivityMonitor`
 
-`app.tim.Tim.Widget` is deliberately **not** on this list.
+`app.dad.Dad.Widget` is deliberately **not** on this list.
 
 ### 2. Register the App IDs and the App Group
 
-App Group: `group.app.tim.shared` — all five targets share it, and a mismatch
+App Group: `group.app.dad.shared` — all five targets share it, and a mismatch
 shows up as the shield displaying the wrong Mode while the app looks fine.
 
 | App ID | Capabilities |
 |---|---|
-| `app.tim.Tim` | Family Controls, App Groups, **NFC Tag Reading** |
-| `app.tim.Tim.ShieldConfiguration` | Family Controls, App Groups |
-| `app.tim.Tim.ShieldAction` | Family Controls, App Groups |
-| `app.tim.Tim.ActivityMonitor` | Family Controls, App Groups |
-| `app.tim.Tim.Widget` | App Groups only |
+| `app.dad.Dad` | Family Controls, App Groups, **NFC Tag Reading** |
+| `app.dad.Dad.ShieldConfiguration` | Family Controls, App Groups |
+| `app.dad.Dad.ShieldAction` | Family Controls, App Groups |
+| `app.dad.Dad.ActivityMonitor` | Family Controls, App Groups |
+| `app.dad.Dad.Widget` | App Groups only |
 
 Enabling a capability is separate from having it approved, and `match` does
 not do it. After enabling, the first Release run needs
@@ -136,14 +136,14 @@ rather than failing twenty minutes later as an opaque signing error.
 
 ### 5. Create the App Store Connect record
 
-Connect → Apps → new app, bundle id `app.tim.Tim`. Minutes.
+Connect → Apps → new app, bundle id `app.dad.Dad`. Minutes.
 
 ### 6. Run Release to TestFlight
 
 Actions → *Release to TestFlight* → Run workflow. Pick the branch, set
 `force_profiles: true` for the first run after enabling capabilities.
 
-**Run it from `claude/tim-phone-focus-device-tbu04b`**, not `main`: the
+**Run it from `claude/dad-phone-focus-device-tbu04b`**, not `main`: the
 certificate-reuse support (`MATCH_GIT_TOKEN`) only exists there. `main` would
 try to mint a certificate.
 

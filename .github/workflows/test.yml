@@ -55,8 +55,8 @@ jobs:
       - name: Build app and extensions
         run: |
           xcodebuild build \
-            -project Tim.xcodeproj \
-            -scheme Tim \
+            -project Dad.xcodeproj \
+            -scheme Dad \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             > build.log 2>&1
@@ -91,8 +91,8 @@ jobs:
       - name: Launch the app on a simulator
         run: |
           xcodebuild test \
-            -project Tim.xcodeproj \
-            -scheme Tim \
+            -project Dad.xcodeproj \
+            -scheme Dad \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \

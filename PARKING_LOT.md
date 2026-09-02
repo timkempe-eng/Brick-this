@@ -17,7 +17,7 @@ add what the work revealed.
       `force_profiles: true` or match reuses a profile that predates it.
 - [ ] App Store Connect API key → the three `ASC_*` secrets, `APPLE_TEAM_ID`,
       `MATCH_PASSWORD`
-- [ ] App Store Connect record for `app.tim.Tim`
+- [ ] App Store Connect record for `app.dad.Dad`
 - [ ] First TestFlight build installed on the iPhone
 
 ## Next up
@@ -36,14 +36,14 @@ add what the work revealed.
       and one is already spent. Run Apple account maintenance first to see the
       real count.
 - [x] ~~**Live Activity.**~~ Investigated and declined — ActivityKit can only
-      start one from the foreground, which is the one path Tim exists to
-      avoid. It would appear only when you Timmed by opening the app.
+      start one from the foreground, which is the one path Dad exists to
+      avoid. It would appear only when you Dadded by opening the app.
       [ADR 002](docs/adr/002-no-live-activity.md).
 
 ## Later
 
 - [ ] Allowance-based Modes — Screen Time can throttle rather than forbid.
-- [ ] Android. `Tim/Shared/Core` would port nearly as-is; every adapter is new,
+- [ ] Android. `Dad/Shared/Core` would port nearly as-is; every adapter is new,
       and blocking via `AccessibilityService` is meaningfully weaker.
 - [ ] 3D-printed puck with a magnet, instead of a bare sticker.
 
@@ -68,13 +68,13 @@ plausible fixes have already failed and the cost was about two hours.
   and reports `Hittable: true`, value `0` before and after a tap.
 - The schedule footer never changes branch, so the model really is unchanged.
   This is independent of whatever XCUITest reports for a switch's `value`.
-- The toggle *logic* is correct: `TimMode.isScheduled` is covered by seven
+- The toggle *logic* is correct: `DadMode.isScheduled` is covered by seven
   Core tests that pass.
 
 **Disproven — do not try these again**
 
 1. *The custom `Binding(get:set:)` in `ScheduleSection`.* Replaced with a
-   direct binding to `TimMode.isScheduled`. Identical failure.
+   direct binding to `DadMode.isScheduled`. Identical failure.
 2. *The editor holding its own copy in `@State`.* Bound it to `editing`
    instead via `Binding($editing)`. Worse — the sheet stopped presenting at
    all. Reverted in 0f1a79a.
@@ -114,7 +114,7 @@ environment that structurally could not resolve it.
 
 - [x] **The schedule toggle was never broken.** Four CI runs chased a
       "schedule can't be turned on" bug that did not exist. The UI test
-      asserted the footer would promise "your phone Tims itself"; the app
+      asserted the footer would promise "your phone Dads itself"; the app
       refused, because a starter Mode blocks nothing and a Mode that blocks
       nothing is never registered with the scheduler — so it says what is
       still missing instead. The app was right every time. Two lessons, both
@@ -141,7 +141,7 @@ environment that structurally could not resolve it.
       layout. A fifth port, `WidgetRefreshing`, means every process that can
       end a session — the app, the shield's emergency button, the
       DeviceActivity monitor — clears the Lock Screen.
-- [x] An unrecognised deep link no longer toggles. `tim://open` would have
+- [x] An unrecognised deep link no longer toggles. `dad://open` would have
       fallen through to the toggle default, so tapping the widget to *check*
       your status would have released a live session.
 

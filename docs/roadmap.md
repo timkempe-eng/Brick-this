@@ -15,7 +15,7 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 - **Scheduled Modes** — recurring wall-clock windows that never override a
   session you started by hand.
 - **Emergency overrides** — five per rolling 30 days, self-restoring.
-- **Stats and streaks** — `TimStats` plus `StatsView`.
+- **Stats and streaks** — `DadStats` plus `StatsView`.
 - **Crash reconciliation** — the shield and the stored session are made to agree
   on every foreground, in both directions.
 - **Lock Screen widget** — status and a live timer without unlocking, in all
@@ -32,7 +32,7 @@ A Mode granting fifteen minutes of an app per day is a softer tool than a hard
 shield, and sometimes the right one.
 
 **Android.** A different mechanism entirely — an `AccessibilityService` watching
-the foreground package rather than a system-enforced shield. `Tim/Shared/Core`
+the foreground package rather than a system-enforced shield. `Dad/Shared/Core`
 is Foundation-only and would port more or less directly; the adapters would all
 be new, and blocking would be meaningfully weaker.
 
@@ -49,7 +49,7 @@ the first evidence that a tap actually blocks an app remains TestFlight.
 configured either.** `FamilyActivityPicker` returns no apps, which means every
 Mode a UI test can reach blocks nothing, which means no schedule it turns on
 will ever be registered. The app says so — a scheduled Mode that blocks nothing
-tells you what is still missing instead of promising to Tim your phone — and
+tells you what is still missing instead of promising to Dad your phone — and
 that honesty is the deepest a Simulator test can go. Configuring a Mode
 end-to-end is a TestFlight step.
 

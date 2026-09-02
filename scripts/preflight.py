@@ -60,7 +60,7 @@ spec = yaml.safe_load((ROOT / "project.yml").read_text())
 targets = spec["targets"]
 
 # --- App Group must match everywhere, including the string the code uses.
-store_src = (ROOT / "Tim/Shared/Adapters/UserDefaultsStore.swift").read_text()
+store_src = (ROOT / "Dad/Shared/Adapters/UserDefaultsStore.swift").read_text()
 m = re.search(r'appGroupID\s*=\s*"([^"]+)"', store_src)
 check(m is not None, "UserDefaultsStore has no appGroupID literal")
 group = m.group(1) if m else None
@@ -90,9 +90,9 @@ for name, target in targets.items():
           f"declares the entitlement={has_entitlement} — these must agree")
 
 # --- Extension bundle IDs must nest under the app's, or they won't install.
-app_id = targets["Tim"]["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
+app_id = targets["Dad"]["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
 for name, target in targets.items():
-    if name == "Tim" or not ships(target):
+    if name == "Dad" or not ships(target):
         continue
     bid = target["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
     check(bid.startswith(app_id + "."),
@@ -147,7 +147,7 @@ def compiles(target, file_path):
     return False
 
 
-adapters = sorted((ROOT / "Tim/Shared/Adapters").glob("*.swift"))
+adapters = sorted((ROOT / "Dad/Shared/Adapters").glob("*.swift"))
 
 for name, target in targets.items():
     if not ships(target):
@@ -172,17 +172,17 @@ for name, target in targets.items():
 # --- The widget reads; it must never acquire Screen Time powers. An
 #     entitlement it doesn't use is a fifth bundle id needing Apple's manual
 #     Family Controls approval, which is already the long pole.
-widget = targets.get("TimWidget")
+widget = targets.get("DadWidget")
 if widget:
     ent = plistlib.loads((ROOT / widget["settings"]["base"]["CODE_SIGN_ENTITLEMENTS"]).read_bytes())
     check("com.apple.developer.family-controls" not in ent,
-          "TimWidget declares family-controls; it only reads the session")
+          "DadWidget declares family-controls; it only reads the session")
     check(not any(compiles(widget, a) and "FamilyControls" in a.read_text()
                   for a in adapters),
-          "TimWidget compiles a FamilyControls adapter; keep its sources narrow")
+          "DadWidget compiles a FamilyControls adapter; keep its sources narrow")
 
 # --- Core must never reach for an iOS framework, or `swift test` stops working.
-for f in (ROOT / "Tim/Shared/Core").glob("*.swift"):
+for f in (ROOT / "Dad/Shared/Core").glob("*.swift"):
     bad = set(re.findall(r"^import (\w+)", f.read_text(), re.M)) - {"Foundation"}
     check(not bad, f"Core/{f.name} imports {sorted(bad)} — Core must stay Foundation-only")
 
@@ -203,8 +203,8 @@ for name, target in targets.items():
     check(not missing, f"{name}: Info.plist is missing {missing}")
 
 # --- NFC needs both the entitlement and the usage string.
-app_ent = plistlib.loads((ROOT / targets["Tim"]["settings"]["base"]["CODE_SIGN_ENTITLEMENTS"]).read_bytes())
-app_info = plistlib.loads((ROOT / targets["Tim"]["settings"]["base"]["INFOPLIST_FILE"]).read_bytes())
+app_ent = plistlib.loads((ROOT / targets["Dad"]["settings"]["base"]["CODE_SIGN_ENTITLEMENTS"]).read_bytes())
+app_info = plistlib.loads((ROOT / targets["Dad"]["settings"]["base"]["INFOPLIST_FILE"]).read_bytes())
 check("com.apple.developer.nfc.readersession.formats" in app_ent,
       "app: missing the NFC reader-session entitlement")
 check("NFCReaderUsageDescription" in app_info,
@@ -243,7 +243,7 @@ if release.exists():
 #     already succeeded.
 fastfile = ROOT / "fastlane/Fastfile"
 if fastfile.exists():
-    signed = set(re.findall(r'"(app\.tim\.[\w.]+)"', fastfile.read_text()))
+    signed = set(re.findall(r'"(app\.dad\.[\w.]+)"', fastfile.read_text()))
     for name, target in targets.items():
         if not ships(target):
             continue
@@ -268,7 +268,7 @@ if ui_tests:
 # --- An icon-only button with no accessibility label is unreachable by
 #     VoiceOver, which reads the SF Symbol name or nothing at all. It is also
 #     unfindable by the UI tests, so the two problems arrive together.
-for swift in (ROOT / "Tim/App").glob("*.swift"):
+for swift in (ROOT / "Dad/App").glob("*.swift"):
     text = swift.read_text()
     for match in re.finditer(
             r"Button\s*\{[^}]*\}\s*label:\s*\{\s*Image\(systemName:[^}]*\}", text):

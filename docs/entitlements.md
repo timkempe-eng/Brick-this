@@ -15,10 +15,10 @@ team and you can build and run on your own device today. Nothing to wait for.
 from your Apple Developer account, per bundle ID — and **separately for every
 Screen Time extension you ship**. For this project that's four requests:
 
-- `app.tim.Tim`
-- `app.tim.Tim.ShieldConfiguration`
-- `app.tim.Tim.ShieldAction`
-- `app.tim.Tim.ActivityMonitor`
+- `app.dad.Dad`
+- `app.dad.Dad.ShieldConfiguration`
+- `app.dad.Dad.ShieldAction`
+- `app.dad.Dad.ActivityMonitor`
 
 A human reviews each one. Reported turnaround runs from about four business days
 to a few weeks. You cannot upload a build to TestFlight until it's approved, so
@@ -44,25 +44,25 @@ there.
 
 ## App Groups
 
-`group.app.tim.shared` — the app and all three extensions must share it. The
+`group.app.dad.shared` — the app and all three extensions must share it. The
 shield extension runs in its own process and reads the active session out of
 this group; if it's missing or misspelled on any target, the shield will show
-the wrong mode name or fail to launch. `TimStore` traps on a missing group
+the wrong mode name or fail to launch. `DadStore` traps on a missing group
 deliberately, so you find out at once rather than debugging a silently wrong
 shield.
 
 ## Associated Domains
 
-`applinks:tim.example.com` — only needed for background tag reading. Delete the
+`applinks:dad.example.com` — only needed for background tag reading. Delete the
 key if you're using the Shortcuts route. See [nfc-and-tags.md](nfc-and-tags.md).
 
 ## Changing the identifiers
 
-The placeholders assume `app.tim.*`. To use your own:
+The placeholders assume `app.dad.*`. To use your own:
 
 1. `project.yml` — `bundleIdPrefix`, every `PRODUCT_BUNDLE_IDENTIFIER`, and
    `DEVELOPMENT_TEAM`
-2. `Tim/Shared/TimStore.swift` — `appGroupID`
+2. `Dad/Shared/DadStore.swift` — `appGroupID`
 3. all four `.entitlements` files — the app group, and the domain if you use one
 
 Then `xcodegen generate` again.

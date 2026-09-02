@@ -1,13 +1,13 @@
 # XcodeGen spec. Generate the Xcode project with:
 #
-#   brew install xcodegen && xcodegen generate && open Tim.xcodeproj
+#   brew install xcodegen && xcodegen generate && open Dad.xcodeproj
 #
 # The project file is deliberately not committed — it is generated output, and
 # regenerating it is how you pick up new source files.
 
-name: Tim
+name: Dad
 options:
-  bundleIdPrefix: app.tim
+  bundleIdPrefix: app.dad
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -24,63 +24,63 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
 schemes:
-  Tim:
+  Dad:
     build:
       targets:
-        Tim: all
-        TimUITests: [test]
+        Dad: all
+        DadUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - TimUITests
+        - DadUITests
 
 targets:
 
-  Tim:
+  Dad:
     type: application
     platform: iOS
     sources:
-      - Tim/App
-      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+      - Dad/App
+      - Dad/Shared      # recursive: includes Shared/Core, the Foundation-only
                         # part that `swift test` also builds via Package.swift
-      - path: Tim/Resources
+      - path: Dad/Resources
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim
-        INFOPLIST_FILE: Tim/App/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tim/App/Tim.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: app.dad.Dad
+        INFOPLIST_FILE: Dad/App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Dad/App/Dad.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
-      - target: TimShieldConfiguration
-      - target: TimShieldAction
-      - target: TimActivityMonitor
-      - target: TimWidget
+      - target: DadShieldConfiguration
+      - target: DadShieldAction
+      - target: DadActivityMonitor
+      - target: DadWidget
       - sdk: FamilyControls.framework
       - sdk: ManagedSettings.framework
       - sdk: DeviceActivity.framework
       - sdk: CoreNFC.framework
       - sdk: WidgetKit.framework
 
-  # Draws the "Timmed." screen over blocked apps.
-  TimShieldConfiguration:
+  # Draws the "Dadded." screen over blocked apps.
+  DadShieldConfiguration:
     type: app-extension
     platform: iOS
     sources:
-      - Tim/Extensions/ShieldConfiguration
-      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+      - Dad/Extensions/ShieldConfiguration
+      - Dad/Shared      # recursive: includes Shared/Core, the Foundation-only
                         # part that `swift test` also builds via Package.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ShieldConfiguration
-        INFOPLIST_FILE: Tim/Extensions/ShieldConfiguration/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: app.dad.Dad.ShieldConfiguration
+        INFOPLIST_FILE: Dad/Extensions/ShieldConfiguration/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Dad/Extensions/ShieldConfiguration/ShieldConfiguration.entitlements
     dependencies:
-      # All targets compile the whole Tim/Shared tree, adapters included, so
+      # All targets compile the whole Dad/Shared tree, adapters included, so
       # each needs every framework the adapters import.
       - sdk: ManagedSettings.framework
       - sdk: ManagedSettingsUI.framework
@@ -89,18 +89,18 @@ targets:
       - sdk: WidgetKit.framework
 
   # Handles the buttons on that screen.
-  TimShieldAction:
+  DadShieldAction:
     type: app-extension
     platform: iOS
     sources:
-      - Tim/Extensions/ShieldAction
-      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+      - Dad/Extensions/ShieldAction
+      - Dad/Shared      # recursive: includes Shared/Core, the Foundation-only
                         # part that `swift test` also builds via Package.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ShieldAction
-        INFOPLIST_FILE: Tim/Extensions/ShieldAction/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ShieldAction/ShieldAction.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: app.dad.Dad.ShieldAction
+        INFOPLIST_FILE: Dad/Extensions/ShieldAction/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Dad/Extensions/ShieldAction/ShieldAction.entitlements
     dependencies:
       - sdk: ManagedSettings.framework
       - sdk: FamilyControls.framework
@@ -108,18 +108,18 @@ targets:
       - sdk: WidgetKit.framework
 
   # Ends timed sessions without the app running.
-  TimActivityMonitor:
+  DadActivityMonitor:
     type: app-extension
     platform: iOS
     sources:
-      - Tim/Extensions/ActivityMonitor
-      - Tim/Shared      # recursive: includes Shared/Core, the Foundation-only
+      - Dad/Extensions/ActivityMonitor
+      - Dad/Shared      # recursive: includes Shared/Core, the Foundation-only
                         # part that `swift test` also builds via Package.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.ActivityMonitor
-        INFOPLIST_FILE: Tim/Extensions/ActivityMonitor/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tim/Extensions/ActivityMonitor/ActivityMonitor.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: app.dad.Dad.ActivityMonitor
+        INFOPLIST_FILE: Dad/Extensions/ActivityMonitor/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Dad/Extensions/ActivityMonitor/ActivityMonitor.entitlements
     dependencies:
       - sdk: DeviceActivity.framework
       - sdk: ManagedSettings.framework
@@ -129,24 +129,24 @@ targets:
   # Reads the session and draws it on the Lock Screen.
   #
   # Sources are deliberately narrow — Core plus UserDefaultsStore — rather than
-  # the whole Tim/Shared tree the other targets take. Compiling the rest would
+  # the whole Dad/Shared tree the other targets take. Compiling the rest would
   # drag in FamilyControls, ManagedSettings and DeviceActivity, and with them a
   # family-controls entitlement this target has no use for and a fifth bundle
   # id needing Apple's manual approval.
-  TimWidget:
+  DadWidget:
     type: app-extension
     platform: iOS
     sources:
-      - Tim/Widget
-      - Tim/Shared/Core
-      - Tim/Shared/Adapters/UserDefaultsStore.swift
-      - path: Tim/Resources
+      - Dad/Widget
+      - Dad/Shared/Core
+      - Dad/Shared/Adapters/UserDefaultsStore.swift
+      - path: Dad/Resources
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.Widget
-        INFOPLIST_FILE: Tim/Widget/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tim/Widget/Widget.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: app.dad.Dad.Widget
+        INFOPLIST_FILE: Dad/Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Dad/Widget/Widget.entitlements
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
       - sdk: WidgetKit.framework
@@ -154,14 +154,14 @@ targets:
 
   # Proves the app launches and renders. Not shipped, not signed by match —
   # preflight skips test bundles for the checks that only apply to products.
-  TimUITests:
+  DadUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - Tim/UITests
+      - Dad/UITests
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.tim.Tim.UITests
-        TEST_TARGET_NAME: Tim
+        PRODUCT_BUNDLE_IDENTIFIER: app.dad.Dad.UITests
+        TEST_TARGET_NAME: Dad
     dependencies:
-      - target: Tim
+      - target: Dad

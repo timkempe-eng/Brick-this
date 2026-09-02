@@ -1,4 +1,4 @@
-# Tim — the contract
+# Dad — the contract
 
 Read this before non-trivial work. It is the set of rules that are easy to
 break by accident and expensive to notice later.
@@ -8,7 +8,7 @@ break by accident and expensive to notice later.
 A DIY [Brick](https://getbrick.com/): tap an NFC sticker, the apps you chose
 disappear until you tap it again. Native Swift, four targets, no Capacitor.
 
-The verb is **Tim**: Tim / Tims / Timming / Timmed, and **Un-Tim** to release.
+The verb is **Dad**: Dad / Dads / Dadding / Dadded, and **Un-Dad** to release.
 
 ## The machines
 
@@ -26,17 +26,17 @@ locally — there is no locally.
 
 ## Hard rules
 
-1. **`Tim/Shared/Core` imports Foundation and nothing else.** Ever. It is the
+1. **`Dad/Shared/Core` imports Foundation and nothing else.** Ever. It is the
    only code that can be tested without a Mac, and an iOS import silently ends
    that. Preflight fails the build if one appears.
 2. **The engine depends on ports, not frameworks.** `Clock`,
-   `ShieldControlling`, `SessionScheduling`, `TimPersisting`. New platform
+   `ShieldControlling`, `SessionScheduling`, `DadPersisting`. New platform
    capability → new port + adapter, never a framework import in Core.
    [ADR 001](docs/adr/001-ports-and-adapters.md).
-3. **Only `TimMode+FamilyControls` may interpret a `BlockedSelection` payload.**
+3. **Only `DadMode+FamilyControls` may interpret a `BlockedSelection` payload.**
    It is an opaque blob everywhere else. That is the privacy model made
    structural: the app is not supposed to learn which apps you blocked.
-4. **The verb is never lowercased.** "Tim your phone", never "tim your phone".
+4. **The verb is never lowercased.** "Dad your phone", never "dad your phone".
    `scripts/lint-vocabulary.sh` enforces it; it crept into eight call sites
    before that existed. `modeNoun` is exempt — "mode" is a common noun.
 5. **Signing is fastlane `match`, never Xcode automatic signing.**
@@ -85,7 +85,7 @@ a mutation that failed to compile apart from one that survived.
 Things the tests deliberately pin down, because they are decisions rather than
 implementation details: a session counts toward the day it *started*; a streak
 with nothing today but something yesterday is still current; an exhausted
-override allowance leaves the phone Timmed rather than half-released; a
+override allowance leaves the phone Dadded rather than half-released; a
 scheduled Mode never stomps a session you began by hand.
 
 ## Where state lives
