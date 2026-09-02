@@ -88,6 +88,23 @@ shows up as the shield displaying the wrong Mode while the app looks fine.
 | `app.dad.Dad.ActivityMonitor` | Family Controls, App Groups |
 | `app.dad.Dad.Widget` | App Groups only |
 
+**"Family Controls" is three rows now, and only one of them is ours.** Xcode 26
+split the capability, so the Identifiers list shows:
+
+| Row | Entitlement key | Tick it? |
+|---|---|---|
+| Family Controls (Development) | `com.apple.developer.family-controls` | **Yes** — self-service, works immediately |
+| Family Controls (Distribution) | same key | Not a checkbox. Apple's approval flips it; a greyed row is expected |
+| Family Controls App and Website Usage | `com.apple.developer.family-controls.app-and-website-usage` | **No** |
+
+The third is a different, newer entitlement: reading which apps and sites were
+used, on iOS 26.4+. Dad shields apps and never reads usage, so it fails hard
+rule 7 — and on 26.4+ it changes the consent prompt to all-or-nothing. There is
+also a live Xcode 26.4 bug where enabling all three produces a profile carrying
+`…app-and-website-usage` with the base `com.apple.developer.family-controls`
+key *missing*, which would break signing for every target we have.
+
+
 ### 2. Request Family Controls (Distribution) — the long pole
 
 <https://developer.apple.com/contact/request/family-controls-distribution>,
