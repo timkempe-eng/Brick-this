@@ -54,6 +54,48 @@ final class RequestAndGrantTests: XCTestCase {
         XCTAssertNil(h.engine.grantRelease(byTagUID: "PARENT"))
     }
 
+    func testAnUnansweredAskLastsTenMinutes() {
+        // Ten minutes is the number, spelled out. Every other test here
+        // advances by `GrantRequest.defaultLifetime`, which is correct style
+        // and means the entire suite moves with the constant: a ten-minute ask
+        // could quietly become a sixteen-hour one without a single failure,
+        // and the failure that causes is the one this lifetime exists to
+        // prevent — granting at midnight an ask made at four o'clock.
+        let (h, _) = dadded()
+        h.engine.requestRelease()
+
+        h.clock.advance(9 * 60)
+        XCTAssertNotNil(h.engine.pendingRequest, "still worth answering at nine minutes")
+
+        h.clock.advance(2 * 60)
+        XCTAssertNil(h.engine.pendingRequest, "and gone by eleven")
+    }
+
+    func testTheExchangeHistoryIsBoundedAtAHundred() {
+        // For the reason the session history is bounded at five hundred: the
+        // shield extension decodes this file under a tight memory budget, and
+        // an unbounded array is a crash on somebody's phone a year from now.
+        // It is the newest exchanges that are worth keeping.
+        let (h, _) = dadded()
+
+        var firstID: UUID?
+        var lastID: UUID?
+        for _ in 0..<150 {
+            guard let exchange = h.engine.requestRelease() else {
+                return XCTFail("an expired ask must not block the next one")
+            }
+            if firstID == nil { firstID = exchange.id }
+            lastID = exchange.id
+            h.clock.advance(GrantRequest.defaultLifetime + 60)
+        }
+
+        XCTAssertEqual(h.store.grantExchanges.count, 100)
+        XCTAssertFalse(h.store.grantExchanges.contains { $0.id == firstID },
+                       "the oldest ask is the one to drop")
+        XCTAssertTrue(h.store.grantExchanges.contains { $0.id == lastID },
+                      "and the newest is the one that must survive")
+    }
+
     // MARK: - Granting releases the phone
 
     func testGrantingGivesTheAppsBackAndBringsTheModeBack() {

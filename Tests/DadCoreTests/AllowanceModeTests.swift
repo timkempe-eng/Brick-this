@@ -643,4 +643,33 @@ final class AllowanceAcrossSessionsTests: XCTestCase {
         XCTAssertEqual(h.shield.appliedMode, mode.id,
                        "fifteen minutes away is not a new day")
     }
+
+    // MARK: - The ceiling
+
+    /// Twelve hours, and it is a guard rather than a picker value: the editor
+    /// offers two hours at most, so nothing anybody can tap gets near it. What
+    /// it defends against is a number arriving from somewhere else — a Mode
+    /// decoded from a future build, or an App Group edited by hand.
+    ///
+    /// Spelled literally on purpose. Every other test here says
+    /// `ModeAllowance(minutesPerDay: 15)`, so the whole suite moved with the
+    /// ceiling and it could have become a hundred and twenty hours in silence.
+    func testTwelveHoursIsTheMostAnAllowanceCanBe() {
+        XCTAssertTrue(ModeAllowance(minutesPerDay: 720).isValid)
+        XCTAssertFalse(ModeAllowance(minutesPerDay: 721).isValid)
+        XCTAssertFalse(ModeAllowance(minutesPerDay: 0).isValid,
+                       "zero is a block with extra steps, not an allowance")
+    }
+
+    /// And the direction it fails in is the whole point of having it. An
+    /// allowance nobody can enforce must not leave the apps sitting there
+    /// unshielded for five days while a Mode claims to be running.
+    func testAnAllowanceOverTheCeilingBlocksRatherThanRationingForever() {
+        let h = Harness()
+        let mode = h.addMode(allowance: ModeAllowance(minutesPerDay: 721))
+
+        XCTAssertEqual(h.engine.handleTap(), .dadded(mode: mode, start: .blocking))
+        XCTAssertEqual(h.shield.appliedMode, mode.id, "the apps are gone, as they should be")
+        XCTAssertTrue(h.usage.watching.isEmpty, "and nothing is being counted")
+    }
 }
