@@ -14,8 +14,8 @@ struct ManagedSettingsShield: ShieldControlling {
     /// ours never disturbs Screen Time limits the user set up themselves.
     private let store = ManagedSettingsStore(named: .dad)
 
-    func apply(_ mode: DadMode) {
-        applyShield(mode)
+    func apply(_ mode: DadMode, neverBlocked: BlockedSelection) {
+        applyShield(mode.shieldTokens(neverBlocked: neverBlocked))
         applyRestrictions(mode)
     }
 
@@ -31,20 +31,22 @@ struct ManagedSettingsShield: ShieldControlling {
         applyRestrictions(mode)
     }
 
-    private func applyShield(_ mode: DadMode) {
-        let selection = mode.selection
+    /// The `except:` arguments are where the never-block list lands, and they
+    /// are the reason it works for categories at all: "Social, except
+    /// WhatsApp" is a thing ManagedSettings expresses natively, and it is a
+    /// far better answer than declining to shield Social.
+    private func applyShield(_ tokens: ShieldTokens) {
+        store.shield.applications = tokens.applications.isEmpty
+            ? nil : tokens.applications
 
-        store.shield.applications = selection.applicationTokens.isEmpty
-            ? nil : selection.applicationTokens
+        store.shield.applicationCategories = tokens.categories.isEmpty
+            ? nil : .specific(tokens.categories, except: tokens.exceptApplications)
 
-        store.shield.applicationCategories = selection.categoryTokens.isEmpty
-            ? nil : .specific(selection.categoryTokens, except: Set())
+        store.shield.webDomains = tokens.webDomains.isEmpty
+            ? nil : tokens.webDomains
 
-        store.shield.webDomains = selection.webDomainTokens.isEmpty
-            ? nil : selection.webDomainTokens
-
-        store.shield.webDomainCategories = selection.categoryTokens.isEmpty
-            ? nil : .specific(selection.categoryTokens, except: Set())
+        store.shield.webDomainCategories = tokens.categories.isEmpty
+            ? nil : .specific(tokens.categories, except: tokens.exceptWebDomains)
     }
 
     /// Strict closes the obvious escape hatch: deleting Dad would otherwise

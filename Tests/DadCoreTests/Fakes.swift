@@ -8,6 +8,7 @@ final class FakeStore: DadPersisting {
     var activeSession: DadSession?
     var history: [DadSession] = []
     var pairedTagUIDs: [String] = []
+    var neverBlocked = BlockedSelection()
     var emergencyUses: [Date] = []
     var hasOnboarded = false
     var syncedSchedules: [RecurringSchedule] = []
@@ -18,6 +19,11 @@ final class FakeStore: DadPersisting {
 final class SpyShield: ShieldControlling {
     enum Call: Equatable { case apply(UUID), restrictionsOnly(UUID), clear }
     private(set) var calls: [Call] = []
+
+    /// What the engine said was off limits on the last `apply`. The shield is
+    /// where the never-block list has to arrive; a test that only checks the
+    /// store would pass while the adapter never heard about it.
+    private(set) var lastNeverBlocked: BlockedSelection?
 
     /// Which Mode's apps are currently hidden, as far as the shield has been
     /// told. Deliberately `nil` for `restrictionsOnly`: while an allowance
@@ -38,7 +44,10 @@ final class SpyShield: ShieldControlling {
         return nil
     }
 
-    func apply(_ mode: DadMode) { calls.append(.apply(mode.id)) }
+    func apply(_ mode: DadMode, neverBlocked: BlockedSelection) {
+        calls.append(.apply(mode.id))
+        lastNeverBlocked = neverBlocked
+    }
     func applyRestrictionsOnly(_ mode: DadMode) { calls.append(.restrictionsOnly(mode.id)) }
     func clear() { calls.append(.clear) }
 }
@@ -55,8 +64,11 @@ final class SpyUsageWatcher: UsageWatching {
     /// What the system would currently be counting.
     private(set) var watching: Set<UUID> = []
 
-    func startWatching(_ mode: DadMode) -> Bool {
+    private(set) var lastNeverBlocked: BlockedSelection?
+
+    func startWatching(_ mode: DadMode, neverBlocked: BlockedSelection) -> Bool {
         calls.append(.start(mode.id, minutes: mode.editableAllowance.minutesPerDay))
+        lastNeverBlocked = neverBlocked
         guard !refusing.contains(mode.id) else { return false }
         watching.insert(mode.id)
         return true

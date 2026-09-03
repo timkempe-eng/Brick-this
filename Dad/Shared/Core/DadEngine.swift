@@ -119,7 +119,7 @@ struct DadEngine {
 
         let start: DadStart
         if mode.rations {
-            if usage.startWatching(mode) {
+            if usage.startWatching(mode, neverBlocked: store.neverBlocked) {
                 start = .rationing(minutesPerDay: mode.editableAllowance.minutesPerDay)
             } else {
                 // Recorded as spent, not merely reported: every later reader —
@@ -303,7 +303,8 @@ struct DadEngine {
         // Re-arm the usage watch before deciding the shield: if the system has
         // forgotten the registration, the allowance is not being counted, and
         // the shield has to go up instead of leaving the apps open forever.
-        if mode.rations, session.allowanceSpentAt == nil, !usage.startWatching(mode) {
+        if mode.rations, session.allowanceSpentAt == nil,
+           !usage.startWatching(mode, neverBlocked: store.neverBlocked) {
             session.allowanceSpentAt = clock.now
             store.activeSession = session
         }
@@ -373,7 +374,7 @@ struct DadEngine {
         switch ShieldPolicy.state(session: session, mode: mode,
                                   now: clock.now, calendar: calendar) {
         case .blocking:
-            shield.apply(mode)
+            shield.apply(mode, neverBlocked: store.neverBlocked)
         case .rationing:
             shield.applyRestrictionsOnly(mode)
         case .off:
@@ -427,7 +428,7 @@ struct DadEngine {
         if previous?.allowance != mode.allowance {
             usage.stopWatching(modeID: mode.id)
             session.allowanceSpentAt = nil
-            if mode.rations, !usage.startWatching(mode) {
+            if mode.rations, !usage.startWatching(mode, neverBlocked: store.neverBlocked) {
                 session.allowanceSpentAt = clock.now
             }
             store.activeSession = session

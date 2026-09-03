@@ -14,7 +14,12 @@ protocol Clock {
 
 /// Taking apps away and giving them back. Implemented by ManagedSettings.
 protocol ShieldControlling {
-    func apply(_ mode: DadMode)
+    /// - Parameter neverBlocked: the apps and sites no Mode may ever take
+    ///   away. Opaque here, like everything else about a `BlockedSelection`:
+    ///   Core hands both halves over and the subtraction happens inside
+    ///   `DadMode+FamilyControls`, which is the only file allowed to look at
+    ///   either. Rule 3 expressed as a location rather than a convention.
+    func apply(_ mode: DadMode, neverBlocked: BlockedSelection)
 
     /// Everything `apply` does except hiding the apps — which today means
     /// strict mode's refusal to let Dad be deleted.
@@ -71,8 +76,12 @@ protocol UsageWatching {
     ///
     /// Registering a Mode that is already being watched is a no-op, so
     /// `reconcile()` may call this on every foreground.
+    ///
+    /// - Parameter neverBlocked: excluded from the count as well as from the
+    ///   shield. Time in a banking app you protected must not spend the
+    ///   allowance for the apps you were rationing.
     @discardableResult
-    func startWatching(_ mode: DadMode) -> Bool
+    func startWatching(_ mode: DadMode, neverBlocked: BlockedSelection) -> Bool
 
     /// Stops counting for this Mode. Safe when nothing is registered.
     func stopWatching(modeID: UUID)
@@ -99,6 +108,16 @@ protocol DadPersisting: AnyObject {
     var activeSession: DadSession? { get set }
     var history: [DadSession] { get set }
     var pairedTagUIDs: [String] { get set }
+
+    /// Apps and sites no Mode may take away, whatever it blocks.
+    ///
+    /// One list, not one per Mode, and that is the point: the failure it
+    /// exists to prevent is forgetting. Every review of a blocker has the same
+    /// story in it — someone shields a category, and discovers at the wrong
+    /// moment that it contained their bank, their maps, or the call they
+    /// needed to answer. A safety net you have to remember to fit each time is
+    /// not one.
+    var neverBlocked: BlockedSelection { get set }
     var emergencyUses: [Date] { get set }
     var hasOnboarded: Bool { get set }
 

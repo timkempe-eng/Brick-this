@@ -1,4 +1,5 @@
 import SwiftUI
+import FamilyControls
 
 struct SettingsView: View {
     @EnvironmentObject private var model: DadModel
@@ -6,6 +7,13 @@ struct SettingsView: View {
     @StateObject private var scanner = TagScanner()
     @StateObject private var writer = TagWriter()
     @State private var linkToWrite = ""
+
+    @State private var showingSafePicker = false
+    /// The picker gets its own state and writes back on dismiss, for the
+    /// reason written out on `ModeEditorView`: binding a computed bridge that
+    /// JSON round-trips on every read means the modifier clobbers the value
+    /// during a render.
+    @State private var safeSelection = FamilyActivitySelection()
 
     var body: some View {
         NavigationStack {
@@ -33,6 +41,25 @@ struct SettingsView: View {
                     Text(model.pairedTagCount == 0
                          ? "No tag paired yet, so any NFC tag will work. Pair one to lock Dad to it."
                          : "Only your paired tags can \(Vocab.verb) and \(Vocab.unVerb) this phone.")
+                }
+
+                Section {
+                    Button {
+                        showingSafePicker = true
+                    } label: {
+                        HStack {
+                            Text("Apps and sites to keep")
+                            Spacer()
+                            Text("\(model.neverBlocked.totalCount)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Never blocked")
+                } footer: {
+                    Text(model.neverBlocked.isEmpty
+                         ? "Nothing is protected yet. Anything you put here stays reachable no matter which \(Vocab.modeNoun.lowercased()) is running — the place for your bank, your maps, and the people who need to reach you. Blocking a whole category is where this earns itself: it is easy to forget what is in one."
+                         : "\(model.neverBlocked.summary) — reachable whatever is running. A \(Vocab.modeNoun.lowercased()) that names one of these anyway does not win; this list does.")
                 }
 
                 Section {
@@ -84,6 +111,11 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .familyActivityPicker(isPresented: $showingSafePicker, selection: $safeSelection)
+            .onAppear { safeSelection = model.neverBlocked.familyActivitySelection }
+            .onChange(of: showingSafePicker) { _, isShowing in
+                if !isShowing { model.neverBlocked = BlockedSelection(safeSelection) }
+            }
             .nfcErrorAlert($scanner.lastError)
             .nfcErrorAlert($writer.lastError)
             .toolbar {

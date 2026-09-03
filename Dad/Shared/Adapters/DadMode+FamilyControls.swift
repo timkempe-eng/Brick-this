@@ -36,3 +36,58 @@ extension DadMode {
         set { blocked = BlockedSelection(newValue) }
     }
 }
+
+/// What the system should actually restrict, once the never-block list has
+/// been taken out of the Mode's selection.
+///
+/// Both halves are opaque tokens everywhere else in the codebase, so this is
+/// the only place the subtraction can happen — hard rule 3 as a location
+/// rather than a convention. It is also the only place that *could* do it:
+/// Core holds two `Data` blobs and has no way to tell whether they overlap.
+struct ShieldTokens {
+    let applications: Set<ApplicationToken>
+    let categories: Set<ActivityCategoryToken>
+    let webDomains: Set<WebDomainToken>
+
+    /// Handed to ManagedSettings as the `except:` of a category policy.
+    /// Categories are deliberately *not* filtered by removing them: shielding
+    /// "Social except WhatsApp" is a better answer than not shielding Social,
+    /// and ManagedSettings expresses it natively.
+    let exceptApplications: Set<ApplicationToken>
+    let exceptWebDomains: Set<WebDomainToken>
+
+    var isEmpty: Bool {
+        applications.isEmpty && categories.isEmpty && webDomains.isEmpty
+    }
+}
+
+extension DadMode {
+    /// - Parameter neverBlocked: apps and sites no Mode may take away.
+    func shieldTokens(neverBlocked: BlockedSelection) -> ShieldTokens {
+        let wanted = selection
+        let safe = neverBlocked.familyActivitySelection
+
+        return ShieldTokens(
+            // An app named on both lists is protected. The never-block list
+            // wins by construction rather than by ordering, because a rule
+            // whose outcome depends on which screen you edited last is not a
+            // safety net.
+            applications: wanted.applicationTokens.subtracting(safe.applicationTokens),
+            categories: wanted.categoryTokens,
+            webDomains: wanted.webDomainTokens.subtracting(safe.webDomainTokens),
+            exceptApplications: safe.applicationTokens,
+            exceptWebDomains: safe.webDomainTokens
+        )
+    }
+
+    /// The apps whose use counts against a rationed Mode's allowance.
+    ///
+    /// The same subtraction, and it has to be: time spent in a banking app you
+    /// protected must not spend the allowance for the apps you were rationing.
+    /// A `DeviceActivityEvent` has no `except:`, so here the categories cannot
+    /// carry an exception either — which is a real limitation and is written
+    /// down in docs/roadmap.md rather than hidden.
+    func usageTokens(neverBlocked: BlockedSelection) -> ShieldTokens {
+        shieldTokens(neverBlocked: neverBlocked)
+    }
+}

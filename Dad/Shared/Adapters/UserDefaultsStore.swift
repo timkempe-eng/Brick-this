@@ -28,6 +28,7 @@ final class UserDefaultsStore: DadPersisting {
         static let activeSession = "activeSession"
         static let history = "history"
         static let pairedTagUIDs = "pairedTagUIDs"
+        static let neverBlocked = "neverBlocked"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
@@ -56,6 +57,14 @@ final class UserDefaultsStore: DadPersisting {
     var pairedTagUIDs: [String] {
         get { decodeArray(String.self, Key.pairedTagUIDs) ?? [] }
         set { encode(newValue, Key.pairedTagUIDs) }
+    }
+
+    /// Absent decodes as empty, which is exactly the old behaviour — nothing
+    /// protected — so no migration is needed for a store written before this
+    /// existed.
+    var neverBlocked: BlockedSelection {
+        get { decode(BlockedSelection.self, Key.neverBlocked) ?? BlockedSelection() }
+        set { encode(newValue, Key.neverBlocked) }
     }
 
     var emergencyUses: [Date] {

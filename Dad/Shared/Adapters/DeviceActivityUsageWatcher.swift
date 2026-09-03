@@ -34,7 +34,7 @@ struct DeviceActivityUsageWatcher: UsageWatching {
         repeats: true
     )
 
-    func startWatching(_ mode: DadMode) -> Bool {
+    func startWatching(_ mode: DadMode, neverBlocked: BlockedSelection) -> Bool {
         let name = DeviceActivityName(ScheduleActivityNaming.allowanceName(modeID: mode.id))
 
         // Already counting: leave it alone and report success. `reconcile()`
@@ -43,7 +43,7 @@ struct DeviceActivityUsageWatcher: UsageWatching {
         // torn-down-window failure this codebase goes out of its way to avoid.
         guard !center.activities.contains(name) else { return true }
 
-        let selection = mode.selection
+        let tokens = mode.usageTokens(neverBlocked: neverBlocked)
         let minutes = mode.editableAllowance.minutesPerDay
 
         // No `includesPastActivity`: it is iOS 17.4+ and the deployment target
@@ -52,9 +52,9 @@ struct DeviceActivityUsageWatcher: UsageWatching {
         // grants the allowance from 4pm rather than handing over what is left
         // of a budget already spent before Dad was involved.
         let event = DeviceActivityEvent(
-            applications: selection.applicationTokens,
-            categories: selection.categoryTokens,
-            webDomains: selection.webDomainTokens,
+            applications: tokens.applications,
+            categories: tokens.categories,
+            webDomains: tokens.webDomains,
             threshold: DateComponents(minute: minutes)
         )
 

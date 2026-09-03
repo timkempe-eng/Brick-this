@@ -24,6 +24,9 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   usable for a set number of minutes a day, then go until midnight. Strict
   still holds through the free period, and an allowance the system refuses to
   count becomes a plain block rather than a rule nobody is enforcing.
+- **A never-blocked list** — apps and sites no Mode may take away, whatever it
+  names. One list, not one per Mode, because the failure it exists to prevent
+  is forgetting.
 - **A puck to put the tag in** — [hardware/](../hardware/), two printed parts,
   about a dollar, rendered by CI rather than committed.
 
@@ -65,6 +68,15 @@ registered mid-day, and how promptly, is the one thing only TestFlight can say.
 The engine is built so that being wrong about it fails safe: an allowance the
 system will not count becomes a block, and a midnight wake that never arrives is
 corrected on the next foreground.
+
+**A protected app inside a blocked *category* still spends a rationed Mode's
+allowance.** ManagedSettings expresses "this category except these apps"
+natively, so the never-blocked list works properly for the shield. A
+`DeviceActivityEvent` has no equivalent `except:`, so a Mode that rations the
+Social category counts every app in it — including one you protected. The app
+stays reachable, which is the part that matters; it just costs you minutes it
+shouldn't. Naming apps rather than categories in a rationed Mode avoids it
+entirely.
 
 **`DeviceActivitySchedule` pins one weekday per window.** An every-day schedule
 collapses to a single repeating window, but a three-day-a-week Mode costs three.

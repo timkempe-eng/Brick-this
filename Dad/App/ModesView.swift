@@ -108,7 +108,7 @@ struct ModeEditorView: View {
                         }
                     }
                 } footer: {
-                    Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps.")
+                    Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps. Anything on your never-blocked list in Settings stays reachable even if a \(Vocab.modeNoun.lowercased()) names it.")
                 }
 
                 AllowanceSection(mode: $mode)

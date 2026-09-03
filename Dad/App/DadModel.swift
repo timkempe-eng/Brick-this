@@ -106,6 +106,19 @@ final class DadModel: ObservableObject {
 
     var pairedTagCount: Int { engine.store.pairedTagUIDs.count }
 
+    /// Apps and sites no Mode may take away.
+    var neverBlocked: BlockedSelection {
+        get { engine.store.neverBlocked }
+        set {
+            engine.store.neverBlocked = newValue
+            // Take effect now rather than at the next session. Someone who
+            // has just protected their bank because a Mode hid it is not
+            // going to wait for a shield they can currently see.
+            engine.reconcile()
+            reload()
+        }
+    }
+
     // MARK: - Authorization
 
     func requestAuthorization() async {
