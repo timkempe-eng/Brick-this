@@ -20,7 +20,7 @@ There is no Mac in this project. GitHub's macOS runners have Xcode on them and
 are free for public repositories, so the Mac is a rented one that exists for
 four minutes per push.
 
-- **Every push** compiles the app and all three extensions against the real iOS
+- **Every push** compiles the app and all four extensions against the real iOS
   SDK, and runs the tests and checks. Green means it builds.
 - **To get it on your phone**, run the *Release to TestFlight* workflow from the
   Actions tab — which works from an iPad — then install from TestFlight.
@@ -28,7 +28,7 @@ four minutes per push.
 The one unavoidable cost is the **Apple Developer Program, $99/year**. Free
 provisioning needs Xcode on a Mac, sideloading tools can't grant the Family
 Controls entitlement, and Swift Playgrounds on iPad can't build app extensions
-(Dad has three). TestFlight is the only Mac-free route onto a phone, and it
+(Dad has four). TestFlight is the only Mac-free route onto a phone, and it
 requires the paid program.
 
 Signing is fastlane `match`, not Xcode automatic signing —
@@ -50,9 +50,9 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test                      # 98 tests, seconds, no Mac
+swift test                      # 240 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
-python3 scripts/preflight.py    # 87 checks on the Xcode wiring
+python3 scripts/preflight.py    # 94 checks on the Xcode wiring
 ```
 
 CI runs all three on Linux, plus a fourth job on a macOS runner that actually
@@ -79,19 +79,22 @@ NFC tag ──tap──▶ Shortcuts automation ──▶ ToggleDadIntent ──
                                                       DadEngine
                                           (Foundation only, fully tested)
                                                             │
-              ┌──────────────┬──────────────┬───────────────┘
-              ▼              ▼              ▼
-      ShieldControlling  SessionScheduling  DadPersisting   ← ports
-              │              │              │
-      ManagedSettings   DeviceActivity   App Group           ← iOS adapters
+      ┌───────┬───────┴───────┬───────────────┬───────────┐
+      ▼       ▼               ▼               ▼           ▼
+ Shield-  Session-        UsageWatching  DadPersisting  Widget-      ← ports
+ Controlling Scheduling                                 Refreshing
+      │       │               │               │           │
+ Managed-  Device-        DeviceActivity   App Group    WidgetKit    ← adapters
+ Settings  Activity       (usage events)
               │
       iOS shields the apps ──▶ ShieldConfigurationExtension
                                     "Dadded."
 ```
 
 Every trigger funnels through one engine, so there is exactly one place a
-session can begin or end. The engine depends only on four protocols, which is
-what lets the whole state machine be tested without a device —
+session can begin or end. The engine depends only on six protocols (`Clock` is
+the sixth, and the reason time-dependent behaviour is testable at all), which
+is what lets the whole state machine be tested without a device —
 [ADR 001](docs/adr/001-ports-and-adapters.md).
 
 The restrictions are held by the system, not by this app. Force-quitting Dad
@@ -118,26 +121,35 @@ from inside an agent session.
 ```
 Dad/
   Shared/
-    Core/          Foundation-only. Built into all four targets, and by
+    Core/          Foundation-only. Built into all five targets, and by
                    Package.swift for `swift test`. No iOS frameworks, ever.
       DadEngine        start/stop/toggle — one path for every trigger
-      Ports            the four protocols the engine depends on
+      Ports            the six protocols the engine depends on
       DadMode          a Mode; BlockedSelection is opaque here by design
       DadSession       one stretch of being Dadded
       DadStats         streaks, totals, chart data
+      ShieldPolicy     whether the apps are currently taken away — one answer
       ModeSchedule     recurring windows; wall-clock, not instants
+      ModeAllowance    a daily budget, for a Mode that rations rather than hides
+      PendingResume    a break: released by hand, coming back on its own
+      WidgetSnapshot   what the Lock Screen says, decided here not in the widget
+      SchemaCoding     stored values carry the version that wrote them
       LenientDecoding  one bad stored record can't cost the whole array
       EmergencyAllowance  five per rolling 30 days
       DadVocabulary    every string carrying the verb, in one place
     Adapters/      the iOS side of each port — thin, no logic worth testing
-      ManagedSettingsShield, DeviceActivityScheduler, UserDefaultsStore,
-      SystemClock, DadMode+FamilyControls, DadEngine+Live (composition root)
+      ManagedSettingsShield, DeviceActivityScheduler, DeviceActivityUsageWatcher,
+      UserDefaultsStore, WidgetKitRefresher, SystemClock,
+      DadMode+FamilyControls, DadEngine+Live (composition root)
   App/             the SwiftUI app, NFC scanning, App Intents
   Extensions/
     ShieldConfiguration   the "Dadded." screen over blocked apps
     ShieldAction          its two buttons
-    ActivityMonitor       ends timed sessions with the app closed
-docs/              research, naming, tags, entitlements, roadmap
+    ActivityMonitor       ends timed sessions, and rations, with the app closed
+  Widget/          the Lock Screen widget — Core plus one adapter, no
+                   Screen Time entitlement, deliberately
+hardware/          the printable puck; rendered by CI, not committed
+docs/              research, naming, tags, entitlements, roadmap, ADRs
 ```
 
 `Dad.xcodeproj` is generated and not committed — rerun `xcodegen generate` after
@@ -145,15 +157,20 @@ adding a file.
 
 ## Status
 
-The core loop, the three tap paths, scheduled Modes and the stats screen are
-built. Widgets and Android are [not done](docs/roadmap.md).
+The core loop, the three tap paths, scheduled Modes, the Lock Screen widget,
+the stats screen, allowance Modes, breaks and the never-blocked list are built.
+A Live Activity and Android are both **declined with reasons written down**
+rather than pending — [ADR 002](docs/adr/002-no-live-activity.md) and
+[ADR 004](docs/adr/004-android.md). [What is and isn't built](docs/roadmap.md).
 
-`swift test` passes — 138 tests covering the whole engine state machine,
-recurring schedules, the override allowance, and the session/streak maths. The suite is mutation-checked:
-deliberately breaking the tag guard, the allowance, the empty-Mode guard, the
-history bound, the scheduler floor or the reconcile clear each turns it red.
+`swift test` passes — 240 tests covering the whole engine state machine,
+recurring schedules, allowances across a day boundary, breaks, the override
+allowance, and the session/streak maths. The suite is mutation-checked with
+`scripts/mutate.sh`: deliberately breaking the tag guard, the rationing branch,
+the allowance's day comparison, the empty-Mode guard, the history bound, the
+scheduler floor or the reconcile clear each turns it red.
 
-The app and all three extensions compile cleanly against the iOS SDK on a
+The app and all four extensions compile cleanly against the iOS SDK on a
 GitHub macOS runner, on every push. Nothing has run on a device yet — Screen
 Time and NFC both no-op in the Simulator, so the first real proof that a tap
 blocks anything comes from TestFlight.
