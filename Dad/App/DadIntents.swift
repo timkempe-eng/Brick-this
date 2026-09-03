@@ -49,7 +49,11 @@ struct ToggleDadIntent: AppIntent {
     /// Siri reads this aloud, so it has to be true. A rationing Mode has taken
     /// nothing away yet, and "Dadded. Deep Work." would tell someone their
     /// apps are gone while they are not.
-    static func dialog(mode: DadMode, start: DadEngine.DadStart) -> String {
+    /// `IntentDialog`, not `String`: `.result(dialog:)` takes the former, and
+    /// the literals at the other call sites only compile because it is
+    /// `ExpressibleByStringInterpolation`. A `String` returned from here has
+    /// no such conversion.
+    static func dialog(mode: DadMode, start: DadEngine.DadStart) -> IntentDialog {
         switch start {
         case .blocking:
             return "\(Vocab.verbPast). \(mode.name)."
