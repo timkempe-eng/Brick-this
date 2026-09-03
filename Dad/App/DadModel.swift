@@ -237,7 +237,17 @@ final class DadModel: ObservableObject {
     }
 
     func claim(_ reward: RewardLedger.Reward) {
-        guard engine.claim(reward) else { return }
+        guard engine.claim(reward) else {
+            // The only two refusals are "not enough days" and "that offer was
+            // taken back" — both of which can become true between a render and
+            // a tap. Silence would read as the tap not registering, which is
+            // the one thing worse than either answer.
+            let short = rewardLedger.shortfall(for: reward)
+            banner = short > RewardLedger.Days(0)
+                ? "\(short.description) to go before you can claim that."
+                : "That isn't on offer any more."
+            return
+        }
         reload()
     }
 

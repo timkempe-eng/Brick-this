@@ -97,8 +97,7 @@ extension TagWriter: NFCNDEFReaderSessionDelegate {
                     // tag and neither screen has to know the other exists.
                     tag.readNDEF { existing, _ in
                         let ledger = (existing?.records ?? []).filter {
-                            $0.wellKnownTypeTextPayload().0?
-                                .hasPrefix(HouseholdLedgerFormat.prefix) ?? false
+                            HouseholdLedgerFormat.isOurRecord($0.wellKnownTypeTextPayload().0)
                         }
                         let outgoing = NFCNDEFMessage(records: message.records + ledger)
 

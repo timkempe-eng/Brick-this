@@ -85,6 +85,39 @@ final class HouseholdLedgerTests: XCTestCase {
                       "the wire format must be incapable of carrying a name: \(payload)")
     }
 
+    func testATextRecordThatMerelyStartsWithDIsNotALedger() {
+        // The bug this predicate exists to prevent, found by review. All three
+        // NFC call sites matched on `"d"` alone, so any text record beginning
+        // with that letter — "desk", "dinner", "downstairs", the sort of thing
+        // somebody writes with NFC Tools — was treated as a ledger. It was
+        // destroyed on the first in-app tap, and if it sat before a real
+        // ledger record it was read *as* one: the decode fails, the tag is
+        // ignored, and both records are then replaced by this phone's
+        // un-merged view. Everyone else's standings, gone.
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("desk"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("dinner"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord(nil))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d"))
+        XCTAssertTrue(HouseholdLedgerFormat.isOurRecord("d1;a1b2c3d4,20260903,7"))
+    }
+
+    func testALaterBuildsRecordIsNotOursToReplace() {
+        // Version-exact, and the same decision `decoded` makes for the same
+        // reason. A record we cannot read is left on the tag rather than
+        // overwritten, so a household running two builds carries two records
+        // and heals when both update — instead of one build deleting data it
+        // could not parse.
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d2;a1b2c3d4,20260903,7"))
+        XCTAssertNil(HouseholdLedger.decoded("d2;a1b2c3d4,20260903,7"))
+    }
+
+    func testEverythingWeWriteIsSomethingWeWouldRecogniseBack() {
+        // The predicate and the encoder are two halves of one rule, so they
+        // are asserted against each other rather than each against a literal.
+        let ledger = HouseholdLedger(standings: [standing(parent, "20260903", 7)])
+        XCTAssertTrue(HouseholdLedgerFormat.isOurRecord(ledger.encoded()))
+    }
+
     func testATagWrittenByALaterBuildIsLeftAlone() {
         // Strict across versions on purpose. A later build's fields cannot be
         // guessed, and half-reading them would write the guess back — losing
@@ -249,6 +282,38 @@ final class HouseholdLedgerTests: XCTestCase {
         let known = HouseholdLedger(standings: [standing(child, "20260902", 6)])
         XCTAssertEqual(known.afterExchange(with: "d7;nonsense", own: nil).standings,
                        known.standings)
+    }
+
+    func testOurOwnStandingIsNeverTheOneDroppedByTheCap() {
+        // `setting` puts us at the front, and a mutation appending us instead
+        // survived the suite. It should not have: `trimmed` keeps the first
+        // `maximumMembers`, so in a household already at the cap the phone
+        // writing the tag would drop *itself* — and then read the tag back and
+        // conclude it was not a member of its own household.
+        //
+        // This is the one entry with a claim on the space. Everyone else's
+        // standing is news from the tag; ours is the only thing on it that
+        // nothing else can supply.
+        let others = (0..<HouseholdLedgerFormat.maximumMembers).map {
+            standing(MemberID(String(format: "1000000%d", $0))!, "20260903", 9)
+        }
+        let mine = standing(parent, "20260901", 2)
+
+        let written = HouseholdLedger(standings: others).setting(mine).trimmed()
+
+        XCTAssertEqual(written.standings.count, HouseholdLedgerFormat.maximumMembers)
+        XCTAssertNotNil(written.standing(for: parent), "the writer must be on its own tag")
+        XCTAssertEqual(HouseholdLedger.decoded(written.encoded())?.standing(for: parent)?.streak, 2)
+    }
+
+    func testANegativeStreakIsNotAShorterRunWhenOneIsConstructed() {
+        // The clamp guards construction, not decoding: the synthesised decoder
+        // does not run this initialiser. What protects the decode paths is
+        // separate and already tested — the wire format rejects a negative
+        // streak outright, and `HouseholdStreak` clamps whatever the
+        // arithmetic produces. This pins the third door.
+        XCTAssertEqual(MemberStanding(member: parent, lastActive: day("20260903"),
+                                      streak: -4).streak, 0)
     }
 
     // MARK: - The shared number

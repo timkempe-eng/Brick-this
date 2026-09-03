@@ -77,6 +77,46 @@ final class ShieldGapTests: XCTestCase {
         XCTAssertNil(report.setupNote)
     }
 
+    func testAConfirmationFromTheFutureDoesNotCrashTheReport() {
+        // The guard on the left edge is a crash guard, not tidiness, and a
+        // mutation removing it survived the whole suite — so it had no test
+        // under it at all.
+        //
+        // `DateInterval(start:end:)` traps when the end precedes the start.
+        // `lastConfirmedAt` can be after `now` for reasons that happen to real
+        // phones: a restored backup carrying a stamp from the future, or a
+        // clock corrected backwards while a session was running — the same
+        // events the report's own caveat lists as indistinguishable from a
+        // gap. The honest answer is no gap, not a crash on the Stats screen.
+        let report = ShieldGap.report(ShieldObservations(
+            now: now,
+            authorization: .notApproved,
+            activeSessionStartedAt: now.addingTimeInterval(-3 * hour),
+            lastConfirmedAt: now.addingTimeInterval(hour),
+            audience: .shared))
+
+        XCTAssertTrue(report.gaps.isEmpty)
+        XCTAssertNotNil(report.setupNote, "the setup problem is still worth saying")
+    }
+
+    func testAConfirmationAtThisVeryInstantIsNotAGapOfNoLength() {
+        // Confirmed exactly now, so there is no interval between the last time
+        // the shield was known good and the moment we looked.
+        //
+        // Note that loosening the guard to `<=` still passes this: a
+        // zero-length gap is below `minimumReportable` and gets filtered out
+        // regardless. That is recorded on the guard itself, because a mutation
+        // survives there and it is taste rather than a hole.
+        let report = ShieldGap.report(ShieldObservations(
+            now: now,
+            authorization: .notApproved,
+            activeSessionStartedAt: now.addingTimeInterval(-3 * hour),
+            lastConfirmedAt: now,
+            audience: .shared))
+
+        XCTAssertTrue(report.gaps.isEmpty)
+    }
+
     func testNotBeingAbleToAskIsNotAnAnswer() {
         // `.unknown` must never be read as `.notApproved`. A slow or
         // unavailable AuthorizationCenter would otherwise manufacture a gap,

@@ -136,7 +136,11 @@ extension TagScanner: NFCTagReaderSessionDelegate {
         guard let mine = exchange.mine, let ndef = Self.ndefTag(of: tag) else { return finish() }
 
         ndef.queryNDEFStatus { status, capacity, _ in
-            guard status == .readWrite else { return finish() }
+            // A locked tag is still perfectly readable, and a household whose
+            // tag someone write-protected should still pick up everyone
+            // else's standings — they simply cannot leave their own. Skipping
+            // the read as well was giving up more than the tag took away.
+            guard status != .notSupported else { return finish() }
             ndef.readNDEF { message, _ in
                 // A blank tag reads as an error rather than an empty message,
                 // and a blank tag is the normal first case: nothing has to be
@@ -144,6 +148,8 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                 let existing = message?.records ?? []
                 let found = Self.ledgerText(in: existing)
                 self.exchange.found = found
+
+                guard status == .readWrite else { return finish() }
 
                 let reply = mine.afterExchange(with: found, own: self.exchange.own).encoded()
                 guard reply != found else { return finish() }
@@ -163,7 +169,7 @@ extension TagScanner: NFCTagReaderSessionDelegate {
     nonisolated private static func ledgerText(in records: [NFCNDEFPayload]) -> String? {
         records.lazy
             .compactMap { $0.wellKnownTypeTextPayload().0 }
-            .first { $0.hasPrefix(HouseholdLedgerFormat.prefix) }
+            .first { HouseholdLedgerFormat.isOurRecord($0) }
     }
 
     /// Every record the tag had, with its ledger record replaced.
@@ -174,7 +180,7 @@ extension TagScanner: NFCTagReaderSessionDelegate {
     nonisolated private static func message(replacingLedgerIn records: [NFCNDEFPayload],
                                             with ledger: String) -> NFCNDEFMessage {
         let kept = records.filter {
-            !($0.wellKnownTypeTextPayload().0?.hasPrefix(HouseholdLedgerFormat.prefix) ?? false)
+            !HouseholdLedgerFormat.isOurRecord($0.wellKnownTypeTextPayload().0)
         }
         guard let payload = NFCNDEFPayload.wellKnownTypeTextPayload(string: ledger,
                                                                    locale: Locale(identifier: "en")) else {

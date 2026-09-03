@@ -60,11 +60,11 @@ struct RewardsView: View {
             Text("Days")
         } footer: {
             Text("""
-                 A day is earned by finishing a session at the \(Vocab.tagNoun) — one \
-                 counts however many times you \(Vocab.verb) that day, and a \
-                 \(Vocab.modeNoun.lowercased()) a schedule opened and closed on its own \
-                 earns nothing. The same days the ladder counts, so a rung and a reward \
-                 quote against the same evidence.
+                 A day is earned by ending a session yourself — at the \(Vocab.tagNoun), \
+                 or in the app. One counts however many times you \(Vocab.verb) that day. \
+                 A \(Vocab.modeNoun.lowercased()) a schedule opened and closed while the \
+                 phone sat on a table earns nothing. The same days the ladder counts, so a \
+                 rung and a reward quote against the same evidence.
                  """)
         }
     }

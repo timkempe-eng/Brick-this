@@ -240,7 +240,10 @@ struct AutonomyLadder {
     /// one heroic fortnight and then nothing, and a streak alone rewards a
     /// month of thirty-second sessions.
     struct Requirement: Equatable {
-        /// Days on which at least one session was finished at the tag.
+        /// Days on which at least one session was ended by a person — at the
+        /// tag, in the app, or through the Un-Dad intent. Not "at the tag":
+        /// `DadSession.EndReason.tapped` covers all three, and the copy that
+        /// said otherwise was promising a ceremony the code does not require.
         let cleanDays: Int
         /// The longest run of consecutive such days — ever, not currently.
         let cleanStreak: Int

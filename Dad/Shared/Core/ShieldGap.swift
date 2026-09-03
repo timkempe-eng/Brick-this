@@ -357,6 +357,17 @@ extension ShieldGap {
         guard let startedAt = o.activeSessionStartedAt else { return nil }
 
         let left = max(startedAt, o.lastConfirmedAt ?? startedAt)
+
+        // A crash guard, not tidiness. `DateInterval(start:end:)` traps when
+        // the end precedes the start, and `lastConfirmedAt` can be after `now`
+        // for reasons that happen to real phones: a restored backup carrying a
+        // stamp from the future, or a clock corrected backwards mid-session —
+        // the same events this file's own caveat calls indistinguishable from
+        // a gap. The honest answer is no gap, not a crash on the Stats screen.
+        //
+        // `<` rather than `<=` is taste and not behaviour, and that is worth
+        // saying so nobody spends a mutation on it twice: a zero-length gap is
+        // below `minimumReportable` and would be filtered out anyway.
         guard left < o.now else { return nil }
         return ShieldGap(interval: DateInterval(start: left, end: o.now),
                          evidence: .authorizationNotInPlace)

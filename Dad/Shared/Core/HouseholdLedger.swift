@@ -71,6 +71,35 @@ enum HouseholdLedgerFormat {
     /// a round trip.
     static let maximumMembers =
         (maximumPayload - 2) / maximumMemberBytes
+
+    /// The exact bytes a ledger record written by *this* build starts with.
+    ///
+    /// Three characters, not one, and the third is what matters. Matching on
+    /// `"d"` alone — which is what the three call sites did — treats any text
+    /// record beginning with that letter as a ledger: "desk", "dinner",
+    /// "downstairs", the sort of thing somebody writes with NFC Tools. Such a
+    /// record was destroyed on the first in-app tap, and if it happened to sit
+    /// before a real ledger record it was read *as* one, which fails to decode
+    /// — so the other phones' standings were dropped and replaced with this
+    /// phone's un-merged view. That is the "never half-applied" failure the
+    /// exchange is built to avoid, one layer above where the guard for it is.
+    static let recordPrefix = "\(prefix)\(version);"
+
+    /// Whether an NDEF text payload is a ledger this build wrote and can read.
+    ///
+    /// Deliberately version-exact, and it is the same decision `decoded` makes
+    /// for the same reason: a record from a later build is not ours to read
+    /// and not ours to replace. It is left on the tag rather than overwritten,
+    /// so a household running two builds ends up carrying two records and
+    /// heals itself when both update — instead of one build silently deleting
+    /// data it could not parse.
+    ///
+    /// One predicate, called from all three places that had written the rule
+    /// out: reading the tag, replacing the record on it, and keeping it while
+    /// writing a link.
+    static func isOurRecord(_ text: String?) -> Bool {
+        text?.hasPrefix(recordPrefix) ?? false
+    }
 }
 
 /// Who a phone is, to the tag. Opaque by construction.
@@ -115,6 +144,17 @@ struct MemberID: Codable, Hashable, CustomStringConvertible {
 /// makes two of these intersectable without carrying a calendar of days: the
 /// run is `(lastActive - streak, lastActive]`. That is the whole reason the
 /// household number is computable from a payload this small.
+/// **Every property added here must be Optional**, and the reason is sharper
+/// than it is for the arrays.
+///
+/// Swift's synthesised decoder throws on a missing key rather than falling back
+/// to a default. The lenient arrays respond to a throw by dropping one element;
+/// this type is read as part of a *whole value* —
+/// `decode(HouseholdLedger.self, …) ?? HouseholdLedger()` — so a throw anywhere
+/// inside it resets the **entire household ledger to empty**, with the "absent
+/// decodes as nobody" comment beside it making the result look intended. The
+/// household would lose its shared streak on the morning it updated and there
+/// would be nothing to point at.
 struct MemberStanding: Codable, Hashable {
 
     let member: MemberID

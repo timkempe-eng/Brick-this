@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 803 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 816 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -49,7 +49,7 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   feature costs no account, no server and no network. It carries an opaque id,
   a date and a count and could not carry a name if somebody tried, and it says
   which day the number is true as of rather than pretending to be live.
-- **Rewards priced in days** — earned by finishing sessions at the tag, spent
+- **Rewards priced in days** — earned by ending sessions yourself, spent
   on things a grown-up offers. Never in minutes, and not by convention:
   `RewardLedger.Days` has no multiply, no `Double` and no duration member, so
   paying in screen time does not compile. Offering and settling need a grown-up

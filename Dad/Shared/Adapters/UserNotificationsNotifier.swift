@@ -30,7 +30,12 @@ struct UserNotificationsNotifier: Notifying {
         guard warning.fireAt > Date() else { return clearOurs() }
 
         centre.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
+            // Permission can be withdrawn in Settings after a warning was
+            // already scheduled. Returning without clearing would leave that
+            // one pending, so the *last* warning before somebody turned
+            // notifications off would still arrive — which is the one thing a
+            // person who just turned them off would find hardest to explain.
+            guard granted else { return clearOurs() }
             let content = UNMutableNotificationContent()
             content.title = warning.title
             content.body = warning.body
