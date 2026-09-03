@@ -1086,7 +1086,8 @@ struct DadEngine {
     /// exactly the kind of inconsistency that makes a future failure read as
     /// impossible.
     var stats: DadStats {
-        DadStats(sessions: store.history, now: clock.now, calendar: calendar)
+        DadStats(sessions: store.history, activeSession: store.activeSession,
+                 now: clock.now, calendar: calendar)
     }
 
     // MARK: - Warning before a scheduled Mode lands

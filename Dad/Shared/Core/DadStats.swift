@@ -14,10 +14,23 @@ struct DadStats {
 
     /// - Parameter calendar: injected so tests can pin a time zone. The app
     ///   passes `.current`, which is what the user's day boundaries actually are.
-    init(sessions: [DadSession], now: Date = Date(), calendar: Calendar = .current) {
-        // Only finished sessions count. An in-flight one has no duration yet
-        // and would make every total drift upward as you look at it.
+    /// The day an unfinished session began, if one is running.
+    ///
+    /// Kept apart from `sessions` because the totals and the streak want
+    /// different things from it. A session with no end has no duration, so
+    /// counting it would make every total drift upward as you watch — but the
+    /// streak counts *days somebody Dadded*, and a session that has started is
+    /// a day somebody Dadded. Filtering it out of both left a person who
+    /// Dadded an hour ago looking at a streak without today in it, on the home
+    /// screen, the widget, and the household number.
+    private let activeStartedAt: Date?
+
+    init(sessions: [DadSession],
+         activeSession: DadSession? = nil,
+         now: Date = Date(),
+         calendar: Calendar = .current) {
         self.sessions = sessions.filter { $0.endedAt != nil }
+        self.activeStartedAt = activeSession?.startedAt
         self.calendar = calendar
         self.now = now
     }
@@ -68,9 +81,19 @@ struct DadStats {
     // evening you began it, which is how anyone would describe it out loud.
 
     /// The same definition `AutonomyLadder` counts lapses against, read from
-    /// the one place it is written. It was spelled out here too until the
-    /// reward ledger arrived carrying a third copy that had already drifted.
-    private var activeDays: Set<Date> { sessions.daysWithASession(calendar: calendar) }
+    /// the one place it is written — plus the day a running session began.
+    ///
+    /// The running session is added here and nowhere else. A rung still needs
+    /// a session a *person ended*, which an in-flight one is not, so the ladder
+    /// is untouched: today counts toward the streak the moment you Dad, and
+    /// toward a rung only once you have finished.
+    private var activeDays: Set<Date> {
+        var days = sessions.daysWithASession(calendar: calendar)
+        if let activeStartedAt {
+            days.insert(calendar.startOfDay(for: activeStartedAt))
+        }
+        return days
+    }
 
     /// Consecutive days up to today. Today not having a session yet does not
     /// break the streak — the day isn't over — so a streak ending yesterday

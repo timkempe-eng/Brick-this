@@ -541,21 +541,31 @@ anyone's time.
 
 ## Open, and worth deciding rather than drifting
 
-- [ ] **What should a household bigger than the tag be told?** The wire format
-      holds five members, derived from the byte budget. A sixth phone joins
-      silently: `merged` accepts it, `trimmed` drops the stalest, and each
-      phone publishes itself plus a different four — so two phones in a
-      six-person house never agree on the bytes, rewrite the tag on alternating
-      taps, and show slightly different numbers.
+- [x] ~~**What should a household bigger than the tag be told?**~~ **Answered**
+      by the person whose family is six. The cap was five, and five was never
+      chosen — it was what the arithmetic yielded against a budget guessed from
+      the cheapest chip on the market.
 
-      A rule for which four to keep is deliberately not attempted, because
-      every such rule drops a real person from a real household's number
-      without saying so. The honest answer is to notice the case and say it —
-      "this \(tag) can hold five phones and there are six" — and nothing says
-      it yet. Whether that is a warning, a picker, or a bigger chip is the
-      decision.
+      Two changes. The wire format is version 2 and costs 17 bytes a person
+      instead of 23, so six fit in 104 bytes where they used to need 140. And
+      the budget now comes from the tag: `queryNDEFStatus` reports a capacity,
+      the write is sized against it, and the difference between the cheapest
+      chip and the recommended one is 144 bytes against 504. A household that
+      still overflows is told how many phones did not fit and which sticker
+      would hold them.
 
-- [ ] **Should an in-flight session count toward today's streak?** It does not:
+- [x] ~~**Should an in-flight session count toward today's streak?**~~ **Yes.**
+      Somebody who Dadded an hour ago has Dadded today. It now counts from the
+      moment the session starts, on the home screen, the widget and the shared
+      household number.
+
+      The totals still only count finished sessions — a session with no end has
+      no duration, and counting it would make every total drift upward as you
+      watch. Two questions, two filters, which is what the old single filter
+      was hiding. A rung is unchanged and deliberately: that needs a session a
+      *person ended*, and an in-flight one is not that.
+
+      Originally raised as: It does not:
       `DadStats` filters to finished sessions, documented against totals
       drifting upward as you watch them. But the streak rule is "at least one
       session *started* that day", and an in-flight session has a start. So

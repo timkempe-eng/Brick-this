@@ -169,6 +169,9 @@ struct HomeView: View {
             .onChange(of: scanner.tagIsReadOnly) { _, isReadOnly in
                 model.tagIsWriteProtected = isReadOnly
             }
+            .onChange(of: scanner.membersThatDidNotFit) { _, count in
+                model.membersThatDidNotFit = count
+            }
             .nfcErrorAlert($scanner.lastError)
             .sheet(isPresented: $showingModes) { ModesView() }
             .sheet(isPresented: $showingSettings) { SettingsView() }

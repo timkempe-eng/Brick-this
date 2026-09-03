@@ -131,11 +131,17 @@ Two records, at most, and they coexist:
 1. **A URI record** — only if you wrote one, for background reading. Optional
    and unrelated to everything else.
 2. **A text record holding the household ledger** — the shared streak, written
-   on every tap made *inside the app*. Five people at most, 23 bytes each, so
-   it fits alongside a URL even on a 144-byte NTAG213. The five is arithmetic
-   on the byte budget rather than a number chosen separately — when the two
-   were chosen separately they disagreed, and the phone writing the tag counted
-   a member that every phone reading it could not see.
+   on every tap made *inside the app*. 17 bytes a person, and **how many people
+   fit is the tag's business, not the app's**: the write is budgeted against
+   the capacity the chip reports, so an NTAG213 holds seven alongside a URL and
+   an NTAG215 holds everybody with room to spare. Sixteen is a hard ceiling on
+   parsing, not a product limit.
+
+   It used to be five, from a constant guessed against the smallest chip on the
+   market — which is a poor answer to a family of six. If a household ever does
+   overflow the tag in front of it, the app now says how many phones did not
+   fit and which sticker would hold them, rather than dropping the stalest
+   person quietly.
 
 Each writer keeps the other's record. `TagScanner` preserves the URI when it
 writes the ledger; `TagWriter` preserves the ledger when it writes the URI.

@@ -53,7 +53,10 @@ struct DadProvider: TimelineProvider {
         let mode = session.flatMap { s in store.modes.first(where: { $0.id == s.modeID }) }
         return .make(session: session,
                      mode: mode,
-                     stats: DadStats(sessions: store.history),
+                     // The running session goes in, or the widget shows a
+                     // streak without today in it while today is the thing it
+                     // is showing a timer for.
+                     stats: DadStats(sessions: store.history, activeSession: session),
                      pendingResume: store.pendingResume)
     }
 }

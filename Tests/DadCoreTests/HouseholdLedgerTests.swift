@@ -77,7 +77,12 @@ final class HouseholdLedgerTests: XCTestCase {
             standing(child, "20260902", 3),
             standing(third, "20260901", 41),
         ])
-        let permitted = Set("0123456789abcdef,;d")
+        // Base 36 now, so the whole lower-case alphabet is in the set — and
+        // still nothing that can spell a name apart, because the *fields* are
+        // fixed width and positional: eight characters of opaque id, three of
+        // packed date, three of base-36 streak. There is nowhere for prose to
+        // go even though its letters are permitted.
+        let permitted = Set("0123456789abcdefghijklmnopqrstuvwxyz,;")
         let payload = ledger.encoded()
 
         XCTAssertFalse(payload.isEmpty)
@@ -98,7 +103,7 @@ final class HouseholdLedgerTests: XCTestCase {
         XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("dinner"))
         XCTAssertFalse(HouseholdLedgerFormat.isOurRecord(nil))
         XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d"))
-        XCTAssertTrue(HouseholdLedgerFormat.isOurRecord("d1;a1b2c3d4,20260903,7"))
+        XCTAssertTrue(HouseholdLedgerFormat.isOurRecord("d2;a1b2c3d4,0rm,007"))
     }
 
     func testALaterBuildsRecordIsNotOursToReplace() {
@@ -107,8 +112,8 @@ final class HouseholdLedgerTests: XCTestCase {
         // overwritten, so a household running two builds carries two records
         // and heals when both update — instead of one build deleting data it
         // could not parse.
-        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d2;a1b2c3d4,20260903,7"))
-        XCTAssertNil(HouseholdLedger.decoded("d2;a1b2c3d4,20260903,7"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d3;a1b2c3d4,0rm,007"))
+        XCTAssertNil(HouseholdLedger.decoded("d3;a1b2c3d4,0rm,007"))
     }
 
     func testEverythingWeWriteIsSomethingWeWouldRecogniseBack() {
@@ -123,9 +128,9 @@ final class HouseholdLedgerTests: XCTestCase {
         // guessed, and half-reading them would write the guess back — losing
         // whatever the other phone actually meant, on the one copy of the data
         // that is shared.
-        let future = "d2;a1b2c3d4,20260903,7"
+        let future = "d3;a1b2c3d4,0rm,007"
         XCTAssertNil(HouseholdLedger.decoded(future))
-        XCTAssertNil(HouseholdLedger.decoded("x1;a1b2c3d4,20260903,7"))
+        XCTAssertNil(HouseholdLedger.decoded("x2;a1b2c3d4,0rm,007"))
         XCTAssertNil(HouseholdLedger.decoded(""))
         XCTAssertNil(HouseholdLedger.decoded("nonsense"))
     }
@@ -134,7 +139,7 @@ final class HouseholdLedgerTests: XCTestCase {
         // Lenient *within* a version, following `LenientDecoding`: a single bad
         // field on a shared physical object must not cost the whole household
         // their number.
-        let payload = "d1;a1b2c3d4,20260903,7;zzzz,notadate,x;e5f6a7b8,20260902,3"
+        let payload = "d2;a1b2c3d4,0rm,007;zzzz,notadate,x;e5f6a7b8,0rl,003"
         let decoded = HouseholdLedger.decoded(payload)
 
         XCTAssertEqual(decoded?.standings.count, 2)
@@ -147,17 +152,17 @@ final class HouseholdLedgerTests: XCTestCase {
         // holding it has been corrupted or hand-edited. Taking the first and
         // dropping the rest is arbitrary but bounded; merging them would make
         // a member's streak grow by being written badly.
-        let decoded = HouseholdLedger.decoded("d1;a1b2c3d4,20260903,7;a1b2c3d4,20260903,900")
+        let decoded = HouseholdLedger.decoded("d2;a1b2c3d4,0rm,007;a1b2c3d4,0rm,0p0")
         XCTAssertEqual(decoded?.standings.count, 1)
         XCTAssertEqual(decoded?.standings.first?.streak, 7)
     }
 
     func testAnImpossibleDateIsNotAMember() {
-        XCTAssertEqual(HouseholdLedger.decoded("d1;a1b2c3d4,20261303,7")?.standings.count, 0,
+        XCTAssertEqual(HouseholdLedger.decoded("d2;a1b2c3d4,zzz,007")?.standings.count, 0,
                        "there is no thirteenth month")
-        XCTAssertEqual(HouseholdLedger.decoded("d1;a1b2c3d4,20260900,7")?.standings.count, 0,
+        XCTAssertEqual(HouseholdLedger.decoded("d2;a1b2c3d4,---,007")?.standings.count, 0,
                        "there is no zeroth day")
-        XCTAssertEqual(HouseholdLedger.decoded("d1;a1b2c3d4,20260903,-4")?.standings.count, 0,
+        XCTAssertEqual(HouseholdLedger.decoded("d2;a1b2c3d4,0rm,-04")?.standings.count, 0,
                        "a negative streak is not a shorter one")
     }
 
@@ -170,7 +175,7 @@ final class HouseholdLedgerTests: XCTestCase {
             standing(MemberID(String(format: "%08x", $0))!, "20260903", 999)
         })
         XCTAssertLessThanOrEqual(crowded.encoded().utf8.count,
-                                 HouseholdLedgerFormat.maximumPayload)
+                                 HouseholdLedgerFormat.conservativePayload)
     }
 
     func testAFullHouseholdSurvivesTheRoundTripToTheTag() {
@@ -192,7 +197,7 @@ final class HouseholdLedgerTests: XCTestCase {
             standing(MemberID(String(format: "%08x", $0))!, "20260903", 9999)
         })
 
-        XCTAssertLessThanOrEqual(full.encoded().utf8.count, HouseholdLedgerFormat.maximumPayload)
+        XCTAssertLessThanOrEqual(full.encoded().utf8.count, HouseholdLedgerFormat.conservativePayload)
         XCTAssertEqual(HouseholdLedger.decoded(full.encoded())?.standings.count,
                        HouseholdLedgerFormat.maximumMembers,
                        "what the writer counts and what the reader counts must be the same number")
@@ -201,13 +206,14 @@ final class HouseholdLedgerTests: XCTestCase {
     func testTheMemberCapIsArithmeticOnTheByteBudget() {
         // Two numbers that have to agree cannot both be written down. Spelled
         // out here because it is the one place the relationship is visible.
-        XCTAssertEqual(HouseholdLedgerFormat.maximumMembers, 5)
+        XCTAssertEqual(HouseholdLedgerFormat.maximumMembers, 7,
+                       "seven by default, and more when the tag says it can hold more")
         XCTAssertLessThanOrEqual(
             2 + HouseholdLedgerFormat.maximumMembers * HouseholdLedgerFormat.maximumMemberBytes,
-            HouseholdLedgerFormat.maximumPayload)
+            HouseholdLedgerFormat.conservativePayload)
     }
 
-    func testTheWireCarriesFourDigitsOfStreakAndSaysSo() {
+    func testTheWireCarriesThreeBaseThirtySixDigitsOfStreak() {
         // Spelled out, because every assertion about the clamp refers to it
         // symbolically and the whole suite therefore moves with it. A mutation
         // lowering it to 9 survived: every phone would publish a streak
@@ -217,7 +223,8 @@ final class HouseholdLedgerTests: XCTestCase {
         //
         // The number is written down in prose in its own doc comment, which is
         // the test CLAUDE.md gives for a literal belonging in a test.
-        XCTAssertEqual(HouseholdLedgerFormat.widestStreakOnTheWire, 9_999)
+        XCTAssertEqual(HouseholdLedgerFormat.widestStreakOnTheWire, 46_655,
+                       "zzz, which is a hundred and twenty-seven years")
 
         let long = HouseholdLedger(standings: [standing(parent, "20260903", 5_000)])
         XCTAssertEqual(HouseholdLedger.decoded(long.encoded())?.standings.first?.streak, 5_000,
@@ -238,12 +245,87 @@ final class HouseholdLedgerTests: XCTestCase {
         })
 
         XCTAssertLessThanOrEqual(ancient.encoded().utf8.count,
-                                 HouseholdLedgerFormat.maximumPayload)
+                                 HouseholdLedgerFormat.conservativePayload)
         XCTAssertEqual(HouseholdLedger.decoded(ancient.encoded())?.standings.count,
                        HouseholdLedgerFormat.maximumMembers,
                        "nobody is dropped, however long they have been at it")
         XCTAssertEqual(HouseholdLedger.decoded(ancient.encoded())?.standings.first?.streak,
                        HouseholdLedgerFormat.widestStreakOnTheWire)
+    }
+
+    func testASixPersonHouseholdFitsOnTheCheapestTag() {
+        // The reason version 2 exists. Five was never a considered number — it
+        // was whatever the arithmetic yielded against a budget guessed from
+        // the smallest chip on the market, and six is not an unusual family.
+        //
+        // Six now costs 104 bytes where it used to cost 140, so it fits an
+        // NTAG213 with room for a URL record beside it, and fits the NTAG215
+        // this project actually recommends many times over.
+        let six = HouseholdLedger(standings: (0..<6).map {
+            standing(MemberID(String(format: "%08x", $0))!, "20260903", 400)
+        })
+
+        XCTAssertLessThanOrEqual(six.encoded().utf8.count, 110)
+        XCTAssertEqual(HouseholdLedger.decoded(six.encoded())?.standings.count, 6,
+                       "and every one of them survives the round trip")
+        XCTAssertTrue(six.encoded(within: 144).dropped.isEmpty)
+    }
+
+    func testATagThatCannotHoldEverybodySaysWhoDidNotFit() {
+        // Dropping the stalest member silently is the writer-disagrees-with-
+        // reader defect this format has produced twice. A household too big
+        // for its tag is now told which people did not fit, so somebody can be
+        // told to buy a bigger sticker rather than quietly losing a person.
+        let eight = HouseholdLedger(standings: (0..<8).map {
+            standing(MemberID(String(format: "%08x", $0))!, "20260903", 1)
+        })
+
+        let onATinyTag = eight.encoded(within: 60)
+        XCTAssertLessThanOrEqual(onATinyTag.payload.utf8.count, 60)
+        XCTAssertEqual(onATinyTag.dropped.count, 5, "three fit in sixty bytes; five did not")
+        XCTAssertEqual(HouseholdLedger.decoded(onATinyTag.payload)?.standings.count, 3)
+
+        let onARealTag = eight.encoded(within: 500)
+        XCTAssertTrue(onARealTag.dropped.isEmpty, "an NTAG215 holds everybody")
+        XCTAssertEqual(HouseholdLedger.decoded(onARealTag.payload)?.standings.count, 8)
+    }
+
+    func testTheParsedMemberCountIsBoundedWhateverTheTagSays() {
+        // A tag is a thing anybody can write anything onto, and a 500-byte
+        // chip would otherwise admit thirty members. Not a product limit —
+        // sixteen is past any household — but a bound on the work one read can
+        // cause.
+        let crowd = (0..<40).map { "\(String(format: "%08x", $0)),0rm,001" }.joined(separator: ";")
+        XCTAssertEqual(HouseholdLedger.decoded("d2;" + crowd)?.standings.count,
+                       HouseholdLedgerFormat.absoluteMaximumMembers)
+
+        // Both ends of the format, because a bound on reading is no bound at
+        // all if writing is unbounded. An NTAG216 has 888 bytes, which the
+        // arithmetic alone would turn into fifty-two members.
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 5_000),
+                       HouseholdLedgerFormat.absoluteMaximumMembers)
+    }
+
+    func testAPackedDateSurvivesEveryDayItCanExpress() {
+        // The packing wastes 372 slots on 365 days so it is reversible by
+        // division with no month-length table — a table would be a second copy
+        // of a rule the calendar already owns. Walked rather than sampled,
+        // because an off-by-one in either direction is a member landing on the
+        // wrong day and losing a merge.
+        for year in [2024, 2026, 2099, 2124] {
+            for month in 1...12 {
+                for day in 1...31 {
+                    let original = ScheduleOccurrence(year: year, month: month, day: day)
+                    let packed = HouseholdLedgerFormat.packed(original)
+                    XCTAssertEqual(HouseholdLedgerFormat.unpacked(packed), original,
+                                   "\(original) did not survive packing")
+                }
+            }
+        }
+        XCTAssertNil(HouseholdLedgerFormat.unpacked(-1))
+        XCTAssertNil(HouseholdLedgerFormat.unpacked(46_655),
+                     "a wide field decoded as a date four hundred million years out, "
+                     + "which sorted as the freshest standing and won every merge")
     }
 
     func testTheDerivationBitesAtABudgetWhereItMatters() {
@@ -253,17 +335,16 @@ final class HouseholdLedgerTests: XCTestCase {
         // so a mutation deleting it survived. At 115 it decides the answer,
         // and getting it wrong puts five members into a payload that holds
         // four, which is exactly the defect the derivation replaced.
-        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 115), 4)
-        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 120), 5)
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 103), 5)
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 121), 7)
 
-        // The header term is one byte, not two: `recordPrefix` is "d1;" and
-        // the ";" belongs to the first member. That distinction gets a
+        // The header term is two bytes, not three: `recordPrefix` is "d2;"
+        // and the ";" belongs to the first member. That distinction gets a
         // paragraph in the source and had nothing under it — a mutation
-        // charging the whole prefix survived, because it only bites at 117,
-        // where charging three bytes gives four members and charging two
-        // gives five.
-        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 117), 5)
-        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 116), 4)
+        // charging the whole prefix survived, because it only bites where the
+        // budget lands within a byte of a member boundary, as 119 does.
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 119), 6)
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 120), 6)
 
         XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 1), 0,
                        "a budget too small for anybody holds nobody")
@@ -284,7 +365,7 @@ final class HouseholdLedgerTests: XCTestCase {
         XCTAssertLessThanOrEqual(
             header.utf8.count
                 + HouseholdLedgerFormat.maximumMembers * HouseholdLedgerFormat.maximumMemberBytes,
-            HouseholdLedgerFormat.maximumPayload)
+            HouseholdLedgerFormat.conservativePayload)
     }
 
     func testTheRecordPrefixIncludesItsSeparator() {
@@ -294,8 +375,8 @@ final class HouseholdLedgerTests: XCTestCase {
         // "d1nner" is read as a ledger and destroyed: the same defect, one
         // character narrower.
         XCTAssertTrue(HouseholdLedgerFormat.recordPrefix.hasSuffix(";"))
-        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d1nner"))
-        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d1 kitchen"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d2nner"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d2 kitchen"))
     }
 
     func testAHouseholdIsCappedAndKeepsTheFreshest() {
@@ -356,7 +437,7 @@ final class HouseholdLedgerTests: XCTestCase {
         // history whenever it carries the same day and a longer run — which is
         // exactly the day a streak breaks.
         let known = HouseholdLedger(standings: [standing(parent, "20260903", 2)])
-        let tag = "d1;a1b2c3d4,20260903,40;e5f6a7b8,20260902,6"
+        let tag = "d2;a1b2c3d4,0rm,014;e5f6a7b8,0rl,006"
         let result = known.afterExchange(with: tag, own: standing(parent, "20260903", 2))
 
         XCTAssertEqual(result.standing(for: parent)?.streak, 2, "our history is the authority on us")

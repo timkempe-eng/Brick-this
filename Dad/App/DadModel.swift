@@ -43,6 +43,14 @@ final class DadModel: ObservableObject {
     /// seen.
     @Published var tagIsWriteProtected = false
 
+    /// How many people the last tag write had no room for.
+    ///
+    /// Zero for any household on any chip worth buying. Surfaced because the
+    /// alternative — dropping the stalest member quietly — is the defect this
+    /// format produced twice, and because the fix is a thirty-cent sticker
+    /// somebody can buy this afternoon.
+    @Published var membersThatDidNotFit = 0
+
     /// What the records can honestly say about the shield having been missing.
     /// Silent in the overwhelmingly common case, and always silent about
     /// *anybody* — see `ShieldGap`.

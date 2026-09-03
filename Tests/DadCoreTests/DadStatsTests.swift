@@ -53,6 +53,44 @@ final class DadStatsTests: XCTestCase {
                        "and the honest number about *how* they ended is reported separately")
     }
 
+    func testASessionStillRunningPutsTodayInTheStreak() {
+        // Somebody who Dadded an hour ago has Dadded today, and the streak
+        // counts days somebody Dadded. It used to wait for them to tap out —
+        // an accident of the filter that keeps unfinished sessions out of the
+        // *totals*, where they belong out, because a session with no end has
+        // no duration and would make every total drift upward as you watch.
+        //
+        // Two different questions, two different filters.
+        let yesterday = session(daysAgo: 1)
+        let running = DadSession(modeID: UUID(), modeName: "Deep Work",
+                                 startedAt: now.addingTimeInterval(-3600),
+                                 endedAt: nil)
+
+        let withoutIt = DadStats(sessions: [yesterday], now: now, calendar: calendar)
+        let withIt = DadStats(sessions: [yesterday], activeSession: running,
+                              now: now, calendar: calendar)
+
+        XCTAssertEqual(withoutIt.currentStreak, 1, "yesterday alone is still a current streak")
+        XCTAssertEqual(withIt.currentStreak, 2, "and today counts the moment you Dad")
+
+        XCTAssertEqual(withIt.sessionCount, 1, "but the totals still only count finished sessions")
+        XCTAssertEqual(withIt.totalTime, withoutIt.totalTime,
+                       "a session with no end has no duration to add")
+    }
+
+    func testARunningSessionEarnsNoRungOnItsOwn() {
+        // The line between the two numbers. A streak is engagement and counts
+        // it immediately; a rung is evidence somebody finished, and an
+        // unfinished session is not that. The ladder reads
+        // `daysEndedByAPerson`, which this does not touch.
+        let running = DadSession(modeID: UUID(), modeName: "Deep Work",
+                                 startedAt: now.addingTimeInterval(-3600),
+                                 endedAt: nil)
+        let ladder = AutonomyLadder(sessions: [running], now: now, calendar: calendar)
+
+        XCTAssertEqual(ladder.cleanDayCount, 0)
+    }
+
     func testAMixedDayIsStillOneDay() {
         // Two sessions, one bailed and one finished at the tag. A day is a
         // day; the streak counts days, not sessions.

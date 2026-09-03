@@ -27,6 +27,14 @@ final class TagScanner: NSObject, ObservableObject {
     /// that names a remedy has to be able to notice the remedy.
     @Published var tagIsReadOnly = false
 
+    /// How many people the last tag write had no room for.
+    ///
+    /// Zero on every tag anybody should be using. A household big enough to
+    /// overflow the chip in their pocket has to be told which chip would hold
+    /// them — dropping the stalest member quietly is the defect this format
+    /// has produced twice.
+    @Published var membersThatDidNotFit = 0
+
     private var session: NFCTagReaderSession?
     private var onRead: ((String) -> Void)?
     private var onLedger: ((String) -> Void)?
@@ -79,6 +87,7 @@ final class TagScanner: NSObject, ObservableObject {
         exchange.own = own
         exchange.found = nil
         exchange.wasReadOnly = false
+        exchange.didNotFit = 0
         // .iso14443 covers the NTAG21x stickers almost everyone buys;
         // .iso15693 covers NFC Forum Type 5 (ICODE and friends). FeliCa is
         // left out deliberately — polling for it needs a separate entitlement
@@ -129,8 +138,9 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                     // The ledger first: the tap can start a session, and a
                     // household number that arrived a moment after it would
                     // render one frame late.
-                    // Assigned either way, so a successful write clears it.
+                    // Assigned either way, so a successful write clears them.
                     self.tagIsReadOnly = self.exchange.wasReadOnly
+                    self.membersThatDidNotFit = self.exchange.didNotFit
                     if let text = self.exchange.found { self.onLedger?(text) }
                     self.onLedger = nil
                     self.onRead?(uid.hexString)
@@ -175,7 +185,20 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                     return finish()
                 }
 
-                let reply = mine.afterExchange(with: found, own: self.exchange.own).encoded()
+                // The tag's own capacity, less what the other records on it
+                // need. This is the number the budget should always have been:
+                // the difference between the cheapest chip and the one this
+                // project recommends is 144 bytes against 504, and a constant
+                // in Core was how the member cap came to be five.
+                let others = existing
+                    .filter { !HouseholdLedgerFormat.isOurRecord($0.wellKnownTypeTextPayload().0) }
+                    .reduce(0) { $0 + $1.length }
+                let budget = max(0, capacity - others - Self.recordFraming)
+
+                let written = mine.afterExchange(with: found, own: self.exchange.own)
+                    .encoded(within: budget)
+                self.exchange.didNotFit = written.dropped.count
+                let reply = written.payload
                 guard reply != found else { return finish() }
 
                 let outgoing = Self.message(replacingLedgerIn: existing, with: reply)
@@ -212,6 +235,15 @@ extension TagScanner: NFCTagReaderSessionDelegate {
         }
         return NFCNDEFMessage(records: kept + [payload])
     }
+
+    /// What an NDEF text record costs beyond its payload: the record header,
+    /// the type byte, the status byte and a two-character language code.
+    ///
+    /// Approximate and deliberately generous. Being a few bytes pessimistic
+    /// costs at most one member on the smallest chip; being optimistic makes
+    /// the write fail outright, and a failed write is a household whose number
+    /// silently stops moving.
+    private static let recordFraming = 12
 
     /// The NDEF face of a tag we already have by UID.
     ///
@@ -252,6 +284,7 @@ private final class LedgerExchange: @unchecked Sendable {
     private var storedOwn: MemberStanding?
     private var storedFound: String?
     private var storedReadOnly = false
+    private var storedDidNotFit = 0
 
     var mine: HouseholdLedger? {
         get { lock.withLock { storedMine } }
@@ -274,5 +307,11 @@ private final class LedgerExchange: @unchecked Sendable {
     var wasReadOnly: Bool {
         get { lock.withLock { storedReadOnly } }
         set { lock.withLock { storedReadOnly = newValue } }
+    }
+
+    /// How many members the tag had no room for.
+    var didNotFit: Int {
+        get { lock.withLock { storedDidNotFit } }
+        set { lock.withLock { storedDidNotFit = newValue } }
     }
 }

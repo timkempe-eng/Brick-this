@@ -43,85 +43,120 @@ enum HouseholdLedgerFormat {
     /// its first two bytes and is left alone rather than half-parsed.
     static let prefix = "d"
 
-    static let version = 1
+    /// Bumped to 2 when the encoding was compacted to fit a real family.
+    ///
+    /// Version 1 packed the date as `20260903` and the streak as up to four
+    /// digits, which cost 23 bytes a member and fitted five people. Six is not
+    /// an unusual household and five was not a considered number — it was
+    /// whatever the arithmetic happened to yield against a budget guessed from
+    /// the smallest chip on the market.
+    ///
+    /// A version-1 record is left on the tag rather than overwritten, which is
+    /// what `isOurRecord` has always done, so a household part-way through
+    /// updating carries both and heals when the last phone updates.
+    static let version = 2
 
-    /// Beyond this the tag write starts failing on the smallest chips people
-    /// actually buy. Chosen against NTAG213's 144 bytes with room for a URL
-    /// record beside it.
-    static let maximumPayload = 120
+    /// The budget assumed when no tag is in hand.
+    ///
+    /// A *default*, not the limit. The real limit is the capacity the tag
+    /// reports, which `TagScanner` now passes to `encoded(within:)` — and on
+    /// the NTAG215 this project actually recommends that is around 500 bytes,
+    /// room for far more people than any household has.
+    ///
+    /// 136 is a bare NTAG213's 144 less our own record framing, so the default
+    /// is honest about the *cheapest* chip somebody might use rather than
+    /// pessimistic about it. A tag that turns out smaller than this — an
+    /// NTAG213 already carrying a URL, say — is handled where it is discovered
+    /// rather than guessed at here, and it is now reported instead of silently
+    /// dropping somebody.
+    static let conservativePayload = 136
 
-    /// The widest a member's line can be: eight for the id, eight for the
-    /// date, up to **four** digits of streak, plus the two separators and the
-    /// leading semicolon.
+    /// A member's line: the id, a packed date, a base-36 streak, and three
+    /// separators.
     ///
-    /// Four digits rather than three because four is the honest width for a
-    /// streak that can run for years, and at today's budget it costs nothing:
-    /// both estimates divide to five members, and five real members with
-    /// four-digit streaks come to 117 of the 120 bytes.
-    ///
-    /// It was true for one commit that narrowing this back to three survived
-    /// the suite. It is not any more: `testTheDerivationBitesAtABudgetWhereItMatters`
-    /// pins the cap at a 115-byte budget, where 22 bytes per member gives five
-    /// and 23 gives four. The comment saying otherwise outlived the test that
-    /// falsified it by sixty lines, which is the shortest a stale claim has
-    /// managed in this repository.
-    ///
-    /// Five digits would cost a member, and 9,999 days is twenty-seven years.
-    ///
-    /// What actually guards the tag is the round-trip test, which builds a
-    /// full household at four-digit streaks and asserts the reader counts what
-    /// the writer counted.
-    static let maximumMemberBytes = 8 + 8 + 4 + 3
+    /// 17 bytes where version 1 spent 23. The date is `(year - 2024) × 372 +
+    /// (month - 1) × 31 + (day - 1)` in base 36, which is three characters up
+    /// to the year 2124 and stays a *calendar* date rather than a day count —
+    /// two phones in different time zones must encode the same wall-clock day
+    /// identically, which a days-since-epoch number would not guarantee.
+    static let maximumMemberBytes = MemberID.length + 1 + 3 + 1 + 3 + 1
 
-    /// How many members fit, **derived rather than chosen**, and that is the
-    /// fix for a real defect rather than tidiness.
+    /// The first year the packed date can express. Dates outside the range
+    /// decode as `nil`, which reads as a corrupt member and is skipped.
+    static let dateEpochYear = 2024
+
+    /// A hard ceiling on how many members are ever parsed or written,
+    /// whatever a tag's capacity says.
     ///
-    /// It was six, and six does not fit: the header is two bytes and a member
-    /// is at least twenty, so a sixth member pushed the line past
-    /// `maximumPayload` and `encoded()`'s loop dropped it. The phone that wrote
-    /// the tag reported six people; every phone that read it reported five —
-    /// and the member dropped is the *stalest*, which is the one whose
-    /// `lastActive` decides whether the streak is current. So a reader
-    /// computed a longer, possibly falsely-current streak than the writer.
-    ///
-    /// Two numbers that have to agree cannot both be written down. This one is
-    /// arithmetic on the other, and a test pins that a full household survives
-    /// a round trip.
-    static let maximumMembers = membersThatFit(inPayload: maximumPayload)
+    /// Not a product limit — sixteen is past any household — but a bound on
+    /// the work a single tag read can cause. A 500-byte NTAG215 would
+    /// otherwise admit thirty members, and a tag is a thing anybody can write
+    /// anything onto.
+    static let absoluteMaximumMembers = 16
 
     /// How many members fit in a payload of `budget` bytes.
     ///
     /// A function rather than an expression so the rule can be exercised at a
-    /// budget where it *matters*. As a bare `(maximumPayload - 2) / …` a
-    /// mutation deleting the header term survived: at 120 bytes both answers
-    /// are five, so nothing downstream moved. It bites at 115, where the
-    /// correct cap is four and the mutated one is five — and five do not fit,
-    /// which is the original writer-disagrees-with-reader defect walking back
-    /// in the moment somebody changes the budget. Which is the one moment this
-    /// derivation exists for.
+    /// budget where it *matters*. As a bare `(payload - 2) / …` a mutation
+    /// deleting the header term survived: at the old budget both answers were
+    /// the same, so nothing downstream moved.
     ///
-    /// The header is charged by measuring it rather than by writing 2 down
-    /// again: `recordPrefix` is "d1;", and the ";" belongs to the first member.
+    /// The header is charged by measuring it rather than by writing a number
+    /// down again: `recordPrefix` is "d2;", and the ";" belongs to the first
+    /// member.
     static func membersThatFit(inPayload budget: Int) -> Int {
         // No `max(0, …)`: Swift's integer division truncates toward zero, so a
-        // budget too small for anybody already yields nought. One was here and
-        // a mutation removing it survived — a guard no test can reach, which
-        // this file's neighbours have spent three commits deleting.
-        (budget - (recordPrefix.count - 1)) / maximumMemberBytes
+        // budget too small for anybody already yields nought.
+        min(absoluteMaximumMembers,
+            (budget - (recordPrefix.count - 1)) / maximumMemberBytes)
     }
 
-    /// The widest streak the wire format budgets for. Past this the line grows
-    /// and the cap arithmetic stops holding, so the number is clamped on the
-    /// wire rather than allowed to push a member off the tag.
+    /// How many members fit when nothing better is known.
+    static let maximumMembers = membersThatFit(inPayload: conservativePayload)
+
+    /// The widest streak the wire format budgets for, in base 36.
     ///
-    /// 9,999 days is twenty-seven years. Clamping is the lesser lie: the
-    /// alternative is that a household at the cap silently loses a member on
-    /// the day somebody's streak reaches five digits, which is the
-    /// writer-disagrees-with-reader defect returning on a date nobody would
-    /// connect to it. The phone's *own* streak is always read from its own
-    /// history and is never clamped; this is only what the tag can carry about
+    /// `zzz` is 46,655 days — a hundred and twenty-seven years. Clamping is
+    /// the lesser lie: the alternative is that a household at the cap silently
+    /// loses a member on the day somebody's streak grows a character, which is
+    /// the writer-disagrees-with-reader defect returning on a date nobody
+    /// would connect to it. A phone's *own* streak is read from its own
+    /// history and is never clamped; this is only what the tag carries about
     /// somebody else.
-    static let widestStreakOnTheWire = 9_999
+    static let widestStreakOnTheWire = 36 * 36 * 36 - 1
+
+    /// A calendar date packed into one number, small enough for three base-36
+    /// characters up to the year 2124.
+    ///
+    /// `(year - epoch) × 372 + (month - 1) × 31 + (day - 1)`. Wasteful — 372
+    /// slots for 365 days — and deliberately so: it is reversible by division
+    /// with no month-length table, and a table is a second copy of a rule the
+    /// calendar already owns.
+    ///
+    /// It stays a *calendar* date rather than becoming a day count. Two phones
+    /// in different time zones must encode the same wall-clock day identically,
+    /// and days-since-an-epoch is computed against a calendar that differs
+    /// between them.
+    static func packed(_ day: ScheduleOccurrence) -> Int {
+        (day.year - dateEpochYear) * 372 + (day.month - 1) * 31 + (day.day - 1)
+    }
+
+    /// `nil` for anything outside the range the packing can express, which
+    /// reads as a corrupt member and is skipped like any other.
+    static func unpacked(_ value: Int) -> ScheduleOccurrence? {
+        guard value >= 0 else { return nil }
+        let year = value / 372 + dateEpochYear
+        let month = (value % 372) / 31 + 1
+        let day = (value % 372) % 31 + 1
+        // The year is bounded as well as the month and day. Three base-36
+        // characters cannot exceed this range, but a *malformed* field is not
+        // three characters — and a wider one decoded as a date in the year
+        // four hundred million, which sorted as the freshest standing on the
+        // tag and would have won every merge.
+        guard (dateEpochYear...(dateEpochYear + 100)).contains(year),
+              (1...12).contains(month), (1...31).contains(day) else { return nil }
+        return ScheduleOccurrence(year: year, month: month, day: day)
+    }
 
     /// The exact bytes a ledger record written by *this* build starts with.
     ///
@@ -386,13 +421,31 @@ struct HouseholdLedger: Codable, Hashable {
     /// dropped from the stale end until it fits, so this never returns
     /// something a tag would refuse.
     func encoded() -> String {
-        var kept = trimmed().standings
+        encoded(within: HouseholdLedgerFormat.conservativePayload).payload
+    }
+
+    /// What to write, and who did not fit.
+    ///
+    /// The budget is a parameter because the only honest source for it is the
+    /// tag in front of you: `queryNDEFStatus` reports a capacity, and the
+    /// difference between the cheapest chip and the one this project actually
+    /// recommends is 144 bytes against 504. A constant here was how the cap
+    /// came to be five — not a considered number, just what the arithmetic
+    /// yielded against a guess about somebody else's hardware.
+    ///
+    /// `dropped` is returned rather than swallowed. Dropping the stalest
+    /// member silently is the writer-disagrees-with-reader defect this format
+    /// has produced twice; a household too big for its tag deserves to be told
+    /// which chip would hold them, not to quietly lose somebody.
+    func encoded(within budget: Int) -> (payload: String, dropped: [MemberStanding]) {
+        var kept = Array(standings.prefix(HouseholdLedgerFormat.membersThatFit(inPayload: budget)))
+        var dropped = Array(standings.dropFirst(kept.count))
         while true {
             let line = Self.line(kept)
-            if line.utf8.count <= HouseholdLedgerFormat.maximumPayload || kept.count <= 1 {
-                return line
+            if line.utf8.count <= budget || kept.count <= 1 {
+                return (line, dropped)
             }
-            kept.removeLast()
+            dropped.append(kept.removeLast())
         }
     }
 
@@ -430,8 +483,38 @@ struct HouseholdLedger: Codable, Hashable {
     private static func rawLine(_ standings: [MemberStanding]) -> String {
         ([HouseholdLedgerFormat.prefix + String(HouseholdLedgerFormat.version)]
          + standings.map {
-            "\($0.member.value),\($0.lastActive.year)\(String(format: "%02d%02d", $0.lastActive.month, $0.lastActive.day)),\(min($0.streak, HouseholdLedgerFormat.widestStreakOnTheWire))"
+            let day = HouseholdLedgerFormat.packed($0.lastActive)
+            let streak = min($0.streak, HouseholdLedgerFormat.widestStreakOnTheWire)
+            return "\($0.member.value),\(base36(day, width: 3)),\(base36(streak, width: 3))"
          }).joined(separator: ";")
+    }
+
+    /// Fixed-width base 36, lower case, zero-padded.
+    ///
+    /// Fixed width rather than variable so a member's line has one length and
+    /// the cap arithmetic is exact rather than an upper bound — the looseness
+    /// in the old four-digit-streak estimate is what let a stale comment about
+    /// it survive two commits.
+    private static func base36(_ value: Int, width: Int) -> String {
+        let digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+        var remaining = max(0, value)
+        var out = ""
+        for _ in 0..<width {
+            let index = digits.index(digits.startIndex, offsetBy: remaining % 36)
+            out = String(digits[index]) + out
+            remaining /= 36
+        }
+        return out
+    }
+
+    private static func unbase36(_ text: String) -> Int? {
+        let digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+        var value = 0
+        for character in text {
+            guard let index = digits.firstIndex(of: character) else { return nil }
+            value = value * 36 + digits.distance(from: digits.startIndex, to: index)
+        }
+        return value
     }
 
     /// `nil` for anything this build does not understand, including a tag
@@ -452,11 +535,13 @@ struct HouseholdLedger: Codable, Hashable {
 
         var standings: [MemberStanding] = []
         for part in parts {
+            guard standings.count < HouseholdLedgerFormat.absoluteMaximumMembers else { break }
             let fields = part.split(separator: ",", omittingEmptySubsequences: false)
             guard fields.count == 3,
                   let member = MemberID(String(fields[0])),
-                  let day = ScheduleOccurrence(compact: String(fields[1])),
-                  let streak = Int(fields[2]), streak >= 0,
+                  let packed = unbase36(String(fields[1])),
+                  let day = HouseholdLedgerFormat.unpacked(packed),
+                  let streak = unbase36(String(fields[2])),
                   !standings.contains(where: { $0.member == member })
             else { continue }
             standings.append(MemberStanding(member: member, lastActive: day, streak: streak))

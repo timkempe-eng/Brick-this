@@ -184,7 +184,7 @@ final class SharedStreakTests: XCTestCase {
         // is shared.
         let h = Harness()
         dadDaily(h, days: 3)
-        h.engine.absorb(tagPayload: "d1;e5f6a7b8,20260903,4")
+        h.engine.absorb(tagPayload: "d2;e5f6a7b8,0rm,004")
         let before = h.store.ledger
 
         XCTAssertFalse(h.engine.absorb(tagPayload: "d9;whatever"))
@@ -197,7 +197,7 @@ final class SharedStreakTests: XCTestCase {
         // second of somebody holding a phone against a sticker.
         let h = Harness()
         dadDaily(h, days: 3)
-        let payload = "d1;e5f6a7b8,20260903,4"
+        let payload = "d2;e5f6a7b8,0rm,004"
 
         XCTAssertTrue(h.engine.absorb(tagPayload: payload))
         XCTAssertFalse(h.engine.absorb(tagPayload: payload), "the second read is news to nobody")
@@ -211,7 +211,7 @@ final class SharedStreakTests: XCTestCase {
         dadDaily(h, days: 2)
         let mine = h.engine.memberID()
 
-        h.engine.absorb(tagPayload: "d1;\(mine.value),20260101,900")
+        h.engine.absorb(tagPayload: "d2;\(mine.value),0ko,0p0")
 
         XCTAssertEqual(h.engine.ledgerToWrite.standing(for: mine)?.streak, 2,
                        "our own history is the authority on our own streak")
@@ -226,10 +226,10 @@ final class SharedStreakTests: XCTestCase {
         let h = Harness()
         h.addMode(name: "Bedtime for the twins")
         dadDaily(h, days: 2)
-        h.engine.absorb(tagPayload: "d1;e5f6a7b8,20260903,4")
+        h.engine.absorb(tagPayload: "d2;e5f6a7b8,0rm,004")
 
         let payload = h.engine.tagPayload() ?? ""
-        let permitted = Set("0123456789abcdef,;d")
+        let permitted = Set("0123456789abcdefghijklmnopqrstuvwxyz,;")
         XCTAssertFalse(payload.isEmpty)
         XCTAssertTrue(payload.allSatisfy { permitted.contains($0) }, payload)
         XCTAssertFalse(payload.contains("Bedtime"))

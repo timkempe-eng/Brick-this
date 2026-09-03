@@ -155,6 +155,18 @@ struct HouseholdView: View {
         // in its ledger, so a check placed after the `guard` fell through to
         // "tap the same tag with another phone and it joins in" — the loop
         // with no exit, in exactly the state most likely to produce it.
+        if model.membersThatDidNotFit > 0 {
+            // Say which chip holds them. The households this can happen to are
+            // large ones, and the fix is a sticker that costs thirty cents —
+            // so the honest answer names it rather than quietly counting
+            // fewer people than live in the house.
+            let count = model.membersThatDidNotFit
+            return """
+                \(count) phone\(count == 1 ? "" : "s") did not fit on that \(Vocab.tagNoun). \
+                A bigger sticker holds everybody — an NTAG215 has three and a half times \
+                the room of the cheapest ones and costs about the same.
+                """
+        }
         if model.tagIsWriteProtected {
             return """
                 That \(Vocab.tagNoun) is write-protected, so this phone can read the \
