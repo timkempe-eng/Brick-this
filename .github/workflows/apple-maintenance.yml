@@ -34,5 +34,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          MATCH_GIT_BRANCH: ${{ vars.MATCH_GIT_BRANCH }}
           FASTLANE_SKIP_UPDATE_CHECK: "1"
         run: fastlane ios certs revoke_id:"${{ inputs.revoke_id }}"

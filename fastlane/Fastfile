@@ -251,6 +251,18 @@ platform :ios do
   lane :certs do |options|
     connect_api_key
 
+    # Does the store actually hold anything? A certificate Apple issued but
+    # match never pushed is unusable — the private key lived only in the
+    # runner's keychain — and it still counts against the ceiling. That is not
+    # visible from the certificate list, so ask the store directly.
+    store_url = ENV["MATCH_GIT_URL"].to_s
+    if store_url.empty?
+      UI.important("MATCH_GIT_URL not set; cannot say whether a certificate is stored.")
+    else
+      stored = match_branch_exists?(git_url: store_url, token: ENV["MATCH_GIT_TOKEN"].to_s)
+      UI.important("store #{store_url}: #{stored ? 'has a match branch' : 'EMPTY — nothing stored'}")
+    end
+
     certs = Spaceship::ConnectAPI::Certificate.all.select do |c|
       c.certificate_type.to_s.include?("DISTRIBUTION")
     end
