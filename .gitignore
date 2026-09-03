@@ -14,3 +14,7 @@ build/
 .build/
 .swiftpm/
 Package.resolved
+
+# Python bytecode, from importing a script to test it
+__pycache__/
+*.py[cod]
