@@ -67,9 +67,10 @@ struct DadStats {
     // rather than the end means a session that runs past midnight credits the
     // evening you began it, which is how anyone would describe it out loud.
 
-    private var activeDays: Set<Date> {
-        Set(sessions.map { calendar.startOfDay(for: $0.startedAt) })
-    }
+    /// The same definition `AutonomyLadder` counts lapses against, read from
+    /// the one place it is written. It was spelled out here too until the
+    /// reward ledger arrived carrying a third copy that had already drifted.
+    private var activeDays: Set<Date> { sessions.daysWithASession(calendar: calendar) }
 
     /// Consecutive days up to today. Today not having a session yet does not
     /// break the streak — the day isn't over — so a streak ending yesterday

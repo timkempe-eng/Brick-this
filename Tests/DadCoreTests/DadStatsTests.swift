@@ -32,6 +32,34 @@ final class DadStatsTests: XCTestCase {
         DadStats(sessions: sessions, now: now, calendar: calendar)
     }
 
+    // MARK: - What keeps a streak
+
+    func testABailedDayStillKeepsTheStreak() {
+        // The decision, and the same one `AutonomyLadder` makes about lapses:
+        // a day you Dadded and then spent an override on is a day you Dadded.
+        // Bailing out is still engagement, and a streak that punished it would
+        // teach somebody to leave the phone blocked rather than admit they
+        // needed it — which is the behaviour this product least wants.
+        //
+        // Spelled out rather than implied by the other tests, because every
+        // one of them builds sessions that ended cleanly. A mutation swapping
+        // this for the ladder's *clean*-day rule survived the whole suite, and
+        // the home screen, the widget and the household streak all read it.
+        let bailedEveryDay = (0..<4).map { session(daysAgo: $0, emergency: true) }
+
+        XCTAssertEqual(stats(bailedEveryDay).currentStreak, 4)
+        XCTAssertEqual(stats(bailedEveryDay).longestStreak, 4)
+        XCTAssertEqual(stats(bailedEveryDay).cleanFinishes, 0,
+                       "and the honest number about *how* they ended is reported separately")
+    }
+
+    func testAMixedDayIsStillOneDay() {
+        // Two sessions, one bailed and one finished at the tag. A day is a
+        // day; the streak counts days, not sessions.
+        let mixed = [session(daysAgo: 0, emergency: true), session(daysAgo: 0)]
+        XCTAssertEqual(stats(mixed).currentStreak, 1)
+    }
+
     // MARK: - Totals
 
     func testEmptyHistoryIsAllZeroAndDoesNotDivideByZero() {
