@@ -14,7 +14,8 @@ the habit. The reward for a good decision is autonomy — never more screen time
 which is a trap an entire category fell into. Dad is a boundary, not a spy: it
 cannot monitor, by construction (rule 3), and that is a commitment rather than
 an omission. The README carries the philosophy in full; PARKING_LOT.md ranks the
-family work, none of which is built yet.
+family work, all of which is now built or declined in an ADR — what is left
+there needs Apple, not code.
 
 This began as a DIY [Brick](https://getbrick.com/) and the teardown still holds
 — the $59 puck is a $0.30 sticker. That is no longer the objective. It is what

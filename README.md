@@ -88,21 +88,28 @@ does not get re-litigated:
 Being honest about this, because the sections above describe an intention and
 the code describes a fact, and they are not the same thing yet.
 
-**Built and tested:** the single-phone loop. Pick a Mode, tap, the apps
-disappear, tap, they come back. Three tap paths, Modes with app/category/website
-blocking, strict Mode, timed release, scheduled Modes, emergency overrides,
-stats and streaks, a Lock Screen widget, and crash reconciliation.
+**Built and tested:** the single-phone loop, and the family layer on top of it.
+Pick a Mode, tap, the apps disappear, tap, they come back. Three tap paths,
+Modes with app/category/website blocking, strict Mode, timed release, scheduled
+Modes, allowance Modes that ration instead of forbidding, allowlist Modes that
+name what stays, breaks, a never-blocked list, a tag per Mode, emergency
+overrides, stats and streaks, a Lock Screen widget, and crash reconciliation.
 
-**Designed but not built: everything that makes it a family product.** Two
-distinct roles, earned autonomy, co-authored rules, the shared dashboard,
-request-and-grant. All of it is ranked, costed and argued in
-[PARKING_LOT.md](PARKING_LOT.md). The first item there is a prerequisite rather
-than a feature: Dad currently uses Family Controls *individual* authorization,
-where the phone's owner is in charge — correct for an adult and useless for a
-teenager, who can revoke it in Settings. `requestAuthorization(for: .child)` is
-Apple's route to the real thing, and it only works on a device signed into a
-child's iCloud account inside an iCloud Family. Nothing else on the list means
-much without it.
+Then: two roles with permissions derived rather than stored, an autonomy ladder
+where consistency buys control and never minutes, request-and-grant answered by
+a tag tap, co-authored agreements with a date to talk about them again, rewards
+priced in days, a weekly review aimed at a conversation, ten minutes' notice
+before a scheduled Mode lands, a shared streak carried on the tag itself, and an
+honest report of the stretches Dad cannot account for.
+
+**The one thing still missing is not code.** Dad uses Family Controls
+*individual* authorization, where the phone's owner is in charge — correct for
+an adult and useless for a teenager, who can revoke it in Settings.
+`requestAuthorization(for: .child)` is Apple's route to the real thing, and it
+only works on a device signed into a child's iCloud account inside an iCloud
+Family. Everything above works today as an agreement between two people who
+both want it to; this is what makes it hold when one of them doesn't. Ranked,
+costed and argued in [PARKING_LOT.md](PARKING_LOT.md).
 
 **Never run on a device.** Screen Time and NFC both no-op in the Simulator, so
 the first proof that a tap blocks anything comes from TestFlight.
@@ -187,24 +194,26 @@ NFC tag ──tap──▶ Shortcuts automation ──▶ ToggleDadIntent ──
                                                       DadEngine
                                           (Foundation only, fully tested)
                                                             │
-      ┌───────┬───────┴───────┬───────────────┬───────────┐
-      ▼       ▼               ▼               ▼           ▼
- Shield-  Session-        UsageWatching  DadPersisting  Widget-      ← ports
+      ┌───────┬───────┴───────┬───────────────┬───────────┬──────────┐
+      ▼       ▼               ▼               ▼           ▼          ▼
+ Shield-  Session-        UsageWatching  DadPersisting  Widget-   Notifying  ← ports
  Controlling Scheduling                                 Refreshing
-      │       │               │               │           │
- Managed-  Device-        DeviceActivity   App Group    WidgetKit    ← adapters
- Settings  Activity       (usage events)
+      │       │               │               │           │          │
+ Managed-  Device-        DeviceActivity   App Group    WidgetKit  User-     ← adapters
+ Settings  Activity       (usage events)                           Notifications
               │
       iOS shields the apps ──▶ ShieldConfigurationExtension
                                     "Dadded."
 ```
 
 Every trigger funnels through one engine, so there is exactly one place a
-session can begin or end. The engine depends only on six protocols (`Clock` is
-the sixth, and the reason time-dependent behaviour is testable at all), which
-is what lets the whole state machine be tested without a device —
-[ADR 001](docs/adr/001-ports-and-adapters.md). The family layer arrives the same
-way: a role and a grant are new ports, not new framework imports in Core.
+session can begin or end. The engine depends only on seven protocols (`Clock`
+is the seventh, and the reason time-dependent behaviour is testable at all),
+which is what lets the whole state machine be tested without a device —
+[ADR 001](docs/adr/001-ports-and-adapters.md). The family layer arrived the same
+way and cost exactly one new port: roles, the ladder, grants and agreements are
+all values in Core, and only the ten-minute warning needed a new framework
+behind a protocol.
 
 The restrictions are held by the system, not by this app. Force-quitting Dad
 does not unblock anything. Strict Mode additionally sets `denyAppRemoval`, so
