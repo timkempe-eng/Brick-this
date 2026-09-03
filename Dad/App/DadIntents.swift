@@ -64,6 +64,8 @@ struct ToggleDadIntent: AppIntent {
             return "\(Vocab.verbPast). \(mode.name)."
         case .rationing(let minutes):
             return "\(Vocab.verbPast). \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
+        case .rationAlreadySpent:
+            return "\(Vocab.verbPast). \(Vocab.allowanceAlreadySpent(mode: mode.name, minutes: mode.editableAllowance.minutesPerDay))"
         case .rationRefused:
             return "\(Vocab.verbPast). \(mode.name). \(Vocab.allowanceRefused)"
         }

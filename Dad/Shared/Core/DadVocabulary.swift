@@ -66,6 +66,11 @@ enum Vocab {
     static func allowanceSpent(mode: String, minutes: Int) -> String {
         "\(mode) · your \(minutes) minutes are gone until tomorrow."
     }
+    /// Starting a session on a Mode whose day is already spent. Said plainly,
+    /// because nothing visibly happened when they tapped and the apps went.
+    static func allowanceAlreadySpent(mode: String, minutes: Int) -> String {
+        "\(mode) · you already used today's \(minutes) minutes, so the apps are hidden."
+    }
     /// The system refused to count usage, so the apps were taken away instead.
     /// Said plainly, because the user was promised minutes and did not get them.
     static let allowanceRefused =

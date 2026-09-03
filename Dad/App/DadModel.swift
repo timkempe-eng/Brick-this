@@ -162,6 +162,8 @@ final class DadModel: ObservableObject {
             banner = "\(Vocab.verbPast) — \(mode.name)."
         case .dadded(let mode, .rationing(let minutes)):
             banner = "\(Vocab.verbPast) — \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
+        case .dadded(let mode, .rationAlreadySpent):
+            banner = "\(Vocab.verbPast) — \(Vocab.allowanceAlreadySpent(mode: mode.name, minutes: mode.editableAllowance.minutesPerDay))"
         case .dadded(let mode, .rationRefused):
             // Said out loud rather than swallowed: they were promised minutes
             // and their apps vanished instead.

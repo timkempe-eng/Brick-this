@@ -200,7 +200,7 @@ private struct AllowanceSection: View {
                     Text("An allowance needs apps to count — pick some above.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("These apps stay usable until the allowance runs out, then they go until midnight. Strict still applies the whole time. Changing the allowance while your phone is \(Vocab.verbPast) starts today's count again.")
+                    Text("These apps stay usable until the allowance runs out, then they go until midnight — including across a second session the same day, so ending and restarting doesn't hand back the time. Strict applies throughout. Minutes from a session you ended before reaching the limit aren't carried over; the system only tells \(Vocab.appName) when the limit is reached. Changing the allowance while your phone is \(Vocab.verbPast) starts today's count again.")
                 }
             } else {
                 Text("Off. This \(Vocab.modeNoun.lowercased()) takes its apps away for as long as it runs.")

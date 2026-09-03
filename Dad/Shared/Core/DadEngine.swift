@@ -61,6 +61,9 @@ struct DadEngine {
         /// The Mode rations, but the system would not count usage, so the
         /// apps were taken away instead.
         case rationRefused
+        /// Today's allowance was already used up in an earlier session, so
+        /// this one starts blocked. What makes "a day" mean a day.
+        case rationAlreadySpent
     }
 
     /// Why a session ended.
@@ -159,7 +162,16 @@ struct DadEngine {
 
         let start: DadStart
         if mode.rations {
-            if usage.startWatching(mode, neverBlocked: store.neverBlocked) {
+            if allowanceAlreadySpentToday(modeID: mode.id) {
+                // The system counts usage per registered window, and a window
+                // is registered per session — so without this, ending a
+                // session and starting another would hand out a fresh
+                // fifteen minutes, and "15 min a day" would mean "15 min per
+                // tap". Two taps at the tag you are already standing at is
+                // not a limit.
+                session.allowanceSpentAt = clock.now
+                start = .rationAlreadySpent
+            } else if usage.startWatching(mode, neverBlocked: store.neverBlocked) {
                 start = .rationing(minutesPerDay: mode.editableAllowance.minutesPerDay)
             } else {
                 // Recorded as spent, not merely reported: every later reader —
@@ -469,6 +481,23 @@ struct DadEngine {
         store.activeSession = session
         applyShield(for: session, mode: mode)
         widget.reload()
+    }
+
+    /// Whether this Mode's allowance was already used up today, in a session
+    /// that has since ended.
+    ///
+    /// Only a *fully spent* allowance carries across sessions: the system
+    /// tells us when a threshold is reached and nothing before that, so ten
+    /// minutes used in a session you ended is ten minutes we never hear
+    /// about. That is a real hole and it is in docs/roadmap.md — but it is a
+    /// much smaller one than a limit you can reset by tapping twice.
+    func allowanceAlreadySpentToday(modeID: UUID) -> Bool {
+        store.history.contains { session in
+            guard session.modeID == modeID, let spentAt = session.allowanceSpentAt else {
+                return false
+            }
+            return calendar.isDate(spentAt, inSameDayAs: clock.now)
+        }
     }
 
     /// What the shield should currently be doing, for whoever is asking.

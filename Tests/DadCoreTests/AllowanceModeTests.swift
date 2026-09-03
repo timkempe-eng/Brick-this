@@ -561,3 +561,86 @@ final class ModeAllowanceTests: XCTestCase {
         XCTAssertTrue(mode.summary.contains("15 min a day"), mode.summary)
     }
 }
+
+/// "15 minutes a day" has to mean a day.
+///
+/// The system counts usage inside a window we register, and we register one
+/// per session — so left alone, ending a session and starting another would
+/// hand out a fresh allowance. Two taps at a tag you are already standing next
+/// to is not a limit, and the copy would be a lie.
+final class AllowanceAcrossSessionsTests: XCTestCase {
+
+    private let fifteen = ModeAllowance(minutesPerDay: 15)
+
+    func testASecondSessionTheSameDayDoesNotHandOutAFreshAllowance() {
+        let h = Harness()
+        let mode = h.addMode(allowance: fifteen)
+        h.engine.dad(with: mode)
+        h.clock.advance(15 * 60)
+        h.engine.spendAllowance(modeID: mode.id)
+        h.engine.unDad(.system)
+
+        h.clock.advance(60 * 60)
+        XCTAssertEqual(h.engine.handleTap(), .dadded(mode: mode, start: .rationAlreadySpent))
+
+        XCTAssertEqual(h.shield.appliedMode, mode.id, "the apps are still gone")
+        XCTAssertFalse(h.usage.watching.contains(mode.id),
+                       "and there is nothing left to count")
+    }
+
+    func testTomorrowIsAFreshAllowance() {
+        let h = Harness()
+        let mode = h.addMode(allowance: fifteen)
+        h.engine.dad(with: mode)
+        h.engine.spendAllowance(modeID: mode.id)
+        h.engine.unDad(.system)
+
+        h.clock.advance(days: 1)
+        XCTAssertEqual(h.engine.handleTap(),
+                       .dadded(mode: mode, start: .rationing(minutesPerDay: 15)))
+        XCTAssertNil(h.shield.appliedMode)
+    }
+
+    func testASessionThatNeverReachedTheLimitDoesNotCountAgainstTheNextOne() {
+        // The hole, stated as a test rather than left to be discovered: the
+        // system tells us when a threshold is reached and nothing before it,
+        // so minutes used in a session you ended early are minutes we never
+        // hear about.
+        let h = Harness()
+        let mode = h.addMode(allowance: fifteen)
+        h.engine.dad(with: mode)
+        h.clock.advance(5 * 60)
+        h.engine.unDad(.tapped)
+
+        XCTAssertEqual(h.engine.handleTap(),
+                       .dadded(mode: mode, start: .rationing(minutesPerDay: 15)))
+    }
+
+    func testAnotherModesSpentAllowanceIsNotThisModes() {
+        let h = Harness()
+        let one = h.addMode(name: "Deep Work", allowance: fifteen)
+        let two = h.addMode(name: "Evening", allowance: fifteen)
+        h.engine.dad(with: one)
+        h.engine.spendAllowance(modeID: one.id)
+        h.engine.unDad(.system)
+
+        XCTAssertEqual(h.engine.handleTap(preferredMode: two),
+                       .dadded(mode: two, start: .rationing(minutesPerDay: 15)))
+    }
+
+    func testABreakDoesNotHandBackASpentAllowance() {
+        // The interaction worth checking, because a break ends a session and
+        // starts another — which is exactly the reset this closes.
+        let h = Harness()
+        let mode = h.addMode(allowance: fifteen, breakLength: 15 * 60)
+        h.engine.dad(with: mode)
+        h.engine.spendAllowance(modeID: mode.id)
+        h.engine.handleTap()                       // out, break running
+
+        h.clock.advance(15 * 60)
+        h.engine.resumeFromBreak()
+
+        XCTAssertEqual(h.shield.appliedMode, mode.id,
+                       "fifteen minutes away is not a new day")
+    }
+}

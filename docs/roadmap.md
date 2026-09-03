@@ -73,6 +73,15 @@ The engine is built so that being wrong about it fails safe: an allowance the
 system will not count becomes a block, and a midnight wake that never arrives is
 corrected on the next foreground.
 
+**Partial allowance use is not carried between sessions.** Once a rationed
+Mode's daily limit is *reached* it stays reached for the rest of the day, across
+as many sessions as you start — otherwise ending and re-tapping would be a
+two-tap reset. But the system only reports the moment a threshold is crossed
+and nothing before it, so ten minutes used in a session you ended early are ten
+minutes Dad never hears about, and the next session starts with the full
+allowance. A smaller hole than the one it replaces, and not closable with the
+API as it stands.
+
 **A protected app inside a blocked *category* still spends a rationed Mode's
 allowance.** ManagedSettings expresses "this category except these apps"
 natively, so the never-blocked list works properly for the shield. A
