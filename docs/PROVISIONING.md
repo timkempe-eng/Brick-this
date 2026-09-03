@@ -15,20 +15,40 @@ re-run the check, it isn't ✅.**
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ✅ | Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, every 3 days at 15:00 UTC: runs Release with `force_profiles: true` and reports whether the family-controls errors are gone. Push and email on. Delete it once approved | claude.ai → Routines |
-| Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement | Certificates, IDs & Profiles → the four App IDs show a Family Controls row that is not development-only |
+| Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
 | Private `match` store | ✅ | `timkempe-eng/dad-certificates`, holding certificate `53GT6F9GRZ` encrypted | run Apple account maintenance; it prints whether the store has a match branch |
 | Five provisioning profiles | ✅ | Created and installed; `All required keys, certificates and provisioning profiles are installed` | run Release |
-| Family Controls capability on each App ID | ✅ | Apple-maintenance run 11, 2026-09-03: `FAMILY_CONTROLS` listed on `app.dad.Dad`, `.ShieldConfiguration`, `.ShieldAction`, `.ActivityMonitor`, and absent from `.Widget` — which is what rule 7 wants. `NFC_TAG_READING` on the app alone | run Apple account maintenance; the capabilities lane prints every capability per identifier |
+| Family Controls capability on each App ID | ✅ | Apple-maintenance run 11 and again 2026-09-03 12:03: `FAMILY_CONTROLS` listed on `app.dad.Dad`, `.ShieldConfiguration`, `.ShieldAction`, `.ActivityMonitor`, and absent from `.Widget` — which is what rule 7 wants. `NFC_TAG_READING` on the app alone. **This says the capability is on, not that distribution is approved:** Apple's API reports a single `FAMILY_CONTROLS` type and cannot tell the self-service development variant from the reviewed distribution one, so this row would read identically either way | run Apple account maintenance; the capabilities lane prints every capability per identifier |
 | App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
-| App Store Connect record | ❌ | Checked 2026-09-03: does not exist. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible | run Apple account maintenance; the capabilities lane says outright whether it exists |
+| App Store Connect record | ❌ | Re-checked 2026-09-03 12:03, still absent. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible. The `beta` lane now refuses up front on this rather than failing at the upload after a twenty-minute build | run Apple account maintenance; the capabilities lane says outright whether it exists |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
 ❓ means unverified, not false. ⏳ means waiting on someone else.
+
+## The two things between here and TestFlight
+
+Asked and answered on 2026-09-03. Everything else in the table above is green,
+so these are the whole list — and only one of them is ours.
+
+1. **The App Store Connect record does not exist.** Minutes of browser work on
+   the iPad, blocked on nobody: appstoreconnect.apple.com → Apps → + → New App
+   → iOS → bundle id `app.dad.Dad`. Until it exists there is nothing for a
+   build to upload *to*, so this is worth doing before spending a runner.
+2. **Family Controls (Distribution) approval is unconfirmed.** The capability
+   is enabled on the four App IDs, which is necessary and not sufficient — see
+   the table row. No Release run has been attempted since it was enabled: the
+   last one, run #7 at 04:09, predates it and failed on exactly these four
+   entitlements. So whether Apple has approved is genuinely unknown right now,
+   and one Release run with `force_profiles: true` answers it.
+
+The order does not matter for the answer, but it does for the cost: doing (1)
+first means the run that settles (2) can also deliver the build, instead of
+being spent twice.
 
 ## What the first signing runs settled (2026-09-03)
 

@@ -68,6 +68,27 @@ rescue StandardError => e
   0
 end
 
+# The App Store Connect app record, or nil if Connect says there is none.
+#
+# Registering an App ID at developer.apple.com and creating the app record at
+# appstoreconnect.apple.com are different actions on different sites, and only
+# the second one makes TestFlight possible. The two are easy to conflate, and
+# on 2026-09-03 the App IDs existed while the record did not.
+#
+# Nothing between the top of the beta lane and its last line notices: match
+# mints profiles, gym compiles for twenty minutes, and upload_to_testflight is
+# the first thing to ask Connect anything.
+#
+# An exception is not an answer. It means the question could not be asked, and
+# a release must not be blocked by that — so a failed query returns :unknown
+# and only a clean nil means "absent".
+def connect_app_record
+  Spaceship::ConnectAPI::App.find(APP_ID)
+rescue StandardError => e
+  UI.important("Could not ask Connect whether #{APP_ID} has a record (#{e.class}). Continuing.")
+  :unknown
+end
+
 # owner/repo out of an https git url, with or without a trailing .git.
 def repo_slug(git_url)
   m = git_url.to_s.match(%r{github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?/?\z})
@@ -108,6 +129,20 @@ platform :ios do
   lane :beta do |options|
     api_key = connect_api_key
     team_id = require_env("APPLE_TEAM_ID", "Developer account → Membership, 10 characters.")
+
+    # One API call, spent before anything expensive, because the alternative is
+    # learning this on the last line of a twenty-minute signed build.
+    record = connect_app_record
+    if record.nil?
+      UI.user_error!(
+        "App Store Connect has no app record for #{APP_ID}, so the upload at the end " \
+        "of this build would fail. Create it: appstoreconnect.apple.com → Apps → + → " \
+        "New App → iOS → bundle id #{APP_ID}. Registering the App ID in the developer " \
+        "portal is a different action on a different site and does not create this. " \
+        "Only the app needs a record; the four extensions ship inside its bundle."
+      )
+    end
+    UI.success("App Store Connect record: #{record.name}") unless record == :unknown
 
     # Where match's certificates live, and what may read them.
     #
@@ -263,13 +298,13 @@ platform :ios do
     # will carry — an App Group has to be ticked AND assigned, and only the
     # assignment shows up here. Reading it back beats asking someone to
     # re-examine five pages in a browser.
-    # Does the App Store Connect record exist? Registering an App ID in the
-    # developer portal and creating the app record in Connect are separate
-    # things on separate sites, and only the second one makes TestFlight
-    # possible. Nothing else in this pipeline notices it is missing until
-    # upload_to_testflight fails at the very end of a signed build.
-    app = Spaceship::ConnectAPI::App.find(APP_ID) rescue nil
-    if app
+    # Does the App Store Connect record exist? This lane only reports; the beta
+    # lane refuses on the same answer, from the same helper, so the two cannot
+    # drift into disagreeing about what makes a release possible.
+    app = connect_app_record
+    if app == :unknown
+      UI.error("App Store Connect record: could not tell — the query failed, which is not the same as absent.")
+    elsif app
       UI.success("App Store Connect record: #{APP_ID} exists (#{app.name})")
     else
       UI.error("App Store Connect record: #{APP_ID} DOES NOT EXIST. TestFlight upload will fail. " \
