@@ -51,9 +51,25 @@ enum HouseholdLedgerFormat {
     static let maximumPayload = 120
 
     /// The widest a member's line can be: eight for the id, eight for the
-    /// date, and up to three digits of streak, plus the two separators and the
+    /// date, up to **four** digits of streak, plus the two separators and the
     /// leading semicolon.
-    static let maximumMemberBytes = 8 + 8 + 3 + 3
+    ///
+    /// Four digits rather than three because four is the honest width for a
+    /// streak that can run for years, and at today's budget it costs nothing:
+    /// both estimates divide to five members, and five real members with
+    /// four-digit streaks come to 117 of the 120 bytes.
+    ///
+    /// So this number is only load-bearing at a boundary — a mutation
+    /// narrowing it back to three survives the suite, because the division
+    /// rounds to the same answer. Worth knowing rather than worth chasing: if
+    /// `maximumPayload` ever changes, the two stop agreeing, and the honest
+    /// width is the one that will still be right. Five digits would cost a
+    /// member, and 9,999 days is twenty-seven years.
+    ///
+    /// What actually guards the tag is the round-trip test, which builds a
+    /// full household at four-digit streaks and asserts the reader counts what
+    /// the writer counted.
+    static let maximumMemberBytes = 8 + 8 + 4 + 3
 
     /// How many members fit, **derived rather than chosen**, and that is the
     /// fix for a real defect rather than tidiness.

@@ -184,8 +184,12 @@ final class HouseholdLedgerTests: XCTestCase {
         //
         // Asserted against `encoded()` rather than `trimmed()`, which is what
         // the old test did and why any cap of three or more passed it.
+        // Four-digit streaks, which is what a household at the cap looks like
+        // after three years. A three-digit assumption held until the day
+        // somebody's streak reached a thousand and then dropped a member
+        // again, on a date nobody would have connected to it.
         let full = HouseholdLedger(standings: (0..<HouseholdLedgerFormat.maximumMembers).map {
-            standing(MemberID(String(format: "%08x", $0))!, "20260903", 999)
+            standing(MemberID(String(format: "%08x", $0))!, "20260903", 9999)
         })
 
         XCTAssertLessThanOrEqual(full.encoded().utf8.count, HouseholdLedgerFormat.maximumPayload)
