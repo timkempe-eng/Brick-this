@@ -579,6 +579,48 @@ anyone's time.
       - The warning had been decided and tested for days and delivered never,
         which is the shape of a feature that reads as built.
 
+- [x] **An adversarial review found nine defects in work that had passed every
+      check.** 817 tests, 106 preflight checks, the vocabulary lint and a
+      green macOS job all said the night's work was sound. It was not, and two
+      of the nine were the kind that quietly change what a person is owed:
+
+      - **A reward claim refunded a day and erased a lift that was given.** The
+        claim list was truncated at a constant named for a different list, and
+        `spent` is derived by summing it. The list is now unbounded, with the
+        reason where the bound was: truncation is a memory strategy and cannot
+        also be an accounting one.
+      - **Talking over an overdue rule re-filed it in the past**, so the
+        conversation left the rule still overdue. The picker started on
+        days-remaining, which is negative once overdue. Guarded in Core, where
+        more than one caller is protected.
+      - **The tag's member cap could not fit the tag's byte budget**, so the
+        writing phone counted six people and every reading phone counted five
+        — and the dropped one is the member whose date decides whether the
+        streak is current.
+      - **Any text record starting with `d` was treated as a ledger**, so
+        "desk" written with NFC Tools was destroyed, and a ledger sitting
+        behind one was read as garbage and then overwritten.
+      - **On a full household the phone dropped itself from its own tag**, then
+        read the tag back and concluded it was not a member of its household.
+      - **A hole in the vocabulary lint**, opened the same night: the lint
+        named the forbidden symbols, so a new alias was unwatched the moment it
+        was added — and its own comment claimed the lint covered it. The lint
+        is now an exemption list, so adding a symbol makes it stricter rather
+        than blinder.
+
+      **What this costs is worth stating plainly: the checks are necessary and
+      they are not sufficient.** Every one of these passed all of them. A
+      second pair of eyes on the diff, briefed with the defect classes this
+      repo actually produces, found in twenty minutes what a night of tests did
+      not. Brief the review with the classes; a general "look for bugs" would
+      have found none of them.
+
+      Around forty mutations were run in total, over the new code and the old.
+      Eight survived and all eight are now covered or explained in place. The
+      one that mattered most was on a fix: it survived, and the first
+      explanation for why was wrong — checking the arithmetic instead of
+      believing it is what turned a false comment into a true one.
+
 - [x] **A mutation reached a pushed commit, and the suite would not have caught
       it.** An adversarial review was running `scripts/mutate.sh` in the same
       working tree, and a `git add -A` landed inside the window where the
