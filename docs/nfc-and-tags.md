@@ -123,3 +123,30 @@ Note that paths 2 and 3 don't carry a UID into the app: Shortcuts already
 verified the tag before running, and a universal link only proves the tag holds
 your URL. Pairing therefore guards path 1. That's the correct division — the OS
 does the verifying on the paths where it can.
+
+## What Dad writes on the tag
+
+Two records, at most, and they coexist:
+
+1. **A URI record** — only if you wrote one, for background reading. Optional
+   and unrelated to everything else.
+2. **A text record holding the household ledger** — the shared streak, written
+   on every tap made *inside the app*. Six people at most, about 20 bytes each,
+   so it fits alongside a URL even on a 144-byte NTAG213.
+
+Each writer keeps the other's record. `TagScanner` preserves the URI when it
+writes the ledger; `TagWriter` preserves the ledger when it writes the URI.
+That symmetry is deliberate and is the kind of thing that breaks silently: a
+"write link to tag" that replaced the whole message would delete the shared
+streak, from a screen that says nothing about streaks, on the only copy of it
+that exists.
+
+**Anyone who taps the tag can read what is on it** — a visitor, a stranger, a
+shop. The ledger is built for that: an opaque eight-character id, a date and a
+count, and no field anybody types into. It says nothing about who you are, what
+you blocked, or when. A test asserts the encoded payload is drawn from
+`[0-9a-f,;d]`, so it cannot come to carry a name later.
+
+A tap through a Shortcuts automation cannot write, because it has no UI to open
+an NFC session with. So the shared streak lags behind the individual ones, and
+the app says which day it is true as of rather than pretending otherwise.

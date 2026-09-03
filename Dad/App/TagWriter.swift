@@ -85,20 +85,38 @@ extension TagWriter: NFCNDEFReaderSessionDelegate {
                 case .readOnly:
                     session.invalidate(errorMessage: "That tag is locked.")
                 case .readWrite:
-                    guard message.length <= capacity else {
-                        session.invalidate(errorMessage: "That tag is too small for this link.")
-                        return
-                    }
-                    tag.writeNDEF(message) { error in
-                        if let error {
-                            session.invalidate(errorMessage: error.localizedDescription)
+                    // Read before writing, and keep the household ledger if
+                    // the tag is carrying one.
+                    //
+                    // `writeNDEF` replaces the whole message, so writing the
+                    // link alone would silently delete the shared streak — on
+                    // the one copy of it that exists, from a screen that says
+                    // nothing about streaks. The mirror of this is in
+                    // `TagScanner`, which keeps the URI record when it writes
+                    // the ledger. Between them the two records coexist on one
+                    // tag and neither screen has to know the other exists.
+                    tag.readNDEF { existing, _ in
+                        let ledger = (existing?.records ?? []).filter {
+                            $0.wellKnownTypeTextPayload().0?
+                                .hasPrefix(HouseholdLedgerFormat.prefix) ?? false
+                        }
+                        let outgoing = NFCNDEFMessage(records: message.records + ledger)
+
+                        guard outgoing.length <= capacity else {
+                            session.invalidate(errorMessage: "That tag is too small for this link.")
                             return
                         }
-                        session.alertMessage = "Tag ready."
-                        session.invalidate()
-                        Task { @MainActor in
-                            self.isWriting = false
-                            self.didWrite = true
+                        tag.writeNDEF(outgoing) { error in
+                            if let error {
+                                session.invalidate(errorMessage: error.localizedDescription)
+                                return
+                            }
+                            session.alertMessage = "Tag ready."
+                            session.invalidate()
+                            Task { @MainActor in
+                                self.isWriting = false
+                                self.didWrite = true
+                            }
                         }
                     }
                 @unknown default:

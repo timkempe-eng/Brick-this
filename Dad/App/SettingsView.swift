@@ -122,7 +122,8 @@ struct SettingsView: View {
                     Text("""
                          Only needed if you want a tap to work with no Shortcuts automation \
                          at all. It takes a domain you control and an Associated Domains \
-                         entitlement — see docs/nfc-and-tags.md. Most people should skip this.
+                         entitlement — see docs/nfc-and-tags.md. Most people should skip this. \
+                         Writing a link keeps whatever the tag is already carrying.
                          """)
                 }
             }
