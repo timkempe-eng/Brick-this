@@ -411,14 +411,19 @@ struct WeeklyReview {
     /// rolling allowance.
     ///
     /// This is the moment `DadSession.allowanceSpentAt` is meant to record.
-    /// `DadSession` does not carry that field on this branch, and existing
-    /// files are not mine to change here, so it is recovered instead: an
-    /// override is spent at the session's `endedAt`, and `EmergencyAllowance`
-    /// already knows how many remain at any instant. Replaying the overrides
-    /// in order and asking it after each one gives the same answer a stored
-    /// timestamp would, with the advantage of needing no schema bump and no
-    /// migration for the sessions already on disk (see `SchemaCoding`). If the
-    /// field does land later, only this one property changes.
+    /// Nothing stores this, so it is recovered: an override is spent at the
+    /// session's `endedAt`, and `EmergencyAllowance` already knows how many
+    /// remain at any instant. Replaying the overrides in order and asking it
+    /// after each one gives the same answer a stored timestamp would, with the
+    /// advantage of needing no schema bump and no migration for the sessions
+    /// already on disk (see `SchemaCoding`).
+    ///
+    /// **Not to be confused with a rationed Mode's daily allowance**, which is
+    /// `daysTheRationRanOut` below and is a different number about a different
+    /// thing. The two were briefly the same property, because "allowance"
+    /// names both the five emergency overrides and the minutes a rationing
+    /// Mode hands out. `ModeAllowance`'s own doc comment warns about exactly
+    /// this collision; it still caught us.
     ///
     /// Two boundary decisions, both consistent with the rest of this type:
     ///
@@ -429,7 +434,7 @@ struct WeeklyReview {
     /// - The replay runs over the *whole* history, because the allowance
     ///   window is thirty days and the fifth use of a window that opened three
     ///   weeks ago still lands in this week.
-    var daysTheAllowanceRanOut: [Date] {
+    var daysTheOverrideAllowanceRanOut: [Date] {
         let overrides = sessions
             .compactMap { session -> (spentAt: Date, day: Date)? in
                 guard session.endedByEmergency, let spentAt = session.endedAt else { return nil }
@@ -450,7 +455,29 @@ struct WeeklyReview {
     }
 
     /// How many days this week the hatch was closed behind you.
-    var daysTheAllowanceRanOutCount: Int { daysTheAllowanceRanOut.count }
+    var daysTheOverrideAllowanceRanOutCount: Int { daysTheOverrideAllowanceRanOut.count }
+
+    /// Days this week a rationing Mode's daily minutes ran out.
+    ///
+    /// The *other* allowance: a Mode that hands out fifteen minutes of an app
+    /// a day rather than taking it away. `DadSession.allowanceSpentAt` records
+    /// the moment it happened, so unlike the overrides above this one is read
+    /// rather than reconstructed.
+    ///
+    /// Attributed to the day the session *started*, like every other number
+    /// here — a session begun at 23:40 whose ration ran out at 00:10 keeps its
+    /// numbers on one day, or a household's "we ran out on Tuesday" lands on
+    /// Wednesday.
+    var daysTheRationRanOut: [Date] {
+        var found: [Date] = []
+        for session in sessionsThisWeek where session.allowanceSpentAt != nil {
+            let day = calendar.startOfDay(for: session.startedAt)
+            if !found.contains(day) { found.append(day) }
+        }
+        return found.sorted()
+    }
+
+    var daysTheRationRanOutCount: Int { daysTheRationRanOut.count }
 
     // MARK: - Is there enough here to say anything?
 

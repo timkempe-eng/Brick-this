@@ -74,7 +74,7 @@ final class WeeklyReviewTests: XCTestCase {
         XCTAssertEqual(r.dayContrast, .notEnoughDays(activeDays: 0))
         XCTAssertEqual(r.comparison, .noBaseline(thisWeek: 0))
         XCTAssertNil(r.comparison.fraction)
-        XCTAssertEqual(r.daysTheAllowanceRanOutCount, 0)
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
         XCTAssertEqual(r.headline, "No Dad sessions this week.")
     }
 
@@ -375,13 +375,13 @@ final class WeeklyReviewTests: XCTestCase {
     func testTheDayTheLastOverrideIsSpentIsTheDayTheAllowanceRanOut() {
         let r = review(overrideRun(count: EmergencyAllowance.perWindow))
         let fifthDay = calendar.date(byAdding: .day, value: 4, to: weekStart)!
-        XCTAssertEqual(r.daysTheAllowanceRanOut, [fifthDay])
-        XCTAssertEqual(r.daysTheAllowanceRanOutCount, 1)
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOut, [fifthDay])
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 1)
     }
 
     func testAnAllowanceWithOneOverrideLeftHasNotRunOut() {
         let r = review(overrideRun(count: EmergencyAllowance.perWindow - 1))
-        XCTAssertEqual(r.daysTheAllowanceRanOutCount, 0)
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
     }
 
     func testRunningOutIsCreditedToTheDayTheSessionStartedNotTheDayItBroke() {
@@ -391,7 +391,7 @@ final class WeeklyReviewTests: XCTestCase {
         run.append(session(start(day: 4, hour: 23, minute: 50), minutes: 30, emergency: true))
 
         let fifthDay = calendar.date(byAdding: .day, value: 4, to: weekStart)!
-        XCTAssertEqual(review(run).daysTheAllowanceRanOut, [fifthDay])
+        XCTAssertEqual(review(run).daysTheOverrideAllowanceRanOut, [fifthDay])
     }
 
     func testOverridesFromLastWeekStillCountTowardRunningOutThisWeek() {
@@ -402,12 +402,12 @@ final class WeeklyReviewTests: XCTestCase {
         run.append(session(start(day: 2, hour: 12), minutes: 30, emergency: true))
 
         let wednesday = calendar.date(byAdding: .day, value: 2, to: weekStart)!
-        XCTAssertEqual(review(run).daysTheAllowanceRanOut, [wednesday])
+        XCTAssertEqual(review(run).daysTheOverrideAllowanceRanOut, [wednesday])
     }
 
     func testRunningOutLastWeekIsNotReportedAsRunningOutThisWeek() {
         let r = review(overrideRun(weeksAgo: 1, count: EmergencyAllowance.perWindow))
-        XCTAssertEqual(r.daysTheAllowanceRanOutCount, 0)
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
     }
 
     func testOverridesThatHaveAgedOutOfTheWindowDoNotCountTowardRunningOut() {
@@ -418,14 +418,14 @@ final class WeeklyReviewTests: XCTestCase {
                     minutes: 30, emergency: true)
         }
         let r = review(old + overrideRun(count: 3))
-        XCTAssertEqual(r.daysTheAllowanceRanOutCount, 0)
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
     }
 
     func testASessionEndedAtTheTagNeverSpendsTheAllowance() {
         let r = review((0..<EmergencyAllowance.perWindow).map {
             session(start(day: $0, hour: 12), minutes: 30, emergency: false)
         })
-        XCTAssertEqual(r.daysTheAllowanceRanOutCount, 0)
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
     }
 
     // MARK: - Tone
@@ -469,5 +469,80 @@ final class WeeklyReviewTests: XCTestCase {
         let headline = review([session(start(day: 0, hour: 9))]).headline
         XCTAssertTrue(headline.contains("Dadded"))
         XCTAssertFalse(headline.contains("dadded"))
+    }
+}
+
+/// The two allowances, which are not the same number.
+///
+/// "Allowance" names both the five emergency overrides and the daily minutes a
+/// rationing Mode hands out, and a week's review has a reason to report each.
+/// They were briefly one property — the reviewer had no `allowanceSpentAt` to
+/// read and substituted the overrides, which is the exact collision
+/// `ModeAllowance`'s doc comment warns about. These tests exist so the two
+/// cannot quietly become one again.
+final class WeeklyReviewAllowanceTests: XCTestCase {
+
+    private let calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        c.firstWeekday = 2
+        return c
+    }()
+
+    /// Wednesday 2026-09-02, 09:00 UTC.
+    private let now = Date(timeIntervalSince1970: 1_756_803_600)
+
+    private func session(dayOffset: Int,
+                         rationSpent: Bool,
+                         byOverride: Bool = false) -> DadSession {
+        let start = calendar.date(byAdding: .day, value: dayOffset, to: now)!
+        var s = DadSession(modeID: UUID(), modeName: "Deep Work", startedAt: start)
+        s.endedAt = start.addingTimeInterval(3600)
+        s.endedByEmergency = byOverride
+        if rationSpent { s.allowanceSpentAt = start.addingTimeInterval(900) }
+        return s
+    }
+
+    private func review(_ sessions: [DadSession]) -> WeeklyReview {
+        WeeklyReview(sessions: sessions, now: now, calendar: calendar)
+    }
+
+    func testARationRunningOutIsReadRatherThanReconstructed() {
+        let r = review([session(dayOffset: -1, rationSpent: true)])
+        XCTAssertEqual(r.daysTheRationRanOutCount, 1)
+    }
+
+    func testARationRunningOutIsNotAnOverride() {
+        // The mislabel, as a test: a session whose rationed minutes ran out
+        // did not spend an emergency override, and reporting it as one would
+        // tell a household they bailed when they did not.
+        let r = review([session(dayOffset: -1, rationSpent: true)])
+        XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
+        XCTAssertEqual(r.endedWithAnOverride, 0)
+    }
+
+    func testTwoSessionsInOneDayAreOneDayOfRunningOut() {
+        let r = review([session(dayOffset: -1, rationSpent: true),
+                        session(dayOffset: -1, rationSpent: true)])
+        XCTAssertEqual(r.daysTheRationRanOutCount, 1)
+    }
+
+    func testASessionThatNeverReachedItsLimitIsNotCounted() {
+        XCTAssertEqual(review([session(dayOffset: -1, rationSpent: false)])
+                        .daysTheRationRanOutCount, 0)
+    }
+
+    func testItIsAttributedToTheDayTheSessionStarted() {
+        // Consistent with every other number here: a session begun at 23:40
+        // keeps its numbers on the day it began, or "we ran out on Tuesday"
+        // lands on Wednesday.
+        let lateStart = calendar.date(byAdding: .day, value: -1, to: now)!
+            .addingTimeInterval(14 * 3600 + 40 * 60)   // 23:40 UTC
+        var s = DadSession(modeID: UUID(), modeName: "Sleep", startedAt: lateStart)
+        s.endedAt = lateStart.addingTimeInterval(3600)
+        s.allowanceSpentAt = lateStart.addingTimeInterval(30 * 60)  // 00:10, next day
+
+        let r = review([s])
+        XCTAssertEqual(r.daysTheRationRanOut, [calendar.startOfDay(for: lateStart)])
     }
 }
