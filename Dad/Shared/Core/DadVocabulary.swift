@@ -95,12 +95,8 @@ enum Vocab {
     /// nothing — a warning with a "postpone" button is a schedule you did not
     /// agree to.
     static func warning(mode: String, at time: String, minutes: Int) -> String {
-        "\(mode) \(verbsThirdPerson) your phone at \(time) — \(minutes) minute\(minutes == 1 ? "" : "s")."
+        "\(mode) \(verbThirdPerson) your phone at \(time) — \(minutes) minute\(minutes == 1 ? "" : "s")."
     }
-
-    /// `Dads`, spelled here so the warning copy reads through the same
-    /// vocabulary as everything else the lint checks.
-    static let verbsThirdPerson = verbThirdPerson
 
     // MARK: Asking, and granting
     static let askAction = "Ask for a few minutes"

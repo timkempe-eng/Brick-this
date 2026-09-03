@@ -140,7 +140,37 @@ final class HouseholdLedgerTests: XCTestCase {
                                  HouseholdLedgerFormat.maximumPayload)
     }
 
-    func testAHouseholdIsCappedAtSixAndKeepsTheFreshest() {
+    func testAFullHouseholdSurvivesTheRoundTripToTheTag() {
+        // The defect this exists to prevent, which a review found and no test
+        // could: the cap was six and six did not fit, so `encoded()` quietly
+        // dropped one. The writing phone reported six members and every
+        // reading phone reported five — and the dropped member is the
+        // *stalest*, which is the one whose last-active day decides whether
+        // the streak is current. A reader therefore computed a longer, and
+        // possibly falsely-current, streak than the writer.
+        //
+        // Asserted against `encoded()` rather than `trimmed()`, which is what
+        // the old test did and why any cap of three or more passed it.
+        let full = HouseholdLedger(standings: (0..<HouseholdLedgerFormat.maximumMembers).map {
+            standing(MemberID(String(format: "%08x", $0))!, "20260903", 999)
+        })
+
+        XCTAssertLessThanOrEqual(full.encoded().utf8.count, HouseholdLedgerFormat.maximumPayload)
+        XCTAssertEqual(HouseholdLedger.decoded(full.encoded())?.standings.count,
+                       HouseholdLedgerFormat.maximumMembers,
+                       "what the writer counts and what the reader counts must be the same number")
+    }
+
+    func testTheMemberCapIsArithmeticOnTheByteBudget() {
+        // Two numbers that have to agree cannot both be written down. Spelled
+        // out here because it is the one place the relationship is visible.
+        XCTAssertEqual(HouseholdLedgerFormat.maximumMembers, 5)
+        XCTAssertLessThanOrEqual(
+            2 + HouseholdLedgerFormat.maximumMembers * HouseholdLedgerFormat.maximumMemberBytes,
+            HouseholdLedgerFormat.maximumPayload)
+    }
+
+    func testAHouseholdIsCappedAndKeepsTheFreshest() {
         let many = HouseholdLedger(standings: (0..<10).map {
             standing(MemberID(String(format: "%08x", $0))!, "202609\(String(format: "%02d", $0 + 1))", 1)
         })

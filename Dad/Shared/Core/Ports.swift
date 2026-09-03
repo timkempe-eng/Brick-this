@@ -219,16 +219,8 @@ protocol DadPersisting: AnyObject {
     /// moment that it contained their bank, their maps, or the call they
     /// needed to answer. A safety net you have to remember to fit each time is
     /// not one.
-    /// Who this phone is to the tag, and what the tag last said about
-    /// everyone else.
-    ///
-    /// Two properties rather than one because they have opposite lifetimes.
-    /// `memberID` is minted once and never changes — a new one reads as a new
-    /// person and resets the household's streak. `ledger` is overwritten on
-    /// every tap that reaches a tag.
-    ///
-    /// Optional so an install from before this existed decodes as a household
-    /// of nobody, which shows no shared streak rather than a wrong one.
+    var neverBlocked: BlockedSelection { get set }
+
     /// Why each Mode exists, in the household's own words, and when it comes
     /// up again.
     ///
@@ -259,10 +251,20 @@ protocol DadPersisting: AnyObject {
     /// stale value from an earlier one cannot widen a later bound.
     var lastShieldConfirmedAt: Date? { get set }
 
+    /// Who this phone is to the tag, and what the tag last said about
+    /// everyone else.
+    ///
+    /// Two properties rather than one because they have opposite lifetimes.
+    /// `memberID` is minted once and never changes — a new one reads as a new
+    /// person and resets the household's streak. `ledger` is overwritten on
+    /// every tap that reaches a tag.
+    ///
+    /// `memberID` is Optional so an install from before this existed decodes
+    /// as a household of nobody, which shows no shared streak rather than a
+    /// wrong one.
     var memberID: MemberID? { get set }
     var ledger: HouseholdLedger { get set }
 
-    var neverBlocked: BlockedSelection { get set }
     var emergencyUses: [Date] { get set }
     var hasOnboarded: Bool { get set }
 

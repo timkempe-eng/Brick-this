@@ -57,7 +57,7 @@ struct AgreementView: View {
             .onAppear {
                 reason = existing?.reason ?? ""
                 comesUpAgain = existing?.comesUpAgain ?? true
-                days = existing?.daysUntilRenegotiation() ?? 30
+                days = nextReviewLength
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
@@ -140,6 +140,29 @@ struct AgreementView: View {
                     come up again cannot shrink — it can only be argued about.
                     """)
         }
+    }
+
+    /// What the picker should start on: how long until this agreement is due,
+    /// rounded to something the picker actually offers.
+    ///
+    /// Never the raw remaining days, and this is the bug it exists to prevent.
+    /// An **overdue** agreement has a negative remaining count. Handing that to
+    /// the picker selects nothing — no tag matches −5 — so a person who talks
+    /// it over and saves without touching the row re-files it five days in the
+    /// past, and it is still overdue the moment the conversation ends. Which
+    /// is precisely the inversion `ModeAgreement.renegotiated` says it exists
+    /// to prevent.
+    ///
+    /// The same blank-picker problem, less dramatically, for any live
+    /// agreement with an unoffered number of days left — twelve, say.
+    ///
+    /// Rounding *up* to the nearest offered length is the right direction:
+    /// talking about a rule buys it at least as long as was left, never less.
+    private var nextReviewLength: Int {
+        guard let remaining = existing?.daysUntilRenegotiation(), remaining > 0 else {
+            return offered.contains(30) ? 30 : offered[0]
+        }
+        return offered.first { $0 >= remaining } ?? offered[offered.count - 1]
     }
 
     private func label(days: Int) -> String {

@@ -234,10 +234,24 @@ struct ModeAgreement: Codable, Hashable, Identifiable {
 
     /// A review date `days` from `date`, snapped to the start of that day so it
     /// matches how `isOverdue` reads it back.
+    ///
+    /// `nil` for a non-positive `days`, and that is a guard rather than
+    /// tidiness. A screen that starts its picker on "days remaining" hands
+    /// this a *negative* number for an agreement that is already overdue — so
+    /// two people talk a rule over, save, and it re-files in the past and is
+    /// still overdue the moment the conversation ends. That is the exact
+    /// inversion `renegotiated` exists to prevent, arriving through the one
+    /// door it does not watch.
+    ///
+    /// `nil` means "no date set", which the summary reports as a fact rather
+    /// than a blank. Refusing here rather than at the call site because there
+    /// is more than one call site and only one of them is testable without a
+    /// Mac.
     static func reviewDate(_ days: Int,
                            after date: Date,
                            calendar: Calendar = .current) -> Date? {
-        calendar.date(byAdding: .day, value: days, to: calendar.startOfDay(for: date))
+        guard days > 0 else { return nil }
+        return calendar.date(byAdding: .day, value: days, to: calendar.startOfDay(for: date))
     }
 
     // MARK: - Decoding

@@ -50,9 +50,27 @@ enum HouseholdLedgerFormat {
     /// record beside it.
     static let maximumPayload = 120
 
-    /// Six is more than any household this product is for, and the cap is what
-    /// keeps the payload bounded by construction rather than by hope.
-    static let maximumMembers = 6
+    /// The widest a member's line can be: eight for the id, eight for the
+    /// date, and up to three digits of streak, plus the two separators and the
+    /// leading semicolon.
+    static let maximumMemberBytes = 8 + 8 + 3 + 3
+
+    /// How many members fit, **derived rather than chosen**, and that is the
+    /// fix for a real defect rather than tidiness.
+    ///
+    /// It was six, and six does not fit: the header is two bytes and a member
+    /// is at least twenty, so a sixth member pushed the line past
+    /// `maximumPayload` and `encoded()`'s loop dropped it. The phone that wrote
+    /// the tag reported six people; every phone that read it reported five —
+    /// and the member dropped is the *stalest*, which is the one whose
+    /// `lastActive` decides whether the streak is current. So a reader
+    /// computed a longer, possibly falsely-current streak than the writer.
+    ///
+    /// Two numbers that have to agree cannot both be written down. This one is
+    /// arithmetic on the other, and a test pins that a full household survives
+    /// a round trip.
+    static let maximumMembers =
+        (maximumPayload - 2) / maximumMemberBytes
 }
 
 /// Who a phone is, to the tag. Opaque by construction.

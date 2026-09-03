@@ -116,6 +116,36 @@ final class RewardWiringTests: XCTestCase {
         XCTAssertEqual(h.engine.rewardLedger.earned, RewardLedger.Days(0))
     }
 
+    // MARK: - What must never be dropped
+
+    func testTheClaimHistoryIsNeverTruncated() {
+        // It used to be, at `grantHistoryLimit` — a constant named and
+        // documented for a different list. Nothing tested the bound, a
+        // mutation lowering it to three survived the whole suite, and the
+        // consequence was not a lost row: `spent` is derived by summing this
+        // list, so the hundred-and-first claim refunded a day nobody gave back
+        // and erased a lift that had actually been given.
+        //
+        // Truncation is a memory strategy. It cannot also be an accounting
+        // one, and this is the list where the two collide.
+        let h = youngPerson(earning: 400)
+        h.engine.offer(RewardLedger.Reward(name: "A biscuit", price: RewardLedger.Days(1)),
+                       byTagUID: "PARENT")
+        let biscuit = h.store.rewards[0]
+
+        for _ in 0..<150 {
+            XCTAssertTrue(h.engine.claim(biscuit))
+            h.engine.settle(claim: h.engine.rewardLedger.pending[0].id, byTagUID: "PARENT")
+        }
+
+        XCTAssertEqual(h.store.redemptions.count, 150)
+        XCTAssertEqual(h.engine.rewardLedger.spent, RewardLedger.Days(150),
+                       "every claim spends, and nothing hands a day back on its own")
+        XCTAssertEqual(h.engine.rewardLedger.settled.count, 150,
+                       "a lift that was given stays given")
+        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Days(250))
+    }
+
     func testAClaimYouCannotAffordIsRefused() {
         let h = youngPerson(earning: 1)
         let expensive = RewardLedger.Reward(name: "A weekend away", price: RewardLedger.Days(30))

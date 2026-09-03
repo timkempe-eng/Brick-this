@@ -154,10 +154,27 @@ extension DadEngine {
 
     /// Claim a reward. The young person's act, and it needs nobody's
     /// permission — the balance is the permission, and it was earned.
+    ///
+    /// **This list is deliberately unbounded**, alone among everything stored
+    /// here, and the bound it used to carry was a real defect rather than a
+    /// precaution: `spent` is derived by summing it, so dropping the oldest
+    /// hundredth-and-first row refunded a day nobody gave back *and* erased a
+    /// lift that had actually been given. Truncation is a memory strategy; it
+    /// cannot also be an accounting one.
+    ///
+    /// The bound elsewhere exists because the shield extension decodes this
+    /// file under a tight memory limit — and the shield extension reads
+    /// `activeSession` and nothing else, so it never pays for this list at
+    /// all. What bounds it in practice is that every row is a person choosing
+    /// something, at the rate people choose things.
+    ///
+    /// If it ever does need bounding, the fix is to fold settled claims into a
+    /// carried total, not to drop them: the number has to survive even when
+    /// the row does not.
     @discardableResult
     func claim(_ reward: RewardLedger.Reward) -> Bool {
         guard let updated = rewardLedger.claiming(reward) else { return false }
-        store.redemptions = Array(updated.suffix(Self.grantHistoryLimit))
+        store.redemptions = updated
         return true
     }
 
@@ -223,20 +240,23 @@ extension DadEngine {
         store.ledger.afterExchange(with: nil, own: myStanding)
     }
 
-    /// The payload for the tag, or `nil` when there is nothing worth writing.
+    /// The payload for the tag, or `nil` when there is nothing to say at all.
     ///
-    /// Nothing worth writing is the one-member case: a tag carrying only this
-    /// phone tells the next reader nothing they did not already know, and
-    /// writing it spends a write cycle and a second of somebody holding a
-    /// phone against a sticker.
+    /// Nothing to say means no member has ever been active — not "nothing has
+    /// changed". **Deciding whether a write is worth making is not this
+    /// function's job and cannot be**: it needs to know what the tag is
+    /// currently carrying, and only the NFC session does. `TagScanner` makes
+    /// that call, by comparing this payload against what it just read.
+    ///
+    /// This carried a guard that tried to make the call here — skip a repeat
+    /// write of a solo ledger — and it was dead: both of its branches returned
+    /// the same thing, and a mutation replacing the condition with `false`
+    /// survived the suite. The comment above it described behaviour that had
+    /// never existed. The skip it wanted does happen, one layer up, where the
+    /// information to make it is.
     func tagPayload() -> String? {
         let ledger = ledgerToWrite
-        guard ledger.standings.count > 1 || !store.ledger.standings.isEmpty else {
-            // Still write the first time, so the *other* phone has something
-            // to merge with. Only a repeat write of a solo ledger is skipped.
-            return ledger.standings.isEmpty ? nil : ledger.encoded()
-        }
-        return ledger.encoded()
+        return ledger.standings.isEmpty ? nil : ledger.encoded()
     }
 
     /// Take in what a tag was carrying.

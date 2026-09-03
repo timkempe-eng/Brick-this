@@ -99,6 +99,42 @@ final class AgreementWiringTests: XCTestCase {
         XCTAssertNil(h.engine.renegotiate(modeID: sleep.id, outcome: .changed, byTagUID: "PARENT"))
     }
 
+    // MARK: - Talking about it must move it forward
+
+    func testTalkingOverAnOverdueRuleDoesNotRefileItInThePast() {
+        // The failure this guards, found by review rather than by anything
+        // breaking: `AgreementView` started its picker on "days remaining",
+        // which is *negative* for an overdue agreement. Nothing in the picker
+        // matched, so a person who talked the rule over and saved without
+        // touching the row re-filed it five days ago — and it was still
+        // overdue the moment the conversation ended.
+        //
+        // Guarded in Core rather than on the screen because there is more than
+        // one caller and only one of them can be tested without a Mac.
+        let (h, sleep) = youngPerson()
+        h.engine.agree(modeID: sleep.id, reason: "So I sleep",
+                       comingUpAgainIn: 30, byTagUID: "PARENT")
+        h.clock.advance(days: 35)
+        XCTAssertTrue(h.engine.agreement(for: sleep.id)?
+                        .isOverdue(now: h.clock.now, calendar: .utc) ?? false)
+
+        let after = h.engine.renegotiate(modeID: sleep.id, outcome: .keptAsIs,
+                                         comingUpAgainIn: -5, byTagUID: "PARENT")
+
+        XCTAssertFalse(after?.isOverdue(now: h.clock.now, calendar: .utc) ?? true,
+                       "a conversation cannot leave a rule due before it happened")
+        XCTAssertFalse(after?.comesUpAgain ?? true,
+                       "no date is an honest answer; a date in the past is not")
+    }
+
+    func testZeroDaysIsNoDateRatherThanToday() {
+        // Today would be due all day and overdue tomorrow, which is a
+        // conversation scheduled for the moment it ended.
+        XCTAssertNil(ModeAgreement.reviewDate(0, after: Date(), calendar: .utc))
+        XCTAssertNil(ModeAgreement.reviewDate(-1, after: Date(), calendar: .utc))
+        XCTAssertNotNil(ModeAgreement.reviewDate(1, after: Date(), calendar: .utc))
+    }
+
     // MARK: - The board
 
     func testTheBoardIsDrivenByTheModesAndNotByTheAgreements() {

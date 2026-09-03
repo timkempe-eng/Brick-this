@@ -60,6 +60,27 @@ final class SharedStreakTests: XCTestCase {
                      "one phone's streak wearing a different hat is not a shared one")
     }
 
+    func testThePayloadSaysWhatWeHaveRatherThanWhetherItIsNews() {
+        // Whether a write is worth making needs the tag's current contents,
+        // which only the NFC session has — so `tagPayload` answers the
+        // narrower question and `TagScanner` makes the call by comparing.
+        //
+        // There used to be a guard here trying to skip a repeat solo write.
+        // Both its branches returned the same value; a mutation replacing the
+        // condition with `false` survived the whole suite, and its comment
+        // described behaviour that had never existed.
+        let h = Harness()
+        dadDaily(h, days: 3)
+
+        let first = h.engine.tagPayload()
+        XCTAssertNotNil(first, "a solo phone still writes, or nobody can ever find it")
+
+        // Store it back, which is exactly what a write-back does. The answer
+        // does not change, and that is the point: it is not a diff.
+        h.engine.absorb(tagPayload: first!)
+        XCTAssertEqual(h.engine.tagPayload(), first)
+    }
+
     // MARK: - Two phones and a tag
 
     /// The exchange, end to end: two engines that have never heard of each
