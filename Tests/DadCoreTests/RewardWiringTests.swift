@@ -172,16 +172,27 @@ final class RewardWiringTests: XCTestCase {
         // add-a-field door. The day `Days` stops encoding as a bare number,
         // every stored price is a mismatch and every row disappears: the same
         // day refunded, by a different route.
+        // Every shape that reaches a different failure inside the decoder: a
+        // wrong scalar type, a wrong container type, a value where a keyed
+        // container was expected, and an element that is not an object at all
+        // — that last group is the one `container(keyedBy:)` throws on before
+        // any field is read, which a per-field `try?` alone would not survive.
         let hostile = """
             [{"price":"three","claimedAt":"tomorrow","settledAt":[],"rewardID":7},
              {"id":"not-a-uuid","price":{"nested":1}},
+             {"price":[1,2],"rewardName":99},
              null,
-             12]
+             12,
+             true,
+             [],
+             "a string"]
             """.data(using: .utf8)!
         let rows = LenientDecoding.array(RewardLedger.Redemption.self, from: hostile)
 
-        XCTAssertEqual(rows?.count, 4, "not one row may vanish, whatever shape it arrived in")
+        XCTAssertEqual(rows?.count, 8, "not one row may vanish, whatever shape it arrived in")
         XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+        XCTAssertEqual(rows?.last?.claimedAt, Date(timeIntervalSince1970: 0),
+                       "an element that is not an object at all still becomes a row")
     }
 
     func testASettledClaimStaysSettledAcrossTheStore() {
