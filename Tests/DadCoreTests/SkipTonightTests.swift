@@ -182,6 +182,29 @@ final class SkipTonightTests: XCTestCase {
     func testTheWarningNamesTheModeThatIsComing() {
         let h = Harness(calendar: utc)
         let sleep = nightly(h)
+        // Warnings are only owed for windows the system has accepted, so a
+        // sync has to have happened — which in the app it always has, at
+        // launch and at every foreground.
+        h.engine.syncSchedules()
+        XCTAssertEqual(h.engine.nextScheduleWarning?.modeID, sleep.id)
+    }
+
+    func testAModeTheSystemRefusedToRegisterIsNotWarnedAbout() {
+        // The activity cap is real and `syncSchedules` reports refusals rather
+        // than swallowing them. A Mode that is perfectly configured and still
+        // not going to run must not be announced — that is the
+        // looks-configured-does-nothing failure in notification form.
+        let h = Harness(calendar: utc)
+        let sleep = nightly(h)
+        h.scheduler.failingNames = Set(
+            ScheduleWindows.windows(for: [RecurringSchedule(modeID: sleep.id,
+                                                            schedule: sleep.schedule!)]).map(\.name))
+
+        XCTAssertFalse(h.engine.syncSchedules())
+        XCTAssertNil(h.engine.nextScheduleWarning)
+
+        h.scheduler.failingNames = []
+        XCTAssertTrue(h.engine.syncSchedules())
         XCTAssertEqual(h.engine.nextScheduleWarning?.modeID, sleep.id)
     }
 
@@ -189,6 +212,7 @@ final class SkipTonightTests: XCTestCase {
         // "Sleep in ten minutes" is a lie when the phone is already Dadded.
         let h = Harness(calendar: utc)
         let sleep = nightly(h)
+        h.engine.syncSchedules()
         h.engine.dad(with: sleep)
         XCTAssertNil(h.engine.nextScheduleWarning)
     }

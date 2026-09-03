@@ -18,6 +18,7 @@ struct DadEngine {
     let clock: Clock
     let widget: WidgetRefreshing
     let usage: UsageWatching
+    let notifier: Notifying
 
     /// - Parameter calendar: only the allowance's day boundary depends on it.
     ///   Injected so a test can pin a time zone, the same way `DadStats` does.
@@ -29,6 +30,7 @@ struct DadEngine {
          clock: Clock,
          widget: WidgetRefreshing,
          usage: UsageWatching,
+         notifier: Notifying = SilentNotifier(),
          calendar: Calendar = .current) {
         self.store = store
         self.shield = shield
@@ -36,6 +38,7 @@ struct DadEngine {
         self.clock = clock
         self.widget = widget
         self.usage = usage
+        self.notifier = notifier
         self.calendar = calendar
     }
 
@@ -224,6 +227,7 @@ struct DadEngine {
             scheduler.scheduleRelease(at: release)
         }
 
+        syncScheduleWarning()
         widget.reload()
         return start
     }
@@ -255,6 +259,10 @@ struct DadEngine {
             startBreak(mode: mode, length: length,
                        startedBySchedule: session.startedBySchedule)
         }
+
+        // A session ending re-opens the question: the next window can run
+        // again now, so it can be warned about again.
+        syncScheduleWarning()
 
         // Whichever process ended this — the app, the shield's emergency
         // button, the DeviceActivity monitor — the Lock Screen must stop
@@ -343,6 +351,10 @@ struct DadEngine {
 
         guard failed.isEmpty else { return false }
         if store.syncedSchedules != desired { store.syncedSchedules = desired }
+        // An edited schedule moves the window, so it moves the warning. This
+        // is the seam an edit passes through, which is why the call is here
+        // rather than in the editor.
+        syncScheduleWarning()
         return true
     }
 
@@ -525,17 +537,30 @@ struct DadEngine {
         guard let skip = nextSkippableNight(modeID: modeID) else { return nil }
         store.scheduleSkips = ScheduleSkipping.adding(skip, to: store.scheduleSkips,
                                                       now: clock.now, calendar: calendar)
+        // The night just skipped is no longer the night to warn about. A
+        // notification left standing for it is the specific lie this feature
+        // exists to avoid — "Sleep in ten minutes" for a Sleep that was told
+        // to sit tonight out.
+        syncScheduleWarning()
         widget.reload()
         return skip
     }
 
     /// The next warning owed across every Mode, or `nil` when none is.
     var nextScheduleWarning: ScheduleWarning? {
-        ScheduleWarning.next(among: store.modes,
-                             now: clock.now,
-                             skips: store.scheduleSkips,
-                             isSessionActive: store.activeSession != nil,
-                             calendar: calendar)
+        // Only Modes whose windows the system has actually accepted. The
+        // system caps how many activities an app may monitor, and
+        // `syncSchedules` reports the refusals rather than swallowing them —
+        // so a Mode can be perfectly configured and still not be going to run.
+        // Warning about that one would be the looks-configured-does-nothing
+        // failure in notification form, and it is the same reasoning that
+        // keeps a Mode blocking nothing out of the answer.
+        let registered = Set(store.syncedSchedules.map(\.modeID))
+        return ScheduleWarning.next(among: store.modes.filter { registered.contains($0.id) },
+                                    now: clock.now,
+                                    skips: store.scheduleSkips,
+                                    isSessionActive: store.activeSession != nil,
+                                    calendar: calendar)
     }
 
     /// The system reached the end of a Mode's scheduled window.
@@ -559,6 +584,13 @@ struct DadEngine {
     /// half-finished start nor a half-finished stop can strand the user.
     func reconcile() {
         syncSchedules()
+
+        // After the sync and outside it, so a foreground that could not
+        // register everything still corrects the warning to what *is*
+        // registered — rather than leaving one standing for a Mode the system
+        // refused. Every return below this line is a state the warning has to
+        // be right about too.
+        syncScheduleWarning()
 
         guard var session = store.activeSession else {
             shield.clear()
@@ -1054,6 +1086,28 @@ struct DadEngine {
     /// impossible.
     var stats: DadStats {
         DadStats(sessions: store.history, now: clock.now, calendar: calendar)
+    }
+
+    // MARK: - Warning before a scheduled Mode lands
+
+    /// Hands the soonest warning owed to the system, replacing whatever was
+    /// pending.
+    ///
+    /// Called from `reconcile`, which runs at launch and at every foreground,
+    /// and from the two engine acts that can change the answer without one —
+    /// starting or ending a session, and skipping a night. Editing a Mode goes
+    /// through `syncSchedules`, which calls this too.
+    ///
+    /// Recomputed rather than tracked. `ScheduleWarning.next(among:)` breaks
+    /// ties on the Mode id precisely so the answer is stable, which means
+    /// re-registering an unchanged warning is a replacement of itself and not
+    /// a duplicate.
+    func syncScheduleWarning() {
+        guard let warning = nextScheduleWarning,
+              let mode = store.modes.first(where: { $0.id == warning.modeID }) else {
+            return notifier.setPendingWarning(nil)
+        }
+        notifier.setPendingWarning(PendingWarning(warning, modeName: mode.name))
     }
 
     // MARK: - Rewards

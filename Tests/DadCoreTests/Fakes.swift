@@ -143,6 +143,20 @@ final class TestClock: Clock {
     func advance(days: Int) { advance(TimeInterval(days) * 24 * 60 * 60) }
 }
 
+/// Records the one warning the system is currently holding.
+final class SpyNotifier: Notifying {
+    /// The current pending warning, or `nil`. A single value rather than a
+    /// log, because a single value is what the port promises the system holds
+    /// — a log would let a test pass while two warnings were live.
+    private(set) var pending: PendingWarning?
+    private(set) var calls = 0
+
+    func setPendingWarning(_ warning: PendingWarning?) {
+        pending = warning
+        calls += 1
+    }
+}
+
 /// A world under test, with everything reachable.
 struct Harness {
     let store = FakeStore()
@@ -150,6 +164,7 @@ struct Harness {
     let scheduler = SpyScheduler()
     let widget = SpyWidget()
     let usage = SpyUsageWatcher()
+    let notifier = SpyNotifier()
     let clock: TestClock
     let engine: DadEngine
 
@@ -162,7 +177,7 @@ struct Harness {
         self.clock = clock
         self.engine = DadEngine(store: store, shield: shield, scheduler: scheduler,
                                 clock: clock, widget: widget, usage: usage,
-                                calendar: calendar)
+                                notifier: notifier, calendar: calendar)
     }
 
     @discardableResult

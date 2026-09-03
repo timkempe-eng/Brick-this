@@ -1,6 +1,6 @@
 import Foundation
 
-/// The six things `DadEngine` needs from the outside world.
+/// The seven things `DadEngine` needs from the outside world.
 ///
 /// Each one hides a framework or a global that would otherwise make the engine
 /// untestable and Mac-only. The iOS adapters live in `Dad/Shared/Adapters`;
@@ -103,6 +103,59 @@ protocol UsageWatching {
 
     /// Stops counting for this Mode. Safe when nothing is registered.
     func stopWatching(modeID: UUID)
+}
+
+/// Saying something is about to happen, with the app closed. Implemented by
+/// UserNotifications.
+///
+/// A port of its own rather than a method on `SessionScheduling`, though both
+/// are "wake me later": that one asks the *system* to do something and its
+/// failure is a Mode that never runs, while this one asks a *person* to and its
+/// failure is a surprise. They are also permissioned separately, and the second
+/// permission is one somebody can decline while the product still works.
+///
+/// Exactly one warning is ever pending. Seven Modes' worth queued days out is a
+/// schedule of its own, and every one of them is a guess that a session, an
+/// edit or a skip can invalidate — see `ScheduleWarning.next(among:)`.
+protocol Notifying {
+
+    /// Replaces whatever was pending with this, or clears it for `nil`.
+    ///
+    /// One call rather than schedule-and-cancel because the two must not be
+    /// able to disagree: a cancel that fails leaves a notification for a night
+    /// that was skipped, which is the specific lie this feature exists to
+    /// avoid making.
+    func setPendingWarning(_ warning: PendingWarning?)
+}
+
+/// One notification, described where it can be tested.
+///
+/// The copy is Core's, not the adapter's, for the reason every other string is:
+/// `lint-vocabulary.sh` only reads this repo's source, and a sentence assembled
+/// inside a framework callback is a sentence nothing checks.
+struct PendingWarning: Equatable {
+
+    /// Stable across re-registrations of the same warning, so the system
+    /// replaces rather than stacks.
+    let id: String
+
+    let fireAt: Date
+    let title: String
+    let body: String
+
+    init(_ warning: ScheduleWarning, modeName: String) {
+        // The Mode and the window, not the moment of firing: two warnings for
+        // the same window are the same notification, however many times a
+        // foreground recomputed it.
+        self.id = "warning.\(warning.modeID.uuidString).\(Int(warning.windowStart.timeIntervalSince1970))"
+        self.fireAt = warning.fireAt
+        self.title = Vocab.appName
+        // The time is written from `windowStart`, which the warning carries
+        // precisely so the copy and the schedule cannot disagree.
+        self.body = Vocab.warning(mode: modeName,
+                                  at: warning.windowStart.formatted(.dateTime.hour().minute()),
+                                  minutes: Int(warning.leadTime / 60))
+    }
 }
 
 /// Telling the Lock Screen widget its timeline is stale. Implemented by
@@ -212,4 +265,18 @@ protocol DadPersisting: AnyObject {
     /// Modes and a lost streak with no explanation, and the first thing they
     /// did would overwrite the data they still have.
     var hasDataFromANewerBuild: Bool { get }
+}
+
+/// A `Notifying` that says nothing.
+///
+/// The default the engine is constructed with, so a process that has no
+/// business asking for notification permission — the shield extension, the
+/// DeviceActivity monitor, the widget — gets one by not thinking about it.
+/// Only the app passes a real adapter.
+///
+/// A no-op rather than an optional port. An `if let notifier` at four call
+/// sites is four places to forget, and the thing forgotten would be a warning
+/// that never arrives.
+struct SilentNotifier: Notifying {
+    func setPendingWarning(_ warning: PendingWarning?) {}
 }

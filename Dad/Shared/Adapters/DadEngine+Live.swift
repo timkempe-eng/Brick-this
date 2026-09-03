@@ -9,6 +9,7 @@ extension DadEngine {
         scheduler: DeviceActivityScheduler(),
         clock: SystemClock(),
         widget: WidgetKitRefresher(),
-        usage: DeviceActivityUsageWatcher()
+        usage: DeviceActivityUsageWatcher(),
+        notifier: UserNotificationsNotifier()
     )
 }

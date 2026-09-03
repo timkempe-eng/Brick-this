@@ -65,6 +65,7 @@ targets:
       - sdk: DeviceActivity.framework
       - sdk: CoreNFC.framework
       - sdk: WidgetKit.framework
+      - sdk: UserNotifications.framework
 
   # Draws the "Dadded." screen over blocked apps.
   DadShieldConfiguration:
@@ -87,6 +88,7 @@ targets:
       - sdk: FamilyControls.framework
       - sdk: DeviceActivity.framework
       - sdk: WidgetKit.framework
+      - sdk: UserNotifications.framework
 
   # Handles the buttons on that screen.
   DadShieldAction:
@@ -106,6 +108,7 @@ targets:
       - sdk: FamilyControls.framework
       - sdk: DeviceActivity.framework
       - sdk: WidgetKit.framework
+      - sdk: UserNotifications.framework
 
   # Ends timed sessions without the app running.
   DadActivityMonitor:
@@ -125,6 +128,7 @@ targets:
       - sdk: ManagedSettings.framework
       - sdk: FamilyControls.framework
       - sdk: WidgetKit.framework
+      - sdk: UserNotifications.framework
 
   # Reads the session and draws it on the Lock Screen.
   #

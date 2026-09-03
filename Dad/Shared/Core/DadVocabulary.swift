@@ -85,6 +85,23 @@ enum Vocab {
         + "Settings › Family. You can also set this phone to \"Mine\" for now; everything "
         + "works, but it can be switched off from here."
 
+    // MARK: The warning before a scheduled Mode
+
+    /// "Sleep Dads your phone at 22:00 — 10 minutes."
+    ///
+    /// The whole answer to the most-repeated complaint about scheduled
+    /// blockers: one that lands mid-sentence is the one that gets switched off.
+    /// It names the Mode, the time and how long you have, and it asks for
+    /// nothing — a warning with a "postpone" button is a schedule you did not
+    /// agree to.
+    static func warning(mode: String, at time: String, minutes: Int) -> String {
+        "\(mode) \(verbsThirdPerson) your phone at \(time) — \(minutes) minute\(minutes == 1 ? "" : "s")."
+    }
+
+    /// `Dads`, spelled here so the warning copy reads through the same
+    /// vocabulary as everything else the lint checks.
+    static let verbsThirdPerson = verbThirdPerson
+
     // MARK: Asking, and granting
     static let askAction = "Ask for a few minutes"
     static func asking(mode: String) -> String {
