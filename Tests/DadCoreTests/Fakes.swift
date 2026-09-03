@@ -9,6 +9,8 @@ final class FakeStore: DadPersisting {
     var history: [DadSession] = []
     var tags = TagPairing()
     var neverBlocked = BlockedSelection()
+    var memberID: MemberID?
+    var ledger = HouseholdLedger()
     var household = Household.solo
     var scheduleSkips: [ScheduleSkip] = []
     var grantExchanges: [GrantExchange] = []

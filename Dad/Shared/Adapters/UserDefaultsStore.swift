@@ -36,6 +36,8 @@ final class UserDefaultsStore: DadPersisting {
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
+        static let memberID = "memberID"
+        static let ledger = "ledger"
     }
 
     var modes: [DadMode] {
@@ -82,6 +84,21 @@ final class UserDefaultsStore: DadPersisting {
 
     /// Absent decodes as `.solo` — one adult Dadding themselves, which is
     /// exactly how every install before this behaved.
+    /// Absent means this phone has not been in a household exchange yet.
+    /// Minted lazily by the engine rather than here, so reading the store
+    /// never writes to it.
+    var memberID: MemberID? {
+        get { decode(MemberID.self, Key.memberID) }
+        set { encode(newValue, Key.memberID) }
+    }
+
+    /// Absent decodes as nobody, which shows no shared streak rather than a
+    /// wrong one — the failure this whole feature has to avoid.
+    var ledger: HouseholdLedger {
+        get { decode(HouseholdLedger.self, Key.ledger) ?? HouseholdLedger() }
+        set { encode(newValue, Key.ledger) }
+    }
+
     var household: Household {
         get { decode(Household.self, Key.household) ?? .solo }
         set { encode(newValue, Key.household) }

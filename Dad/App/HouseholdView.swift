@@ -20,6 +20,7 @@ struct HouseholdView: View {
         NavigationStack {
             List {
                 roleSection
+                sharedStreakSection
 
                 if model.household.role == .youngPerson {
                     ladderSection
@@ -53,6 +54,62 @@ struct HouseholdView: View {
                  ? "You chose the \(Vocab.modeNoun.lowercased())s and you hold the \(Vocab.tagNoun). Nothing on this phone asks anyone's permission."
                  : "The \(Vocab.modeNoun.lowercased())s here were agreed with a grown-up, so this phone can't rewrite them on its own. How much of the arrangement it *can* change grows as the habit holds — see below.")
         }
+    }
+
+    // MARK: - The number both phones see
+
+    /// The shared streak, and how fresh it is.
+    ///
+    /// A parent's own device habits are among the strongest predictors of
+    /// their child's, and a blocker running on exactly one phone in the house
+    /// reads as a punishment. So this counts the days *everyone* took part —
+    /// which means the grown-up's phone can end it, and that is the point
+    /// rather than a side effect.
+    ///
+    /// The freshness is never hidden. The exchange happens on a tap made
+    /// inside the app, so the number can lag by days, and a lagging number
+    /// presented as a live one is worse than no number at all.
+    @ViewBuilder
+    private var sharedStreakSection: some View {
+        Section {
+            if let streak = model.householdStreak {
+                LabeledContent("Everyone, together") {
+                    Text(streak.days == 1 ? "1 day" : "\(streak.days) days")
+                        .foregroundStyle(streak.isCurrent ? .primary : .secondary)
+                }
+                LabeledContent("Phones in it", value: "\(streak.members)")
+            } else {
+                Text("Just this phone so far.")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Together")
+        } footer: {
+            Text(sharedStreakFooter)
+        }
+    }
+
+    private var sharedStreakFooter: String {
+        guard let streak = model.householdStreak else {
+            return """
+                Tap the same \(Vocab.tagNoun) with another phone in the house and it \
+                joins in. The \(Vocab.tagNoun) carries the count itself — no account, \
+                no sign-in, and nothing about either of you leaves it. A grown-up who \
+                \(Vocab.verbThirdPerson) too is the single strongest thing this app has.
+                """
+        }
+        if !streak.isCurrent {
+            return """
+                Counted to \(streak.asOf?.description ?? "an earlier day"), because that \
+                is the last time every phone touched the \(Vocab.tagNoun). Tap it to bring \
+                this up to date — the number only moves when the \(Vocab.tagNoun) sees you.
+                """
+        }
+        return """
+            Days every phone in the house took part, so anyone can end it and nobody \
+            can carry it alone. Updated whenever a phone taps the \(Vocab.tagNoun) from \
+            inside \(Vocab.appName) — a Shortcuts tap is too quick to write to it.
+            """
     }
 
     // MARK: - Where they are

@@ -1011,4 +1011,93 @@ struct DadEngine {
     var stats: DadStats {
         DadStats(sessions: store.history, now: clock.now, calendar: calendar)
     }
+
+    // MARK: - The household's streak, carried on the tag
+
+    /// This phone's id, minted on first use.
+    ///
+    /// Lazy rather than created at install, so a household that never uses the
+    /// shared streak never has an id at all — and so reading the store is not
+    /// something that writes to it. Once minted it is never replaced: a new id
+    /// reads as a new person and would reset the household to zero.
+    func memberID() -> MemberID {
+        if let existing = store.memberID { return existing }
+        let fresh = MemberID.fresh()
+        store.memberID = fresh
+        return fresh
+    }
+
+    /// What this phone would tell the tag about itself.
+    ///
+    /// Derived from the session history every time rather than stored, for the
+    /// reason `DadStats` is: a stored streak is a second number that can
+    /// disagree with the first, and the one it would disagree with is the one
+    /// on the screen next to it.
+    ///
+    /// `nil` before there is anything to report. A member with no sessions is
+    /// not a member with a streak of zero — writing them to the tag would end
+    /// the household's run on the day somebody installed the app.
+    var myStanding: MemberStanding? {
+        let stats = self.stats
+        guard let lastActive = store.history.map(\.startedAt).max() else { return nil }
+        return MemberStanding(member: memberID(),
+                              lastActive: ScheduleOccurrence(startingAt: lastActive,
+                                                             calendar: calendar),
+                              streak: stats.currentStreak)
+    }
+
+    /// The ledger as it should be written back: what the tag said, updated
+    /// with what this phone knows about itself.
+    ///
+    /// `setting` rather than `merged` for our own entry — this phone is the
+    /// authority on its own streak even when its news is worse. See
+    /// `HouseholdLedger.setting(_:)`.
+    var ledgerToWrite: HouseholdLedger {
+        store.ledger.afterExchange(with: nil, own: myStanding)
+    }
+
+    /// The payload for the tag, or `nil` when there is nothing worth writing.
+    ///
+    /// Nothing worth writing is the one-member case: a tag carrying only this
+    /// phone tells the next reader nothing they did not already know, and
+    /// writing it spends a write cycle and a second of somebody holding a
+    /// phone against a sticker.
+    func tagPayload() -> String? {
+        let ledger = ledgerToWrite
+        guard ledger.standings.count > 1 || !store.ledger.standings.isEmpty else {
+            // Still write the first time, so the *other* phone has something
+            // to merge with. Only a repeat write of a solo ledger is skipped.
+            return ledger.standings.isEmpty ? nil : ledger.encoded()
+        }
+        return ledger.encoded()
+    }
+
+    /// Take in what a tag was carrying.
+    ///
+    /// Returns whether anything changed, so a caller can decide whether the
+    /// write-back is worth the second it costs. A payload this build cannot
+    /// read changes nothing and is reported as such — never half-applied,
+    /// because the write-back would then overwrite the other phone's real
+    /// data with our guess at it.
+    @discardableResult
+    func absorb(tagPayload payload: String) -> Bool {
+        guard HouseholdLedger.decoded(payload) != nil else { return false }
+        let merged = store.ledger.afterExchange(with: payload, own: nil)
+        guard merged != store.ledger else { return false }
+        store.ledger = merged
+        widget.reload()
+        return true
+    }
+
+    /// The number both people see, or `nil` when there is no household to
+    /// speak of.
+    ///
+    /// Computed against `ledgerToWrite` rather than the stored ledger, so this
+    /// phone's own contribution is current even when the tag has not been
+    /// touched today. The other members are as stale as the last exchange, and
+    /// `HouseholdStreak.asOf` is what says so.
+    var householdStreak: HouseholdStreak? {
+        ledgerToWrite.streak(asOf: ScheduleOccurrence(startingAt: clock.now, calendar: calendar),
+                             calendar: calendar)
+    }
 }

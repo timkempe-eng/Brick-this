@@ -23,6 +23,11 @@ final class DadModel: ObservableObject {
     /// session history out of `UserDefaults` and back through JSON, and the
     /// stats screen touches it a dozen times per render.
     @Published private(set) var stats = DadStats(sessions: [])
+
+    /// The number both phones see, or `nil` when there is no household yet.
+    /// Snapshotted for the same reason `stats` is — it derives this phone's own
+    /// standing from the whole session history.
+    @Published private(set) var householdStreak: HouseholdStreak?
     @Published var authorization: AuthorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @Published var banner: String?
     @Published var pendingModeChoice = false
@@ -56,6 +61,7 @@ final class DadModel: ObservableObject {
         pendingResume = engine.pendingResume
         pendingRequest = engine.pendingRequest
         stats = engine.stats
+        householdStreak = engine.householdStreak
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
     }
@@ -179,6 +185,26 @@ final class DadModel: ObservableObject {
             authorization = AuthorizationCenter.shared.authorizationStatus
             banner = member == .child ? Vocab.childAuthorizationFailed : Vocab.authorizationDeclined
         }
+    }
+
+    // MARK: - The household's streak
+
+    /// What this phone would leave on the tag, and its own line in it.
+    ///
+    /// Read before the NFC session opens, because the merge happens inside a
+    /// completion handler on a background queue and nothing there may reach
+    /// the store. Both are values; see `TagScanner.exchange`.
+    var ledgerToWrite: HouseholdLedger { engine.ledgerToWrite }
+    var myStanding: MemberStanding? { engine.myStanding }
+
+    /// Take in what the tag turned out to be carrying.
+    ///
+    /// Called after the session closes. Absorbing is not what makes the write
+    /// happen — that already did — so a failure here costs the local copy of
+    /// the household, not the shared one.
+    func absorb(tagLedger payload: String) {
+        guard engine.absorb(tagPayload: payload) else { return }
+        reload()
     }
 
     // MARK: - Tapping

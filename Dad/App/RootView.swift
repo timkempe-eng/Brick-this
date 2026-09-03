@@ -88,7 +88,16 @@ struct HomeView: View {
                     Button {
                         scanner.scan(prompt: model.isDadded
                                      ? "Hold your iPhone near your \(Vocab.tagNoun) to \(Vocab.unVerb)."
-                                     : "Hold your iPhone near your \(Vocab.tagNoun).") { uid in
+                                     : "Hold your iPhone near your \(Vocab.tagNoun).",
+                                     // The household exchange rides along on the
+                                     // same session, so it costs no second
+                                     // prompt and no separate ceremony. It is
+                                     // also the only moment it can happen: a tap
+                                     // through a Shortcuts automation has no UI
+                                     // and cannot open a write session.
+                                     ledger: model.ledgerToWrite,
+                                     own: model.myStanding,
+                                     onLedger: { model.absorb(tagLedger: $0) }) { uid in
                             model.tap(tagUID: uid)
                         }
                     } label: {
