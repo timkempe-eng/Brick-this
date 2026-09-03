@@ -564,6 +564,23 @@ anyone's time.
       - The warning had been decided and tested for days and delivered never,
         which is the shape of a feature that reads as built.
 
+- [x] **A mutation reached a pushed commit, and the suite would not have caught
+      it.** An adversarial review was running `scripts/mutate.sh` in the same
+      working tree, and a `git add -A` landed inside the window where the
+      mutation was applied. `store.redemptions` shipped capped at 3 instead of
+      `grantHistoryLimit` for one commit, corrected by the next.
+
+      Two things worth keeping. **Never `git add -A` while a mutation harness
+      is live in the same tree** — `mutate.sh` restores the file itself, so the
+      only unsafe thing is somebody else staging during the window; use
+      explicit paths, or run the review in a worktree.
+
+      And the reason it was silent: **nothing tests the redemption cap.** The
+      mutation survived all 803 tests, which is why it looked like an ordinary
+      diff. It is the same finding the constant sweep keeps producing, arrived
+      at by accident — a cap borrowed from `grantHistoryLimit` for a second
+      list, with the name still saying "grant".
+
 - [x] **A constant sweep, and what it keeps finding.** Nine constants mutated;
       three survived and now have tests — an allowance ceiling, a request's
       lifetime, a bounded exchange history. All three were the emergency-
