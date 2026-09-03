@@ -24,7 +24,7 @@ runs anywhere.
 | Land work | any session | merge to `main`, push |
 | Delete merged branches | the workflow | *Branch cleanup* → `delete-merged` |
 | Keep unmerged work without its branch | the workflow | *Branch cleanup* → `archive` |
-| Change the default branch | Settings → Branches, in a browser | nothing in a session can |
+| Change the default branch | Settings → General → Default branch, in a browser | nothing in a session can |
 
 ## The audit
 
@@ -88,6 +88,6 @@ not survive.
 The repository's default branch is still `claude/tim-phone-focus-device-tbu04b`
 (PARKING_LOT.md tracks the rename). GitHub refuses to delete the default
 branch, and the script marks it `kept`, so it will survive `delete-merged`
-until the rename is done in Settings → Branches. After the rename, one more
+until the rename is done under Settings → General → Default branch. After the rename, one more
 `delete-merged` run from `main` removes it and the branch this workflow first
 shipped on.

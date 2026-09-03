@@ -74,7 +74,7 @@ left is calendar time and a browser.
 
 ## Repository settings
 
-- [ ] **Rename the default branch to `main`.** Settings → Branches. `main`
+- [ ] **Rename the default branch to `main`.** Settings → General → Default branch (Settings → Branches is Rulesets, not this). `main`
       carries everything and CI is green on its head; the default is still
       `claude/tim-phone-focus-device-tbu04b`. Nothing in a session can flip it —
       it is a repository setting, not a git operation. Afterwards, run the
