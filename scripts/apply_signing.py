@@ -33,6 +33,14 @@ def main(argv):
 
     unmatched = []
     for name, target in spec["targets"].items():
+        # Test bundles are never signed by match and have no profile. They
+        # still carry a PRODUCT_BUNDLE_IDENTIFIER, so without this they look
+        # like a shipping target whose profile went missing — which is what
+        # stopped the first successful signing run, after match had already
+        # done its work. preflight.py's `ships()` draws the same line.
+        if str(target.get("type", "")).startswith("bundle."):
+            continue
+
         base = target.setdefault("settings", {}).setdefault("base", {})
         bundle_id = base.get("PRODUCT_BUNDLE_IDENTIFIER")
         profile = profiles.get(bundle_id)
@@ -45,7 +53,8 @@ def main(argv):
         base["DEVELOPMENT_TEAM"] = team_id
 
     if unmatched:
-        sys.exit("No profile supplied for: " + ", ".join(unmatched))
+        sys.exit("No profile supplied for shipping target(s): " + ", ".join(unmatched)
+                 + "\nEvery product target's bundle id must be in the Fastfile's signing list.")
 
     # CI build numbers must be monotonic or TestFlight rejects the upload as a
     # duplicate. The Actions run number is monotonic and free.
