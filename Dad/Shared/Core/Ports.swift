@@ -176,6 +176,15 @@ protocol DadPersisting: AnyObject {
     ///
     /// Optional so an install from before this existed decodes as a household
     /// of nobody, which shows no shared streak rather than a wrong one.
+    /// What a grown-up offers, and what has been claimed against it.
+    ///
+    /// Two lists rather than one ledger, because the ledger itself is derived:
+    /// what is earned comes from the session history and never from a stored
+    /// number. A stored balance is a number somebody could edit, and this one
+    /// decides what a young person is owed.
+    var rewards: [RewardLedger.Reward] { get set }
+    var redemptions: [RewardLedger.Redemption] { get set }
+
     /// The last moment the app saw a session running *and* authorization
     /// approved — the most recent instant it can honestly say the shield was
     /// in place.

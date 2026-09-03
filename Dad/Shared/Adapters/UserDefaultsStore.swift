@@ -36,6 +36,8 @@ final class UserDefaultsStore: DadPersisting {
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
+        static let rewards = "rewards"
+        static let redemptions = "redemptions"
         static let lastShieldConfirmedAt = "lastShieldConfirmedAt"
         static let memberID = "memberID"
         static let ledger = "ledger"
@@ -88,6 +90,18 @@ final class UserDefaultsStore: DadPersisting {
     /// Absent means this phone has not been in a household exchange yet.
     /// Minted lazily by the engine rather than here, so reading the store
     /// never writes to it.
+    /// Lenient, like the other arrays: one unreadable reward must not take the
+    /// household's claim history with it.
+    var rewards: [RewardLedger.Reward] {
+        get { decodeArray(RewardLedger.Reward.self, Key.rewards) ?? [] }
+        set { encode(newValue, Key.rewards) }
+    }
+
+    var redemptions: [RewardLedger.Redemption] {
+        get { decodeArray(RewardLedger.Redemption.self, Key.redemptions) ?? [] }
+        set { encode(newValue, Key.redemptions) }
+    }
+
     var lastShieldConfirmedAt: Date? {
         get { decode(Date.self, Key.lastShieldConfirmedAt) }
         set { encode(newValue, Key.lastShieldConfirmedAt) }

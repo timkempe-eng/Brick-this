@@ -195,6 +195,46 @@ final class DadModel: ObservableObject {
         }
     }
 
+    // MARK: - Rewards
+
+    /// Derived on read, like `stats`, and not snapshotted: the rewards screen
+    /// is the only thing that asks, and it asks once per render rather than a
+    /// dozen times.
+    var rewardLedger: RewardLedger { engine.rewardLedger }
+
+    func offer(_ reward: RewardLedger.Reward, byTagUID tagUID: String?) {
+        guard engine.offer(reward, byTagUID: tagUID) else { return refuse() }
+        reload()
+    }
+
+    func retire(rewardID: UUID, byTagUID tagUID: String?) {
+        guard engine.retire(rewardID: rewardID, byTagUID: tagUID) else { return refuse() }
+        reload()
+    }
+
+    func claim(_ reward: RewardLedger.Reward) {
+        guard engine.claim(reward) else { return }
+        reload()
+    }
+
+    func withdraw(claim id: UUID) {
+        guard engine.withdraw(claim: id) else { return }
+        reload()
+    }
+
+    func settle(claim id: UUID, byTagUID tagUID: String?) {
+        guard engine.settle(claim: id, byTagUID: tagUID) else { return refuse() }
+        reload()
+    }
+
+    /// The refusal a wrong or missing tag earns.
+    ///
+    /// One sentence, and it names the tag rather than the person: the thing
+    /// that was missing is proof, not trustworthiness.
+    private func refuse() {
+        banner = "That needs your \(Vocab.tagNoun). Hold the phone near it and try again."
+    }
+
     // MARK: - The household's streak
 
     /// What this phone would leave on the tag, and its own line in it.

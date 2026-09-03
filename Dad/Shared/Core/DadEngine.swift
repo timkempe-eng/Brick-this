@@ -1056,6 +1056,83 @@ struct DadEngine {
         DadStats(sessions: store.history, now: clock.now, calendar: calendar)
     }
 
+    // MARK: - Rewards
+
+    /// What is on offer, what has been claimed, and what the history has
+    /// earned.
+    ///
+    /// Derived on every read rather than stored, exactly as `stats` is: a
+    /// stored balance is a number somebody could edit, and this one decides
+    /// what a young person is owed.
+    var rewardLedger: RewardLedger {
+        RewardLedger(rewards: store.rewards,
+                     redemptions: store.redemptions,
+                     sessions: store.history,
+                     now: clock.now,
+                     calendar: calendar)
+    }
+
+    /// Whether a grown-up is demonstrably here.
+    ///
+    /// The same answer the grant flow gives, and for the same reason: on a
+    /// young person's phone the proof is a tap of the paired tag, which the
+    /// grown-up is holding. No account, no server, no PIN anybody here has to
+    /// get right. On a phone that is its owner's, the question does not
+    /// arise — they are the grown-up.
+    private func isGrownUpPresent(tagUID: String?) -> Bool {
+        guard store.household.role == .youngPerson else { return true }
+        guard let tagUID else { return false }
+        return isPaired(tagUID: tagUID)
+    }
+
+    /// Put a reward on offer. A grown-up's act.
+    @discardableResult
+    func offer(_ reward: RewardLedger.Reward, byTagUID tagUID: String? = nil) -> Bool {
+        guard isGrownUpPresent(tagUID: tagUID) else { return false }
+        var rewards = store.rewards.filter { $0.id != reward.id }
+        rewards.append(reward)
+        store.rewards = rewards
+        return true
+    }
+
+    /// Take an offer back without erasing the times it was honoured.
+    @discardableResult
+    func retire(rewardID: UUID, byTagUID tagUID: String? = nil) -> Bool {
+        guard isGrownUpPresent(tagUID: tagUID) else { return false }
+        guard let index = store.rewards.firstIndex(where: { $0.id == rewardID }) else { return false }
+        var rewards = store.rewards
+        rewards[index].isRetired = true
+        store.rewards = rewards
+        return true
+    }
+
+    /// Claim a reward. The young person's act, and it needs nobody's
+    /// permission — the balance is the permission, and it was earned.
+    @discardableResult
+    func claim(_ reward: RewardLedger.Reward) -> Bool {
+        guard let updated = rewardLedger.claiming(reward) else { return false }
+        store.redemptions = Array(updated.suffix(Self.grantHistoryLimit))
+        return true
+    }
+
+    /// Take an unsettled claim back, returning its days.
+    @discardableResult
+    func withdraw(claim id: UUID) -> Bool {
+        guard let updated = rewardLedger.withdrawing(claim: id) else { return false }
+        store.redemptions = updated
+        return true
+    }
+
+    /// The lift actually happened. A grown-up's act, and the only one that is
+    /// permanent: no state in an app can make a thing that happened not have.
+    @discardableResult
+    func settle(claim id: UUID, byTagUID tagUID: String? = nil) -> Bool {
+        guard isGrownUpPresent(tagUID: tagUID) else { return false }
+        guard let updated = rewardLedger.settling(claim: id, at: clock.now) else { return false }
+        store.redemptions = updated
+        return true
+    }
+
     // MARK: - The household's streak, carried on the tag
 
     /// This phone's id, minted on first use.

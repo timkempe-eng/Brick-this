@@ -15,12 +15,14 @@ import SwiftUI
 struct HouseholdView: View {
     @EnvironmentObject private var model: DadModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showingRewards = false
 
     var body: some View {
         NavigationStack {
             List {
                 roleSection
                 sharedStreakSection
+                rewardsSection
 
                 if model.household.role == .youngPerson {
                     ladderSection
@@ -29,6 +31,7 @@ struct HouseholdView: View {
             }
             .navigationTitle("This phone")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingRewards) { RewardsView() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
@@ -53,6 +56,32 @@ struct HouseholdView: View {
             Text(model.household.role == .grownUp
                  ? "You chose the \(Vocab.modeNoun.lowercased())s and you hold the \(Vocab.tagNoun). Nothing on this phone asks anyone's permission."
                  : "The \(Vocab.modeNoun.lowercased())s here were agreed with a grown-up, so this phone can't rewrite them on its own. How much of the arrangement it *can* change grows as the habit holds — see below.")
+        }
+    }
+
+    // MARK: - What the days buy
+
+    /// The way in to the rewards ledger.
+    ///
+    /// On the household screen rather than in Settings because it is an
+    /// arrangement between two people, not a preference. The subtitle is the
+    /// balance, so the screen is worth opening before it is opened.
+    private var rewardsSection: some View {
+        Section {
+            Button { showingRewards = true } label: {
+                HStack {
+                    Text("Rewards")
+                    Spacer()
+                    Text(model.rewardLedger.balance.description)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } footer: {
+            Text("""
+                 Days earned at the \(Vocab.tagNoun), spent on things a grown-up offers — \
+                 never on minutes. A blocker that pays you in the thing it took away has \
+                 agreed the thing was worth having.
+                 """)
         }
     }
 
