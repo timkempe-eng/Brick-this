@@ -29,7 +29,7 @@ import Foundation
 /// already hold a URL record. So the encoding is a compact line rather than
 /// JSON, and it drops the stalest members rather than growing past what a tag
 /// can hold — a ledger that fails to write is worse than one that carries four
-/// people instead of six.
+/// people instead of five.
 ///
 /// **It syncs only on an in-app tap.** A tap through a Shortcuts automation
 /// runs with no UI and cannot open a write session. So the shared number lags,
@@ -59,12 +59,14 @@ enum HouseholdLedgerFormat {
     /// both estimates divide to five members, and five real members with
     /// four-digit streaks come to 117 of the 120 bytes.
     ///
-    /// So this number is only load-bearing at a boundary — a mutation
-    /// narrowing it back to three survives the suite, because the division
-    /// rounds to the same answer. Worth knowing rather than worth chasing: if
-    /// `maximumPayload` ever changes, the two stop agreeing, and the honest
-    /// width is the one that will still be right. Five digits would cost a
-    /// member, and 9,999 days is twenty-seven years.
+    /// It was true for one commit that narrowing this back to three survived
+    /// the suite. It is not any more: `testTheDerivationBitesAtABudgetWhereItMatters`
+    /// pins the cap at a 115-byte budget, where 22 bytes per member gives five
+    /// and 23 gives four. The comment saying otherwise outlived the test that
+    /// falsified it by sixty lines, which is the shortest a stale claim has
+    /// managed in this repository.
+    ///
+    /// Five digits would cost a member, and 9,999 days is twenty-seven years.
     ///
     /// What actually guards the tag is the round-trip test, which builds a
     /// full household at four-digit streaks and asserts the reader counts what
@@ -101,7 +103,11 @@ enum HouseholdLedgerFormat {
     /// The header is charged by measuring it rather than by writing 2 down
     /// again: `recordPrefix` is "d1;", and the ";" belongs to the first member.
     static func membersThatFit(inPayload budget: Int) -> Int {
-        max(0, (budget - (recordPrefix.count - 1)) / maximumMemberBytes)
+        // No `max(0, …)`: Swift's integer division truncates toward zero, so a
+        // budget too small for anybody already yields nought. One was here and
+        // a mutation removing it survived — a guard no test can reach, which
+        // this file's neighbours have spent three commits deleting.
+        (budget - (recordPrefix.count - 1)) / maximumMemberBytes
     }
 
     /// The widest streak the wire format budgets for. Past this the line grows
@@ -149,7 +155,7 @@ enum HouseholdLedgerFormat {
 
 /// Who a phone is, to the tag. Opaque by construction.
 ///
-/// Eight hex characters: short enough that six of them fit on a cheap tag,
+/// Eight hex characters: short enough that a full household fits on a cheap tag,
 /// wide enough that two phones in one house colliding is not a thing that
 /// happens. Derived from a UUID rather than from anything about the person,
 /// because the point is that the tag reveals nothing.
@@ -404,6 +410,15 @@ struct HouseholdLedger: Codable, Hashable {
     ///
     /// Sorting on the wire rather than in storage keeps both properties: the
     /// writer is still protected from the cap, and the bytes are still stable.
+    ///
+    /// **Stable for a given member set, which is not the same as stable.**
+    /// Above `maximumMembers` each phone publishes itself plus a different
+    /// four, so two phones in a six-person house still disagree and still
+    /// rewrite the tag on alternating taps. The sort cannot fix that; only a
+    /// rule for which four is deliberately not attempted, because any such
+    /// rule drops a real person from a real household's number and the honest
+    /// answer to a household too big for the tag is to say so rather than to
+    /// pick quietly. Nothing says so yet — see PARKING_LOT.
     private static func line(_ standings: [MemberStanding]) -> String {
         canonical(standings)
     }

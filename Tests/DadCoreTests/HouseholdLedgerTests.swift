@@ -207,6 +207,23 @@ final class HouseholdLedgerTests: XCTestCase {
             HouseholdLedgerFormat.maximumPayload)
     }
 
+    func testTheWireCarriesFourDigitsOfStreakAndSaysSo() {
+        // Spelled out, because every assertion about the clamp refers to it
+        // symbolically and the whole suite therefore moves with it. A mutation
+        // lowering it to 9 survived: every phone would publish a streak
+        // truncated to nine days, and every other phone in the house would
+        // compute a short household streak from day ten — a wrong number on a
+        // screen, silently.
+        //
+        // The number is written down in prose in its own doc comment, which is
+        // the test CLAUDE.md gives for a literal belonging in a test.
+        XCTAssertEqual(HouseholdLedgerFormat.widestStreakOnTheWire, 9_999)
+
+        let long = HouseholdLedger(standings: [standing(parent, "20260903", 5_000)])
+        XCTAssertEqual(HouseholdLedger.decoded(long.encoded())?.standings.first?.streak, 5_000,
+                       "and anything under it is carried exactly")
+    }
+
     func testAStreakTooWideForTheWireIsClampedRatherThanDroppingAMember() {
         // The last door on the cap arithmetic. A five-digit streak makes a
         // member's line 24 bytes, five of them 122, and `encoded()`'s
@@ -238,8 +255,18 @@ final class HouseholdLedgerTests: XCTestCase {
         // four, which is exactly the defect the derivation replaced.
         XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 115), 4)
         XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 120), 5)
+
+        // The header term is one byte, not two: `recordPrefix` is "d1;" and
+        // the ";" belongs to the first member. That distinction gets a
+        // paragraph in the source and had nothing under it — a mutation
+        // charging the whole prefix survived, because it only bites at 117,
+        // where charging three bytes gives four members and charging two
+        // gives five.
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 117), 5)
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 116), 4)
+
         XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 1), 0,
-                       "a budget too small for anybody holds nobody, rather than crashing")
+                       "a budget too small for anybody holds nobody")
     }
 
     func testTheHeaderIsChargedAgainstTheBudget() {

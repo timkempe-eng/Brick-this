@@ -257,19 +257,46 @@ struct RewardLedger {
         /// truncation anywhere in it. Removing the bound and leaving this
         /// synthesised would have been half a fix.
         ///
-        /// Nothing here can throw. A row missing everything decodes as a claim
-        /// of nought days against an unnamed reward, which is visible and
-        /// wrong-looking; a row that vanishes is invisible and changes a
-        /// balance.
+        /// Nothing here can throw, **including on a type that changed shape**.
+        ///
+        /// `decodeIfPresent` is total against a missing key and throws on a
+        /// mismatch, and `container(keyedBy:)` throws before any of it when
+        /// the element is null or a scalar. A first attempt used it bare and
+        /// closed only the add-a-field door: the day `Days` stops encoding as
+        /// a bare number, every stored `price` is a mismatch and every row
+        /// disappears — the same refund by a different route. `try?`
+        /// throughout is what makes the claim true rather than nearly true.
+        ///
+        /// A row missing everything decodes as a claim of nought days against
+        /// an unnamed reward, which is visible and wrong-looking; a row that
+        /// vanishes is invisible and changes a balance.
+        /// Spelled out rather than synthesised, because the decoder below
+        /// names the type in a signature and the compiler will not synthesise
+        /// it in time for that.
+        private enum CodingKeys: String, CodingKey {
+            case id, rewardID, rewardName, price, claimedAt, settledAt
+        }
+
         init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
-            rewardID = try c.decodeIfPresent(UUID.self, forKey: .rewardID) ?? UUID()
-            rewardName = try c.decodeIfPresent(String.self, forKey: .rewardName) ?? ""
-            price = try c.decodeIfPresent(Days.self, forKey: .price) ?? Days(0)
-            claimedAt = try c.decodeIfPresent(Date.self, forKey: .claimedAt)
+            let c = try? decoder.container(keyedBy: CodingKeys.self)
+            id = Self.read(UUID.self, .id, from: c) ?? UUID()
+            rewardID = Self.read(UUID.self, .rewardID, from: c) ?? UUID()
+            rewardName = Self.read(String.self, .rewardName, from: c) ?? ""
+            price = Self.read(Days.self, .price, from: c) ?? Days(0)
+            claimedAt = Self.read(Date.self, .claimedAt, from: c)
                 ?? Date(timeIntervalSince1970: 0)
-            settledAt = try c.decodeIfPresent(Date.self, forKey: .settledAt)
+            settledAt = Self.read(Date.self, .settledAt, from: c)
+        }
+
+        /// One field, absent for any reason: the key is missing, the value is
+        /// the wrong type, or there was no keyed container to begin with.
+        private static func read<T: Decodable>(
+            _ type: T.Type,
+            _ key: CodingKeys,
+            from container: KeyedDecodingContainer<CodingKeys>?
+        ) -> T? {
+            guard let container else { return nil }
+            return (try? container.decodeIfPresent(type, forKey: key)) ?? nil
         }
 
         init(id: UUID = UUID(), rewardID: UUID, rewardName: String,
@@ -453,10 +480,15 @@ struct RewardLedger {
     /// both are simply "not now", and a screen that explains at length why a
     /// thing is unavailable is a screen that argues with somebody.
     ///
-    /// A caller tempted to work out which fired should not: the refusals are
-    /// ordered, retired before unaffordable, so re-deriving the reason from
-    /// the shortfall reports the wrong one whenever both apply. `DadModel`
-    /// made that mistake and says one neutral sentence now.
+    /// A caller tempted to work out which fired should not, and the reason is
+    /// simpler than the one first written here. That claimed the guards' order
+    /// was the cause — retired before unaffordable — which is unobservable:
+    /// both return a bare `nil`, and a mutation swapping them survives the
+    /// suite because nothing downstream can tell. The actual cause is that
+    /// `shortfall(for:)` says nothing about retirement, so a reason
+    /// re-derived from it can only ever answer the affordability question, and
+    /// answers it about a reward that has been withdrawn. `DadModel` made that
+    /// mistake and says one neutral sentence now.
     ///
     /// * The balance does not cover the price. Under-covering is refused
     ///   outright rather than part-paid: a claim that leaves a debt behind is

@@ -150,23 +150,24 @@ struct HouseholdView: View {
     }
 
     private var sharedStreakFooter: String {
+        // First, and before the no-household case, because that is where it
+        // matters most: a phone that taps a locked *blank* tag has nobody else
+        // in its ledger, so a check placed after the `guard` fell through to
+        // "tap the same tag with another phone and it joins in" — the loop
+        // with no exit, in exactly the state most likely to produce it.
+        if model.tagIsWriteProtected {
+            return """
+                That \(Vocab.tagNoun) is write-protected, so this phone can read the \
+                household from it and never add itself to it. Pair a \(Vocab.tagNoun) \
+                that isn't locked and the count starts moving again.
+                """
+        }
         guard let streak = model.householdStreak else {
             return """
                 Tap the same \(Vocab.tagNoun) with another phone in the house and it \
                 joins in. The \(Vocab.tagNoun) carries the count itself — no account, \
                 no sign-in, and nothing about either of you leaves it. A grown-up who \
                 \(Vocab.verbThirdPerson) too is the single strongest thing this app has.
-                """
-        }
-        if model.tagIsWriteProtected {
-            // Never tell somebody to tap a tag that cannot answer. This phone
-            // read the household off it and could not write back, so the
-            // number is frozen wherever it is until a different tag is used.
-            return """
-                That \(Vocab.tagNoun) is write-protected, so this phone can read the \
-                household from it but never add itself. Counted to \
-                \(streak.asOf?.description ?? "an earlier day"). Pair a \(Vocab.tagNoun) \
-                that isn't locked and the number starts moving again.
                 """
         }
         if !streak.isCurrent {

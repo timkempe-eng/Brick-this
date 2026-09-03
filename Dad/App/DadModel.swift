@@ -29,13 +29,18 @@ final class DadModel: ObservableObject {
     /// standing from the whole session history.
     @Published private(set) var householdStreak: HouseholdStreak?
 
-    /// True once a tap has found a tag that can be read but not written.
+    /// True when the *last* tap found a tag that can be read but not written.
     ///
-    /// Not an error and not cleared: a write-protected tag stays
-    /// write-protected, and the shared streak on this phone can never move
-    /// again until a different tag is used. Without it the household screen
-    /// tells somebody to tap a tag to bring the number up to date, which that
-    /// tag cannot do — a loop with no exit and no explanation.
+    /// Not an error. Without it the household screen tells somebody to tap a
+    /// tag to bring the number up to date, which that tag cannot do — a loop
+    /// with no exit and no explanation.
+    ///
+    /// Reflects the last exchange rather than latching, because the copy it
+    /// drives names a remedy — pair a tag that isn't locked — and copy that
+    /// names a remedy must notice when it is taken. Not persisted, for the
+    /// same reason: on a fresh launch nothing has been observed yet, and
+    /// claiming otherwise would be asserting something this phone has not
+    /// seen.
     @Published var tagIsWriteProtected = false
 
     /// What the records can honestly say about the shield having been missing.
@@ -248,20 +253,25 @@ final class DadModel: ObservableObject {
     func claim(_ reward: RewardLedger.Reward) {
         guard engine.claim(reward) else {
             // One sentence, and deliberately not which of the two refusals
-            // fired. `RewardLedger.claiming` refuses retired *before*
-            // unaffordable, so a screen that decided by re-computing the
-            // shortfall told somebody "ten days to go" about a reward that had
-            // been withdrawn — the more discouraging of the two answers,
-            // chosen precisely when both applied.
+            // fired. A screen that decided by re-computing the shortfall told
+            // somebody "ten days to go" about a reward that had been
+            // withdrawn — because `shortfall(for:)` is silent about
+            // retirement, so a reason derived from it can only answer the
+            // affordability question.
             //
             // Deriving it from the refusal instead would mean widening the
             // Core API, and `claiming`'s own doc argues against that: both
             // cases are simply "not now", and a screen that explains at length
             // why a thing is unavailable is a screen that argues with
-            // somebody. The row already carries the shortfall under the name,
-            // so nothing is lost — this only has to acknowledge the tap, which
-            // silence would not.
+            // somebody.
+            //
+            // `reload()` still runs. The row shows a shortfall only while the
+            // reward is unaffordable, and the button is disabled in exactly
+            // that state — so a tap that reaches here came from a row that
+            // looked available, and returning early would leave it looking
+            // available with a refusal beside it.
             banner = "That isn't available right now."
+            reload()
             return
         }
         reload()

@@ -159,13 +159,17 @@ struct AgreementView: View {
     /// Rounding *up* to the nearest offered length is the right direction:
     /// talking about a rule buys it at least as long as was left, never less.
     private var nextReviewLength: Int {
-        // `offered` is a literal, so a default of 30 and a fallback to its last
-        // value are both reachable only if that literal changes. Written as
-        // plain lookups rather than as guarded ones: this diff spent two of its
-        // findings deleting branches no test could reach, and adding a pair
-        // while doing it would be a poor joke.
-        guard let remaining = existing?.daysUntilRenegotiation(), remaining > 0 else { return 30 }
-        return offered.first { $0 >= remaining } ?? 180
+        // Derived from `offered`, not written out beside it. The literals 30
+        // and 180 were here for one commit, on the argument that a branch
+        // guarding a fixed array is unreachable — which is true and beside the
+        // point: an unreachable branch costs nothing, and a duplicated literal
+        // goes stale the moment somebody edits the array. The failure it goes
+        // stale into is a picker selection matching no tag, which is the exact
+        // bug this function exists to prevent.
+        guard let remaining = existing?.daysUntilRenegotiation(), remaining > 0 else {
+            return offered.first { $0 >= 30 } ?? offered[0]
+        }
+        return offered.first { $0 >= remaining } ?? offered[offered.count - 1]
     }
 
     private func label(days: Int) -> String {

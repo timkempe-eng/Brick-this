@@ -163,8 +163,11 @@ struct HomeView: View {
                         .accessibilityLabel("Settings")
                 }
             }
+            // Assigned, not gated on `true`: a successful write has to be able
+            // to clear it, or the copy about pairing an unlocked tag never
+            // goes away after somebody pairs one.
             .onChange(of: scanner.tagIsReadOnly) { _, isReadOnly in
-                if isReadOnly { model.tagIsWriteProtected = true }
+                model.tagIsWriteProtected = isReadOnly
             }
             .nfcErrorAlert($scanner.lastError)
             .sheet(isPresented: $showingModes) { ModesView() }

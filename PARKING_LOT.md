@@ -541,6 +541,20 @@ anyone's time.
 
 ## Open, and worth deciding rather than drifting
 
+- [ ] **What should a household bigger than the tag be told?** The wire format
+      holds five members, derived from the byte budget. A sixth phone joins
+      silently: `merged` accepts it, `trimmed` drops the stalest, and each
+      phone publishes itself plus a different four — so two phones in a
+      six-person house never agree on the bytes, rewrite the tag on alternating
+      taps, and show slightly different numbers.
+
+      A rule for which four to keep is deliberately not attempted, because
+      every such rule drops a real person from a real household's number
+      without saying so. The honest answer is to notice the case and say it —
+      "this \(tag) can hold five phones and there are six" — and nothing says
+      it yet. Whether that is a warning, a picker, or a bigger chip is the
+      decision.
+
 - [ ] **Should an in-flight session count toward today's streak?** It does not:
       `DadStats` filters to finished sessions, documented against totals
       drifting upward as you watch them. But the streak rule is "at least one

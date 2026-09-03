@@ -12,31 +12,60 @@ does not exist.
 import sys
 
 path, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
-source = open(path).read()
+source = open(path, encoding="utf-8").read()
 lines = source.split("\n")
 
 
+def code_only(line):
+    """The part of `line` outside a comment, or "" if there is none.
+
+    Handles `//` and `///` at the start, a trailing `//` after code, and `/* */`
+    blocks. Not a Swift parser: a `//` inside a string literal is treated as the
+    start of a comment, which errs toward refusing to mutate. That is the right
+    direction — a refusal is visible and a mutation in the wrong place is not.
+    """
+    stripped = line.lstrip()
+    if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+        return ""
+    head = line.split("//", 1)[0]
+    return head.split("/*", 1)[0]
+
+
 def is_comment(line):
-    return line.lstrip().startswith("//")
+    return not code_only(line).strip()
 
 
 if "\n" in old:
-    # A multi-line target is matched against the whole file. Refuse when every
-    # line it would touch is a comment, which is the case this guards.
-    if old not in source:
-        sys.exit(1)
-    at = source[:source.index(old)].count("\n") + 1
-    if all(is_comment(l) or not l.strip() for l in old.split("\n")):
-        sys.exit(1)
-    open(path, "w").write(source.replace(old, new, 1))
-    print(at)
+    # A multi-line target, matched against the file but judged by WHERE IT
+    # LANDS rather than by what it says.
+    #
+    # The first attempt decided by inspecting the lines of `old`, then replaced
+    # the first occurrence anywhere in the file — so a target whose first line
+    # was code still landed happily inside a doc comment or a `"""…"""` sample
+    # that happened to quote it. Judging the destination is the whole point.
+    start = 0
+    while True:
+        at_char = source.find(old, start)
+        if at_char < 0:
+            sys.exit(1)
+        first = source[:at_char].count("\n")
+        span = lines[first:first + old.count("\n") + 1]
+        if any(not is_comment(l) and l.strip() for l in span):
+            break
+        start = at_char + 1
+    open(path, "w", encoding="utf-8").write(source[:at_char] + new + source[at_char + len(old):])
+    print(first + 1)
     sys.exit(0)
 
 for index, line in enumerate(lines):
-    if is_comment(line) or old not in line:
+    # The target must appear in the CODE part of the line, not merely somewhere
+    # in it. A trailing `// … guard start >= horizon …` would otherwise be
+    # mutated in place, which is the whole failure this file exists to stop.
+    if old not in code_only(line):
         continue
-    lines[index] = line.replace(old, new, 1)
-    open(path, "w").write("\n".join(lines))
+    head = code_only(line)
+    lines[index] = head.replace(old, new, 1) + line[len(head):]
+    open(path, "w", encoding="utf-8").write("\n".join(lines))
     print(index + 1)
     sys.exit(0)
 

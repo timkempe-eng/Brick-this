@@ -166,6 +166,56 @@ final class RewardWiringTests: XCTestCase {
         XCTAssertEqual(rows?.first?.rewardName, "")
     }
 
+    func testARowSurvivesAFieldChangingItsTypeAsWellAsAppearing() {
+        // `decodeIfPresent` is total against a *missing* key and throws on a
+        // mismatch — so the first version of this decoder closed only the
+        // add-a-field door. The day `Days` stops encoding as a bare number,
+        // every stored price is a mismatch and every row disappears: the same
+        // day refunded, by a different route.
+        let hostile = """
+            [{"price":"three","claimedAt":"tomorrow","settledAt":[],"rewardID":7},
+             {"id":"not-a-uuid","price":{"nested":1}},
+             null,
+             12]
+            """.data(using: .utf8)!
+        let rows = LenientDecoding.array(RewardLedger.Redemption.self, from: hostile)
+
+        XCTAssertEqual(rows?.count, 4, "not one row may vanish, whatever shape it arrived in")
+        XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+    }
+
+    func testASettledClaimStaysSettledAcrossTheStore() {
+        // `settledAt` is decoded by hand and a mutation dropping the line
+        // survived the whole suite. It is not cosmetic: `withdrawing` refuses
+        // only *settled* claims, so a settled claim that decodes as unsettled
+        // becomes withdrawable — and withdrawing it returns days for a lift
+        // that was actually given. That is the balance made editable by
+        // whoever is holding the phone, which is the whole ledger.
+        let given = RewardLedger.Redemption(rewardID: UUID(), rewardName: "A lift",
+                                            price: RewardLedger.Days(2),
+                                            claimedAt: Date(timeIntervalSince1970: 1_000),
+                                            settledAt: Date(timeIntervalSince1970: 2_000))
+        let data = try? JSONEncoder().encode([given])
+        let back = data.flatMap { try? JSONDecoder().decode([RewardLedger.Redemption].self, from: $0) }
+
+        XCTAssertEqual(back?.first?.settledAt, given.settledAt)
+        XCTAssertTrue(back?.first?.isSettled ?? false, "a lift that was given cannot become withdrawable")
+        XCTAssertEqual(back?.first?.claimedAt, given.claimedAt)
+    }
+
+    func testARowMissingEverythingDecodesRatherThanVanishing() {
+        // The case the doc comment describes and the earlier test did not
+        // reach: it supplied `id` and `claimedAt`, so the defaults for both
+        // were uncovered and a mutation on `claimedAt`'s survived.
+        let empty = "[{}]".data(using: .utf8)!
+        let rows = try? JSONDecoder().decode([RewardLedger.Redemption].self, from: empty)
+
+        XCTAssertEqual(rows?.count, 1)
+        XCTAssertEqual(rows?.first?.claimedAt, Date(timeIntervalSince1970: 0))
+        XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+        XCTAssertNil(rows?.first?.settledAt)
+    }
+
     func testAClaimYouCannotAffordIsRefused() {
         let h = youngPerson(earning: 1)
         let expensive = RewardLedger.Reward(name: "A weekend away", price: RewardLedger.Days(30))

@@ -14,12 +14,17 @@ final class TagScanner: NSObject, ObservableObject {
     @Published var isScanning = false
     @Published var lastError: String?
 
-    /// Set when the last scan found a tag it could read and not write.
+    /// Whether the last scan found a tag it could read and not write.
     ///
     /// Published rather than folded into `lastError`, because it is not an
     /// error: the tap worked and the household's standings were taken in. What
     /// it changes is what the shared streak can honestly promise — see
     /// `HouseholdView`.
+    ///
+    /// Set **and cleared** per scan. A first version only ever set it, so the
+    /// copy it drives — "pair a tag that isn't locked and the number starts
+    /// moving again" — stayed on screen after somebody did exactly that. Copy
+    /// that names a remedy has to be able to notice the remedy.
     @Published var tagIsReadOnly = false
 
     private var session: NFCTagReaderSession?
@@ -124,7 +129,8 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                     // The ledger first: the tap can start a session, and a
                     // household number that arrived a moment after it would
                     // render one frame late.
-                    if self.exchange.wasReadOnly { self.tagIsReadOnly = true }
+                    // Assigned either way, so a successful write clears it.
+                    self.tagIsReadOnly = self.exchange.wasReadOnly
                     if let text = self.exchange.found { self.onLedger?(text) }
                     self.onLedger = nil
                     self.onRead?(uid.hexString)

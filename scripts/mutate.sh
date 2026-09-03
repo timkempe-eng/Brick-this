@@ -18,7 +18,8 @@
 # discarded verdict looks exactly like a covered one. Compile first, and let
 # the compiler alone decide "did not build".
 #
-# Mutations are applied to CODE, never to a comment, and the line is printed.
+# Mutations are applied to a line's CODE, never to a comment — including a
+# trailing `//` after code and a `/* */` block — and the line is printed.
 # This codebase argues with itself in prose: a guard is usually preceded by a
 # paragraph quoting that guard. Replacing the first occurrence in the file puts
 # the change in the paragraph, where it does nothing, and the pass is then
@@ -47,9 +48,17 @@ fi
 OUTPUT="$(swift test 2>&1)"
 STATUS=$?
 
-if [ "$STATUS" -ge 128 ] && ! grep -q "Executed .* tests" <<<"$OUTPUT"; then
-  # Killed by a signal with no tests reported: OOM, a kill, a runner dying.
-  # Infrastructure, not a verdict — and it must not read as one.
+if [ "$STATUS" -ge 128 ]; then
+  # Killed by a signal: OOM, a kill, a runner dying. Infrastructure, not a
+  # verdict, and it must not read as one.
+  #
+  # No "did any tests run?" condition here. That was the first version, and it
+  # missed the likely shape: an OOM lands part-way through a suite that has
+  # already printed several "Executed N tests" lines, which satisfied the grep,
+  # so the run fell through to "non-zero exit" and was reported as CAUGHT — a
+  # fabricated verdict, from the guard written to prevent exactly that. A Swift
+  # trap in a test exits 1 on this runner, not >= 128, so nothing real is lost
+  # by treating every signal as no verdict.
   echo "  ?  NO VERDICT — $LABEL [line $APPLIED] (the run died on signal $((STATUS - 128)); re-run it)"
   exit 1
 fi
