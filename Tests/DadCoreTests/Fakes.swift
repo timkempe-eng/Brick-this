@@ -9,6 +9,7 @@ final class FakeStore: DadPersisting {
     var history: [DadSession] = []
     var tags = TagPairing()
     var neverBlocked = BlockedSelection()
+    var agreements: [ModeAgreement] = []
     var rewards: [RewardLedger.Reward] = []
     var redemptions: [RewardLedger.Redemption] = []
     var lastShieldConfirmedAt: Date?

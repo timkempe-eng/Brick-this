@@ -229,6 +229,17 @@ protocol DadPersisting: AnyObject {
     ///
     /// Optional so an install from before this existed decodes as a household
     /// of nobody, which shows no shared streak rather than a wrong one.
+    /// Why each Mode exists, in the household's own words, and when it comes
+    /// up again.
+    ///
+    /// A side table keyed by Mode rather than a field on `DadMode`, which is
+    /// `HouseholdAgreements`' own shape: an agreement outlives an edit to the
+    /// Mode it describes, and a Mode nobody has explained has no agreement
+    /// rather than an empty one. The difference is the whole feature — an
+    /// unexplained rule reads differently from an agreed one, and a blank
+    /// field would collapse them.
+    var agreements: [ModeAgreement] { get set }
+
     /// What a grown-up offers, and what has been claimed against it.
     ///
     /// Two lists rather than one ledger, because the ledger itself is derived:

@@ -1021,6 +1021,7 @@ struct DadEngine {
         guard may(.deleteMode) else { return .deleteMode }
         store.modes = store.modes.filter { $0.id != id }
         usage.stopWatching(modeID: id)
+        forgetAgreement(modeID: id)
         syncSchedules()
         return nil
     }
@@ -1086,6 +1087,92 @@ struct DadEngine {
     /// impossible.
     var stats: DadStats {
         DadStats(sessions: store.history, now: clock.now, calendar: calendar)
+    }
+
+    // MARK: - Why each Mode is here
+
+    /// Every Mode and the agreement behind it.
+    var householdAgreements: HouseholdAgreements {
+        HouseholdAgreements(modes: store.modes,
+                            agreements: store.agreements,
+                            now: clock.now,
+                            calendar: calendar)
+    }
+
+    func agreement(for modeID: UUID) -> ModeAgreement? {
+        store.agreements.first { $0.modeID == modeID }
+    }
+
+    /// Write down why a Mode exists.
+    ///
+    /// `agreedBy` is **derived, never passed**, and that is the design rather
+    /// than a convenience. The app cannot be told that two people agreed
+    /// something; it can only observe that a grown-up was here, which on a
+    /// young person's phone means the tag they hold was tapped. A parameter
+    /// would let a screen assert "agreed together" about a conversation that
+    /// did not happen, and the record is worth nothing the moment it can say
+    /// that.
+    ///
+    /// A phone that is its owner's records `.onePerson`, because one person is
+    /// who wrote it. That is true rather than a demotion, and the board that
+    /// reads it is only shown on a young person's phone.
+    @discardableResult
+    func agree(modeID: UUID,
+               reason: String,
+               comingUpAgainIn days: Int? = nil,
+               byTagUID tagUID: String? = nil) -> ModeAgreement? {
+        guard store.modes.contains(where: { $0.id == modeID }) else { return nil }
+
+        let together = store.household.role == .youngPerson && isGrownUpPresent(tagUID: tagUID)
+        let existing = agreement(for: modeID)
+        let agreement = ModeAgreement(
+            modeID: modeID,
+            reason: reason,
+            agreedAt: clock.now,
+            agreedBy: together ? .both : .onePerson,
+            renegotiateOn: days.flatMap { ModeAgreement.reviewDate($0, after: clock.now, calendar: calendar) },
+            // Kept across a rewrite. The record of a rule having been talked
+            // about is the thing that makes the next conversation possible,
+            // and rewriting the reason is not a reason to lose it.
+            history: existing?.history ?? [])
+
+        store.agreements = store.agreements.filter { $0.modeID != modeID } + [agreement]
+        return agreement
+    }
+
+    /// Record that a Mode was talked about, whether or not anything changed.
+    ///
+    /// The unchanged case is recorded on purpose: "we talked and kept it" is a
+    /// conversation, and a log that only remembers the times somebody won is
+    /// not a log of a household.
+    @discardableResult
+    func renegotiate(modeID: UUID,
+                     outcome: ModeAgreement.Outcome,
+                     reason: String? = nil,
+                     comingUpAgainIn days: Int? = nil,
+                     byTagUID tagUID: String? = nil) -> ModeAgreement? {
+        guard let existing = agreement(for: modeID) else { return nil }
+        let together = store.household.role == .youngPerson && isGrownUpPresent(tagUID: tagUID)
+        let updated = existing.renegotiated(outcome,
+                                            on: clock.now,
+                                            by: together ? .both : .onePerson,
+                                            reason: reason ?? existing.reason,
+                                            nextReviewOn: days.flatMap {
+                                                ModeAgreement.reviewDate($0, after: clock.now,
+                                                                         calendar: calendar)
+                                            })
+        store.agreements = store.agreements.filter { $0.modeID != modeID } + [updated]
+        return updated
+    }
+
+    /// Drop the agreement for a Mode that no longer exists.
+    ///
+    /// Called where Modes are deleted rather than swept periodically:
+    /// `HouseholdAgreements` is driven by the Modes and already ignores an
+    /// orphan, so this is housekeeping and not correctness — which is why it
+    /// is safe for it to be best-effort.
+    func forgetAgreement(modeID: UUID) {
+        store.agreements = store.agreements.filter { $0.modeID != modeID }
     }
 
     // MARK: - Warning before a scheduled Mode lands

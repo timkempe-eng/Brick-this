@@ -293,7 +293,7 @@ final class ModeAgreementTests: XCTestCase {
         ])
         XCTAssertEqual(h.overdue.map(\.modeName), ["B", "A"])
         XCTAssertEqual(AgreementCopy.overdueHeadline(count: h.overdue.count),
-                       "2 Modes are due to be talked about")
+                       "2 modes are due to be talked about")
     }
 
     func testAnAgreementWithNoDateIsListedAsNeverRevisitedRatherThanOverdue() {
@@ -434,8 +434,8 @@ final class ModeAgreementTests: XCTestCase {
 
     func testOverdueHeadlineIsPluralCorrectAndSilentWhenThereIsNothingToSay() {
         XCTAssertEqual(AgreementCopy.overdueHeadline(count: 0), "")
-        XCTAssertEqual(AgreementCopy.overdueHeadline(count: 1), "1 Mode is due to be talked about")
-        XCTAssertEqual(AgreementCopy.overdueHeadline(count: 3), "3 Modes are due to be talked about")
+        XCTAssertEqual(AgreementCopy.overdueHeadline(count: 1), "1 mode is due to be talked about")
+        XCTAssertEqual(AgreementCopy.overdueHeadline(count: 3), "3 modes are due to be talked about")
     }
 
     func testStandingAndOutcomeLabelsNameTheStateWithoutJudgingIt() {

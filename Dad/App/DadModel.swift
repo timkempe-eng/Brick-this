@@ -195,6 +195,30 @@ final class DadModel: ObservableObject {
         }
     }
 
+    // MARK: - Why each Mode is here
+
+    var householdAgreements: HouseholdAgreements { engine.householdAgreements }
+
+    func agreement(for modeID: UUID) -> ModeAgreement? { engine.agreement(for: modeID) }
+
+    /// Records why a Mode exists.
+    ///
+    /// The `tagUID` is not a permission — anybody may write down a reason, and
+    /// a rule one person wrote is a real thing that happens. It is what makes
+    /// the record say "agreed together" rather than "set by one person", and
+    /// the engine derives that rather than being told it.
+    func agree(modeID: UUID, reason: String, comingUpAgainIn days: Int?, byTagUID tagUID: String?) {
+        engine.agree(modeID: modeID, reason: reason, comingUpAgainIn: days, byTagUID: tagUID)
+        reload()
+    }
+
+    func renegotiate(modeID: UUID, outcome: ModeAgreement.Outcome,
+                     reason: String?, comingUpAgainIn days: Int?, byTagUID tagUID: String?) {
+        engine.renegotiate(modeID: modeID, outcome: outcome, reason: reason,
+                           comingUpAgainIn: days, byTagUID: tagUID)
+        reload()
+    }
+
     // MARK: - Rewards
 
     /// Derived on read, like `stats`, and not snapshotted: the rewards screen

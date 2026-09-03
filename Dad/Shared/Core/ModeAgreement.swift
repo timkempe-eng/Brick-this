@@ -30,12 +30,11 @@ struct ModeAgreement: Codable, Hashable, Identifiable {
 
     /// How many people were in the room.
     ///
-    /// Deliberately not "parent" and "teenager". Roles are item #1 on the
-    /// backlog and are unbuilt — they depend on Family Controls *child*
-    /// authorization, which is a different request to Apple and not yet made.
-    /// Encoding a role here would fix a shape before that work gets to decide
-    /// it, and the product does not need one: what has to be visible is that a
-    /// rule was written by one person rather than two, not which person it was.
+    /// Deliberately not "parent" and "teenager", and it stayed that way after
+    /// roles were built: `Household` knows whose phone this is, and repeating
+    /// it here would be the same fact in two places — the duplication that
+    /// costs this codebase the most. What has to be visible is that a rule was
+    /// written by one person rather than two, not which person it was.
     ///
     /// Naming a person would also be the first step towards a comparison
     /// between two of them, which this file must never produce. There is
@@ -458,7 +457,7 @@ struct HouseholdAgreements {
 /// middle of it undoes the rest.
 enum AgreementCopy {
 
-    static let reasonPrompt = "Why is this Mode here?"
+    static let reasonPrompt = "Why is this \(Vocab.modeNoun.lowercased()) here?"
     static let reasonHint = "In your own words. Both people should recognise it."
 
     static func partiesLabel(_ parties: ModeAgreement.Parties) -> String {
@@ -503,8 +502,8 @@ enum AgreementCopy {
     static func overdueHeadline(count: Int) -> String {
         switch count {
         case 0:  return ""
-        case 1:  return "1 Mode is due to be talked about"
-        default: return "\(count) Modes are due to be talked about"
+        case 1:  return "1 \(Vocab.modeNoun.lowercased()) is due to be talked about"
+        default: return "\(count) \(Vocab.modeNoun.lowercased())s are due to be talked about"
         }
     }
 }

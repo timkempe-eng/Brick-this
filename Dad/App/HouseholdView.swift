@@ -16,12 +16,14 @@ struct HouseholdView: View {
     @EnvironmentObject private var model: DadModel
     @Environment(\.dismiss) private var dismiss
     @State private var showingRewards = false
+    @State private var showingAgreements = false
 
     var body: some View {
         NavigationStack {
             List {
                 roleSection
                 sharedStreakSection
+                agreementsSection
                 rewardsSection
 
                 if model.household.role == .youngPerson {
@@ -32,6 +34,7 @@ struct HouseholdView: View {
             .navigationTitle("This phone")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingRewards) { RewardsView() }
+            .sheet(isPresented: $showingAgreements) { AgreementsBoardView() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
@@ -56,6 +59,34 @@ struct HouseholdView: View {
             Text(model.household.role == .grownUp
                  ? "You chose the \(Vocab.modeNoun.lowercased())s and you hold the \(Vocab.tagNoun). Nothing on this phone asks anyone's permission."
                  : "The \(Vocab.modeNoun.lowercased())s here were agreed with a grown-up, so this phone can't rewrite them on its own. How much of the arrangement it *can* change grows as the habit holds — see below.")
+        }
+    }
+
+    // MARK: - Why each rule is here
+
+    /// The way in to the agreements board, with the one number worth putting
+    /// on the row: how many rules are due to be talked about.
+    ///
+    /// Due, not overdue-and-you-should-feel-bad. The count is a fact and the
+    /// row says nothing when it is nought — an empty household gets an empty
+    /// string rather than a congratulation, which `AgreementCopy` handles.
+    private var agreementsSection: some View {
+        Section {
+            Button { showingAgreements = true } label: {
+                HStack {
+                    Text("Why each \(Vocab.modeNoun.lowercased()) is here")
+                    Spacer()
+                    Text(model.householdAgreements.nothingToRaise
+                         ? "" : AgreementCopy.overdueHeadline(count: model.householdAgreements.overdue.count))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } footer: {
+            Text("""
+                 Written in your own words, with a date to talk about it again. \
+                 Restrictions are meant to shrink as trust grows, and a rule with no \
+                 date to come up again cannot shrink — it can only be argued about.
+                 """)
         }
     }
 

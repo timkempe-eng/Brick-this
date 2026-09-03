@@ -36,6 +36,7 @@ final class UserDefaultsStore: DadPersisting {
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
+        static let agreements = "agreements"
         static let rewards = "rewards"
         static let redemptions = "redemptions"
         static let lastShieldConfirmedAt = "lastShieldConfirmedAt"
@@ -90,6 +91,13 @@ final class UserDefaultsStore: DadPersisting {
     /// Absent means this phone has not been in a household exchange yet.
     /// Minted lazily by the engine rather than here, so reading the store
     /// never writes to it.
+    /// Lenient: one unreadable agreement must not cost the household the rest
+    /// of what they wrote down.
+    var agreements: [ModeAgreement] {
+        get { decodeArray(ModeAgreement.self, Key.agreements) ?? [] }
+        set { encode(newValue, Key.agreements) }
+    }
+
     /// Lenient, like the other arrays: one unreadable reward must not take the
     /// household's claim history with it.
     var rewards: [RewardLedger.Reward] {
