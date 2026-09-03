@@ -7,7 +7,28 @@ struct DadMode: Codable, Identifiable, Hashable {
     var symbol: String
 
     /// Apps, categories and web domains this mode takes away, opaque to Core.
+    /// Used when `effectiveStyle` is `.blocklist`.
     var blocked: BlockedSelection = BlockedSelection()
+
+    /// The few things that stay, when this Mode leaves only what you name.
+    /// Used when `effectiveStyle` is `.allowlist`.
+    ///
+    /// A separate field rather than reinterpreting `blocked`, because a value
+    /// whose meaning depends on a sibling field is how you end up shielding
+    /// the apps someone meant to keep. It also means switching a Mode between
+    /// the two styles and back does not destroy either list.
+    ///
+    /// **Optional, and that is load-bearing.** Swift's synthesised decoder does
+    /// not fall back to a property's default when the key is absent — it fails
+    /// the whole record. `LenientDecoding` then *skips* that record, so a
+    /// non-optional field added here would silently delete every Mode stored
+    /// before this build. `schedule`, `allowance` and `resumeAfter` are
+    /// Optional for exactly the same reason.
+    var allowed: BlockedSelection?
+
+    /// Whether this Mode names what goes away, or the only things that stay.
+    /// `nil` decodes as `.blocklist` — see the note on `allowed`.
+    var style: ModeStyle?
 
     /// Strict mode: while this mode is active, iOS refuses to delete the Dad
     /// app. Stops the two-second "delete the blocker" escape hatch.
@@ -82,14 +103,29 @@ struct DadMode: Codable, Identifiable, Hashable {
         set { allowance = newValue }
     }
 
-    var blocksAnything: Bool { !blocked.isEmpty }
+    var effectiveStyle: ModeStyle { style ?? .blocklist }
+
+    /// The survivors, when this Mode leaves only what you name.
+    var allowedSelection: BlockedSelection { allowed ?? BlockedSelection() }
+
+    /// Whether starting this Mode would actually take something away.
+    ///
+    /// An allowlist always does, and deliberately even when nothing is allowed:
+    /// "leave nothing" is a legitimate Sleep Mode, not a misconfiguration. iOS
+    /// never shields Phone, so it cannot lock anyone out of a call.
+    var blocksAnything: Bool {
+        switch effectiveStyle {
+        case .blocklist: return !blocked.isEmpty
+        case .allowlist: return true
+        }
+    }
 
     /// Shown under the name in the Modes list.
     /// Whether releasing this Mode by hand starts a break rather than ending it.
     var takesBreaks: Bool { (resumeAfter ?? 0) > 0 && blocksAnything }
 
     var summary: String {
-        var parts = [blocked.summary]
+        var parts = [styleSummary]
         if let allowance, allowance.isEnabled, allowance.isValid {
             parts.append(allowance.displayText)
         }
@@ -101,6 +137,20 @@ struct DadMode: Codable, Identifiable, Hashable {
             parts.append(schedule.displayText())
         }
         return parts.joined(separator: " · ")
+    }
+
+    /// "3 apps · 1 category" for a blocklist; "Only 2 apps stay" for an
+    /// allowlist. The two must not read alike — the whole risk of inverting a
+    /// Mode is picking a list and having it mean the opposite of what you
+    /// intended.
+    private var styleSummary: String {
+        switch effectiveStyle {
+        case .blocklist:
+            return blocked.summary
+        case .allowlist:
+            let allowed = allowedSelection
+            return allowed.isEmpty ? "Everything goes" : "Only \(allowed.summary)"
+        }
     }
 
     /// Whether this Mode should be registered with the system scheduler.
@@ -117,7 +167,28 @@ struct DadMode: Codable, Identifiable, Hashable {
     /// says "15 min a day" and means "no limit at all".
     var rations: Bool {
         guard let allowance else { return false }
+        // An allowlist Mode cannot ration. `DeviceActivityEvent` counts usage
+        // of a *named* set of applications, categories and domains — there is
+        // no "everything except" form of it, and the categories cannot be
+        // enumerated from here. So the threshold would count nothing, never
+        // fire, and leave a Mode reading "15 min a day" that lets you use the
+        // phone all day. Refused in Core rather than discovered on a device.
+        guard effectiveStyle == .blocklist else { return false }
         return allowance.isEnabled && allowance.isValid && blocksAnything
+    }
+
+    /// Whether a Mode names what goes, or the only things that stay.
+    ///
+    /// Blocklists decay: a Sleep Mode is only as good as your memory, and every
+    /// app installed after you built it is a silent hole. An allowlist is the
+    /// one shape on this list that improves with time instead — which is why it
+    /// is the right default for exactly the two Modes a household cares most
+    /// about, Sleep and School.
+    enum ModeStyle: String, Codable, Hashable, CaseIterable {
+        /// Take these away.
+        case blocklist
+        /// Leave only these.
+        case allowlist
     }
 
     static let starterModes: [DadMode] = [

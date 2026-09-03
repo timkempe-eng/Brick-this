@@ -39,14 +39,23 @@ struct ManagedSettingsShield: ShieldControlling {
         store.shield.applications = tokens.applications.isEmpty
             ? nil : tokens.applications
 
-        store.shield.applicationCategories = tokens.categories.isEmpty
-            ? nil : .specific(tokens.categories, except: tokens.exceptApplications)
+        switch tokens.categoryScope {
+        case .none:
+            store.shield.applicationCategories = nil
+            store.shield.webDomainCategories = nil
+        case .specific(let categories):
+            store.shield.applicationCategories = .specific(categories, except: tokens.exceptApplications)
+            store.shield.webDomainCategories = .specific(categories, except: tokens.exceptWebDomains)
+        case .all:
+            // An allowlist Mode: leave only what was named. This is the whole
+            // reason the inversion is cheap — ManagedSettings does the "except"
+            // itself, so nothing here has to know what apps exist.
+            store.shield.applicationCategories = .all(except: tokens.exceptApplications)
+            store.shield.webDomainCategories = .all(except: tokens.exceptWebDomains)
+        }
 
         store.shield.webDomains = tokens.webDomains.isEmpty
             ? nil : tokens.webDomains
-
-        store.shield.webDomainCategories = tokens.categories.isEmpty
-            ? nil : .specific(tokens.categories, except: tokens.exceptWebDomains)
     }
 
     /// Strict closes the obvious escape hatch: deleting Dad would otherwise
