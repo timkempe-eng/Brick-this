@@ -179,6 +179,27 @@ anyone's time.
       somebody else. That makes Android a dependency of the household question
       rather than a platform question. [ADR 004](docs/adr/004-android.md).
 
+- [x] **A mutation that had been surviving for months.** Re-ran the original
+      six against the enlarged suite to check the new work hadn't blunted the
+      old, and one of them did not turn it red — while both CLAUDE.md and the
+      README asserted that it did. Every test spells the override allowance
+      `EmergencyAllowance.perWindow`, so the whole suite moves with the
+      constant: change 5 to 500 and 240 tests pass while Settings says "of
+      500". The 30-day window and the 500-session history bound were the same.
+      `PromisedNumbersTests` pins the numbers the product actually promises,
+      and CLAUDE.md now says to re-run the mutations rather than cite them —
+      the claim had been checked once and repeated as fact ever since.
+
+- [x] **Three bugs found reviewing my own work, before anyone else read it.**
+      Picking a Mode from the "which Mode?" dialog during a break cancelled
+      the break instead of starting the Mode, so the dialog appeared, you
+      answered it, and nothing happened. A break inside a scheduled window
+      returned a hand-started session, which the schedule’s own boundary
+      deliberately refuses to end — Sleep would have stayed on all day. And
+      "15 minutes a day" reset on every new session, so ending and re-tapping
+      handed the time back, which made the label false in the most obvious way
+      anyone would find. Each has a test and a caught mutation.
+
 - [x] **Four stale facts corrected.** `docs/PROVISIONING.md` told you to run
       Release from `claude/dad-phone-focus-device-tbu04b`, a branch that has
       never existed — the rename to the Dad verb was applied to the sentence

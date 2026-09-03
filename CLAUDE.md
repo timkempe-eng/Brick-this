@@ -77,8 +77,10 @@ is closed — a hole slices without complaint into a part with a side missing.
 The engine is a state machine over time, so it is tested with fakes and an
 injected clock, not with a device. When you add behaviour, add the test that
 would have caught its absence — and check the suite actually bites by breaking
-the code on purpose. Six mutations were used to validate the original suite;
-every one turned it red.
+the code on purpose. Six mutations were used to validate the original
+suite and every one was reported red — but that was checked once and then
+repeated as fact. Re-running them found one had been surviving for months.
+Re-run them; do not cite them.
 
 Use `scripts/mutate.sh` rather than a hand-rolled loop. Deciding by grepping
 the output for "with N failures" is wrong — XCTest prints "with 1 failure",
