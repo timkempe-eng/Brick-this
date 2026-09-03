@@ -307,7 +307,80 @@ struct DadEngine {
         guard let mode = store.modes.first(where: { $0.id == modeID }), mode.hasLiveSchedule else {
             return
         }
+
+        // Told to sit tonight out. Checked here rather than by not registering
+        // the window in the first place: DeviceActivity windows repeat, and
+        // tearing one down for a single night is the open-window failure this
+        // codebase goes out of its way to avoid — the system would never
+        // deliver its end, and a scheduled session would run forever.
+        let resolution = ScheduleSkipping.resolve(skips: store.scheduleSkips,
+                                                  modeID: modeID,
+                                                  windowStartingAt: clock.now,
+                                                  now: clock.now,
+                                                  calendar: calendar)
+        if store.scheduleSkips != resolution.skips { store.scheduleSkips = resolution.skips }
+        guard resolution.shouldRun else { return }
+
         dad(with: mode, startedBySchedule: true)
+    }
+
+    // MARK: - Skipping one night
+
+    /// The next occurrence of this Mode's schedule that a skip would land on,
+    /// or `nil` when there is nothing to skip.
+    ///
+    /// Exposed so a button can disable itself honestly rather than recording a
+    /// skip against a window that was never coming.
+    ///
+    /// Deliberately the next *scheduled* night, whether or not it is already
+    /// skipped — not `ScheduleSkipping.nextSkip`, which advances past skipped
+    /// occurrences to find the next one that will actually run. That function
+    /// is right for "when does this next happen"; it is wrong for "what does
+    /// this button do", because it makes a second press skip a *second* night.
+    /// `ScheduleSkipping.adding` de-dupes and its comment promises that
+    /// tapping twice is the same as tapping once — which it cannot deliver if
+    /// the caller hands it a different night each time. Idempotence lives
+    /// here, at the seam where the two met.
+    func nextSkippableNight(modeID: UUID) -> ScheduleSkip? {
+        guard let mode = store.modes.first(where: { $0.id == modeID }),
+              mode.hasLiveSchedule, let schedule = mode.schedule,
+              let start = schedule.nextStart(after: clock.now, calendar: calendar)
+        else { return nil }
+        return ScheduleSkip(modeID: modeID,
+                            occurrence: ScheduleOccurrence(startingAt: start, calendar: calendar))
+    }
+
+    /// Whether the next scheduled night is already sitting out, so a button
+    /// can say "Tonight is skipped" rather than offering to skip it again.
+    func isNextNightSkipped(modeID: UUID) -> Bool {
+        guard let next = nextSkippableNight(modeID: modeID) else { return false }
+        return ScheduleSkipping.live(store.scheduleSkips, now: clock.now, calendar: calendar)
+            .contains(next)
+    }
+
+    /// Sit the next occurrence out, without dismantling the schedule.
+    ///
+    /// The whole point: a schedule that cannot be bent gets turned off
+    /// "temporarily" and never restored. Changing the schedule needs a rung on
+    /// the ladder; skipping one night is deliberately cheaper than that —
+    /// it is the difference between renegotiating the rule and asking for
+    /// tonight.
+    @discardableResult
+    func skipNextNight(modeID: UUID) -> ScheduleSkip? {
+        guard let skip = nextSkippableNight(modeID: modeID) else { return nil }
+        store.scheduleSkips = ScheduleSkipping.adding(skip, to: store.scheduleSkips,
+                                                      now: clock.now, calendar: calendar)
+        widget.reload()
+        return skip
+    }
+
+    /// The next warning owed across every Mode, or `nil` when none is.
+    var nextScheduleWarning: ScheduleWarning? {
+        ScheduleWarning.next(among: store.modes,
+                             now: clock.now,
+                             skips: store.scheduleSkips,
+                             isSessionActive: store.activeSession != nil,
+                             calendar: calendar)
     }
 
     /// The system reached the end of a Mode's scheduled window.

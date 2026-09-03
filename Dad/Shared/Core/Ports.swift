@@ -118,6 +118,13 @@ protocol DadPersisting: AnyObject {
     /// `nil` whenever nothing is waiting to come back.
     var pendingResume: PendingResume? { get set }
 
+    /// Nights a scheduled Mode has been told to sit out.
+    ///
+    /// Stored rather than derived because "not tonight" is a decision somebody
+    /// made, and nothing in the history could reconstruct it. Pruned as it is
+    /// read — see `ScheduleSkipping.live`.
+    var scheduleSkips: [ScheduleSkip] { get set }
+
     /// Who is using this phone, and what that lets them do.
     ///
     /// Stored rather than derived because it is an agreement between two

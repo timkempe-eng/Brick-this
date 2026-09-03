@@ -10,6 +10,7 @@ final class FakeStore: DadPersisting {
     var pairedTagUIDs: [String] = []
     var neverBlocked = BlockedSelection()
     var household = Household.solo
+    var scheduleSkips: [ScheduleSkip] = []
     var pendingResume: PendingResume?
     var emergencyUses: [Date] = []
     var hasOnboarded = false

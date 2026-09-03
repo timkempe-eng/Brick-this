@@ -31,6 +31,7 @@ final class UserDefaultsStore: DadPersisting {
         static let neverBlocked = "neverBlocked"
         static let pendingResume = "pendingResume"
         static let household = "household"
+        static let scheduleSkips = "scheduleSkips"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
@@ -79,6 +80,13 @@ final class UserDefaultsStore: DadPersisting {
     var household: Household {
         get { decode(Household.self, Key.household) ?? .solo }
         set { encode(newValue, Key.household) }
+    }
+
+    /// Lenient, like the other arrays: one unreadable skip must not cost the
+    /// others, or a stale record would quietly un-skip somebody's night.
+    var scheduleSkips: [ScheduleSkip] {
+        get { decodeArray(ScheduleSkip.self, Key.scheduleSkips) ?? [] }
+        set { encode(newValue, Key.scheduleSkips) }
     }
 
     var emergencyUses: [Date] {
