@@ -263,6 +263,19 @@ platform :ios do
     # will carry — an App Group has to be ticked AND assigned, and only the
     # assignment shows up here. Reading it back beats asking someone to
     # re-examine five pages in a browser.
+    # Does the App Store Connect record exist? Registering an App ID in the
+    # developer portal and creating the app record in Connect are separate
+    # things on separate sites, and only the second one makes TestFlight
+    # possible. Nothing else in this pipeline notices it is missing until
+    # upload_to_testflight fails at the very end of a signed build.
+    app = Spaceship::ConnectAPI::App.find(APP_ID) rescue nil
+    if app
+      UI.success("App Store Connect record: #{APP_ID} exists (#{app.name})")
+    else
+      UI.error("App Store Connect record: #{APP_ID} DOES NOT EXIST. TestFlight upload will fail. " \
+               "appstoreconnect.apple.com → Apps → + → iOS → bundle id #{APP_ID}")
+    end
+
     ALL_IDS.each do |identifier|
       bundle = Spaceship::ConnectAPI::BundleId.find(identifier, includes: "bundleIdCapabilities")
       if bundle.nil?
