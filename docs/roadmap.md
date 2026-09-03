@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 634 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 801 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -28,7 +28,7 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   back for a set time, then the Mode starts itself again, so checking one thing
   doesn't cost the evening. Tapping a second time calls the break off. An
   emergency override never starts one.
-- **The family layer, most of it.** Two roles with permissions derived rather
+- **The family layer.** Two roles with permissions derived rather
   than stored; an **autonomy ladder** where consistency buys control and never
   minutes, with every rung visible from day one; **request and grant**, where a
   young person asks and a grown-up answers by tapping their own tag, bounded by
@@ -43,6 +43,23 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 - **A never-blocked list** — apps and sites no Mode may take away, whatever it
   names. One list, not one per Mode, because the failure it exists to prevent
   is forgetting.
+- **A shared streak on the tag itself** — the days *everyone* in the house took
+  part, so the grown-up's phone can end it. The tag is the courier: a tap made
+  inside the app reads the ledger off it, merges, and writes it back, so the
+  feature costs no account, no server and no network. It carries an opaque id,
+  a date and a count and could not carry a name if somebody tried, and it says
+  which day the number is true as of rather than pretending to be live.
+- **Rewards priced in days** — earned by finishing sessions at the tag, spent
+  on things a grown-up offers. Never in minutes, and not by convention:
+  `RewardLedger.Days` has no multiply, no `Double` and no duration member, so
+  paying in screen time does not compile. Offering and settling need a grown-up
+  demonstrably in the room; claiming does not, because the balance is the
+  permission and it was earned.
+- **Ten minutes' notice** before a scheduled Mode lands, over the `Notifying`
+  port. It names the Mode and the time, asks for nothing, and makes no sound.
+- **Saying when the shield went missing** — as an upper bound, never a
+  measurement, with the caveat beside the number rather than in a help screen.
+  An adult Dadding their own phone is told nothing about the past.
 - **A puck to put the tag in** — [hardware/](../hardware/), two printed parts,
   about a dollar, rendered by CI rather than committed.
 
@@ -61,13 +78,20 @@ inside an iCloud Family. Everything above works today as an agreement between
 two people who both want it to; this is what makes it hold when one of them
 doesn't.
 
-**A rewards ledger** (#9) and **the parent's own phone in the streaks** (#10)
-— both ranked below the ladder deliberately, and both still unbuilt.
-
 **Remote granting.** `GrantRequest` defines a `PINHashing` port and nothing
 implements it: the first shape of granting is in-person, because the parent
 already holds a tag and a tag needs no account, server or crypto. A PIN is what
 that becomes when they are not in the room.
+
+**A digest of what you missed while Dadded — declined.** Reviewers of every
+blocker ask for it, and iOS does not expose enough to build it honestly. A
+half-true digest is worse than none: it teaches people to check it, and then to
+distrust it. [ADR 005](adr/005-missed-while-dadded.md).
+
+**The second device — declined for now, with a price on it.** The iPad has no
+NFC, so the tag cannot reach it, and covering it costs a new bundle id, a
+`match` entry, another Family Controls approval and cross-device state.
+[ADR 006](adr/006-the-second-device.md) names what would make it worth paying.
 
 **Android — declined in the form everyone builds it in.** The only consumer
 mechanism is an `AccessibilityService` the user turns off in three taps, which

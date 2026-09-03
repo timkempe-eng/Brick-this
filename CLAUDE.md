@@ -43,8 +43,8 @@ locally — there is no locally.
    that. Preflight fails the build if one appears.
 2. **The engine depends on ports, not frameworks.** `Clock`,
    `ShieldControlling`, `SessionScheduling`, `DadPersisting`,
-   `WidgetRefreshing`, `UsageWatching`. New platform capability → new port +
-   adapter, never a framework import in Core.
+   `WidgetRefreshing`, `UsageWatching`, `Notifying`. New platform capability →
+   new port + adapter, never a framework import in Core.
    [ADR 001](docs/adr/001-ports-and-adapters.md).
 3. **Only `DadMode+FamilyControls` may interpret a `BlockedSelection` payload.**
    It is an opaque blob everywhere else. That is the privacy model made
@@ -71,9 +71,9 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 634 tests, seconds
+swift test                      # 801 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 101 checks on the Xcode wiring
+python3 scripts/preflight.py    # 105 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group

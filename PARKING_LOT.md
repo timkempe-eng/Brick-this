@@ -13,11 +13,17 @@ of this history; its CI was only ever red because it was cut from a stale `main`
 
 Checked boxes below are built, tested and green — not planned.
 
-**Eleven of the eighteen are now built.** What is left is #1's authorization
-half (child authorization, which needs Apple and an iCloud Family), #9 rewards,
-#10 the parent's own phone, #16 shield-gap reporting, and #17/#18 which are
-both decided in ADRs. The two findings above the list shaped everything: no
-rung anywhere pays in screen time, and nothing added can observe anybody.
+**All eighteen are now built or deliberately declined.** Sixteen are built;
+#17 and #18 are declined in ADRs with the triggers that would reopen them.
+The one thing still outstanding is not code: #1's authorization half needs
+Apple's approval and an iCloud Family, and no amount of work here supplies
+either.
+
+The two findings above the list shaped everything: no rung anywhere pays in
+screen time, and nothing added can observe anybody. Both survived contact with
+sixteen features — `RewardLedger` has no multiply and no `TimeInterval` so
+paying in minutes does not compile, and `ShieldGap` withholds its sentences
+from a household of one so the app never reads as an audit.
 
 ## Blocked on Apple (calendar time, not work)
 
@@ -165,21 +171,27 @@ but do not ship that number.
       incentive. Core work is real but ordinary: a level, its rules, and the
       arithmetic from history, all testable without a Mac.
 
-### 3. The rules get written by both people
+### 3. The rules get written by both people — built
 
-- [~] **A setup flow that is a negotiation, not a configuration screen.** The
-      *model* is built — `ModeAgreement` records why a Mode exists, who agreed
-      it, and when it gets renegotiated, and can tell an imposed rule from an
-      agreed one rather than letting the first hide among the second. The flow
-      itself is not built. Both
-      people present, each Mode proposed and agreed, the reasoning recorded next
-      to it, and a scheduled point where it gets renegotiated as trust grows.
+- [x] ~~**A setup flow that is a negotiation, not a configuration screen.**~~
+      **Built.** `ModeAgreement` records why a Mode exists, who agreed it, and
+      when it comes up again; `AgreementsBoardView` shows every Mode and its
+      standing; `AgreementView` is where the reason gets written, in free text,
+      because a picked-from-a-list justification is not writing and the
+      evidence is about having written something.
 
-      Third because it is cheap — it is mostly copy, flow and a stored rationale
-      string — and because it is the single best-supported intervention in the
-      literature. It also changes what the app *is* from the teenager's side: a
-      deal they are party to rather than a restriction that appeared on their
-      phone.
+      The decision that makes the record worth anything: **`agreedBy` is
+      derived, never passed.** The app cannot be told two people agreed
+      something — it can only observe that a grown-up was here, which is a tap
+      of the tag they hold. A parameter would let a screen assert "agreed
+      together" about a conversation that never happened.
+
+      The tap is offered rather than demanded, and saving without it records
+      "set by one person" — which is true, and is the whole reason the
+      distinction exists. A screen that refused to save would turn a record
+      into a gate. Rewriting a reason keeps the history of having talked about
+      it, and talking without changing anything is recorded too: a log that
+      only remembers the times somebody won is not a log of a household.
 
 ### 4. The teenager sees exactly what the parent sees
 
@@ -268,7 +280,26 @@ but do not ship that number.
 
 ### 9. Rewards the parent defines, paid in anything but minutes
 
-- [ ] **A small ledger: the teenager earns, the parent settles up.** Pocket
+- [x] ~~**A small ledger: the teenager earns, the parent settles up.**~~
+      **Built**, priced in days and structurally incapable of paying in
+      minutes: `RewardLedger.Days` has `+`, a saturating `-` and `<`, and that
+      is the complete set — no multiply, no `Double`, no duration member — and
+      a test reads the file's own source to keep it so. A grown-up who means
+      five pounds writes it in the reward's *name*, which Dad never parses.
+
+      Three of the five acts need a grown-up demonstrably in the room, and the
+      proof is a tap of the tag they already hold. Claiming is not one of them:
+      the balance is the permission and it was earned. Settling is the
+      irreversible one, so it is the one that most needs the person who did it
+      to be present.
+
+      The days come from the session history on every read. No stored balance,
+      because a stored balance is a number somebody could edit and this one
+      decides what a young person is owed. It counts the same days the ladder
+      does — `daysEndedByAPerson` lives in one place now, after the two
+      ledgers were found to have written the rule out separately and drifted.
+
+      Originally worded: Pocket
       money, a lift somewhere, a later weekend curfew, choosing dinner. The app
       tracks what was earned and what was redeemed; it does not try to be a
       payments product.
@@ -280,14 +311,28 @@ but do not ship that number.
 
 ### 10. The parent Dads too
 
-- [ ] **Shared streaks and household goals, with the parent's own phone in
-      them.** A parent's own device habits are among the strongest predictors of
-      their child's, and the fastest way to make Dad feel like a punishment is
-      for it to run on exactly one phone in the house.
+- [x] ~~**Shared streaks and household goals, with the parent's own phone in
+      them.**~~ **Built**, and the interesting part was where the shared state
+      could live. Dad has no accounts, no server and no step of a tap that
+      touches the internet — the property every comparison with Brick notices,
+      and one the fork below says not to spend casually. So the **tag is the
+      courier**: every tap made inside the app reads the ledger off it, merges,
+      and writes it back.
 
-      Tenth because it is motivational rather than structural, but it is cheap —
-      Dad already has streaks and a shared physical tag — and it changes the
-      product's tone more than its cost suggests.
+      The streak counts the days *everyone* took part, so the grown-up's phone
+      can end it. That is the point rather than a side effect.
+
+      Three constraints shaped `HouseholdLedger`. Anyone who taps the tag can
+      read it, so it carries an opaque id, a date and a count — a test asserts
+      the encoded payload is drawn from `[0-9a-f,;d]`, which makes carrying a
+      name structurally impossible however the type changes. The tag is small,
+      so it is a compact line and drops the stalest member rather than failing
+      to write. And it only syncs on an in-app tap, because a Shortcuts tap has
+      no UI — so the number carries `asOf` and `isCurrent`, and a stale number
+      is never shown as a live one.
+
+      Household goals were **not** built. The streak is the goal; a second
+      number to sync, with no evidence it helps, is a thing to keep out.
 
 ### 11. A weekly review both people read
 
@@ -306,6 +351,21 @@ but do not ship that number.
       teenager stops reading something.
 
 ### 12–15. Mechanics, unchanged in value and now cheaper to justify
+
+- [x] ~~**Ten minutes' notice before a scheduled Mode lands.**~~ **Built**,
+      both halves. The decision has been tested since `ScheduleWarning` landed;
+      the delivery — `Notifying`, the seventh port, over UserNotifications —
+      is new. Permission is asked for lazily, at the first warning there is
+      something to say, rather than beside the Screen Time prompt where it
+      would spend a "not now" on a feature nobody has met.
+
+      The port takes one call rather than a schedule and a cancel, because the
+      two must not be able to disagree: a cancel that fails leaves a
+      notification for a night that was skipped. Exactly one warning is ever
+      pending. It names the Mode, the time and how long you have, and it asks
+      for nothing — a warning with a "postpone" button is a schedule you did
+      not agree to. No sound: a product whose argument is that phones interrupt
+      too much should not add a chime to make the point.
 
 - [x] ~~**A tag per Mode.**~~ **Built**, and it is the first time the schema
       ladder has actually moved a shape — the envelope went in before anything
@@ -344,18 +404,33 @@ but do not ship that number.
 
 ### 16–18. Real, and correctly last
 
-- [ ] **Say when the shield went missing.** Largely subsumed by #1, which is why
-      it fell from 5th. Still needed as the honest fallback for households that
-      cannot use child authorization, and the copy must not overclaim: a gap is
-      evidence of a gap, not proof of intent.
-- [ ] **What you missed while Dadded.** Reviewers report losing important
-      messages. Check feasibility first — iOS may not expose enough to build this
-      honestly, and a half-true digest is worse than none. The honest outcome may
-      be an ADR declining it, as with the Live Activity.
-- [ ] **The second device.** The teenager whose phone is Dadded picks up the
-      iPad, and Brick cannot help — iPads have no NFC. Last because of cost: a
-      new bundle id, a `match` entry, another Family Controls approval, and
-      cross-device state the app has no mechanism for.
+- [x] ~~**Say when the shield went missing.**~~ **Built**, and the copy does
+      not overclaim: every interval is an upper bound rather than a
+      measurement, because the app is absent during a gap by construction —
+      "Up to 2h 10m", never a confident number. The caveat ships beside it
+      rather than in a help screen: *a restart, a restore, an iOS update and a
+      change in Settings all look the same from here.*
+
+      Deliberately **not** built on "reconcile had to re-apply the shield",
+      which is the obvious cheap signal and is idempotent by design — a
+      detector on it would fire every time the app was opened during a session
+      and produce an accusation with no evidence under it.
+
+      An adult Dadding their own phone gets silence about the past and keeps
+      only the setup note, because that is about the tool and fixable in the
+      next minute. A running tally of the times Dad lost sight of the shield
+      would turn a boundary they chose into a self-audit they did not.
+- [x] ~~**What you missed while Dadded.**~~ **Declined**, with the trigger to
+      reopen it, in [ADR 005](docs/adr/005-missed-while-dadded.md). The
+      feasibility check was the answer: iOS does not expose enough to build it
+      honestly, and the parking lot said in advance that a half-true digest is
+      worse than none.
+- [x] ~~**The second device.**~~ **Declined**, with its trigger, in
+      [ADR 006](docs/adr/006-the-second-device.md). The cost was already
+      written down here — a new bundle id, a `match` entry, another Family
+      Controls approval, and cross-device state — and #10 has since built
+      exactly one mechanism for that state, deliberately the smallest one that
+      works.
 
 ### The architectural fork this creates
 
@@ -371,11 +446,11 @@ when remote grant proves necessary** — iCloud Family Sharing is already a
 prerequisite of #1, so CloudKit is the Apple-native answer and still needs no
 server of ours. Both beat inventing a backend.
 
-- [ ] **Reposition the README and roadmap around the family hook.** They
-      currently pitch a DIY Brick for one adult. If family and teens is the hook,
-      the pitch, the naming rationale and `docs/roadmap.md` all describe a
-      different product than the one being built. Cheap, and it should happen
-      before the feature work so the features get designed for the right user.
+- [x] ~~**Reposition the README and roadmap around the family hook.**~~ Done
+      with the merge of the research branch, which brought its own README, and
+      swept again as each feature landed. The one thing to keep watching is the
+      failure this item names: a doc that describes a different product from
+      the one being built. Every sweep since has found at least one.
 
 ### Researched and deliberately not added
 
@@ -465,6 +540,67 @@ anyone's time.
   activity each, for as long as the session runs.
 
 ## Closed (this sweep)
+
+- [x] **The backlog is clear.** All eighteen ranked gaps are built or declined
+      in an ADR, and the six items still unchecked above are the ones no amount
+      of work in a Linux container can close: Apple's approvals, an App Store
+      Connect record, a build on the phone, and a repository setting.
+
+- [x] **The last seven, and what each cost.** #9 rewards, #10 the household
+      streak, #16 the shield-gap report, #3's negotiation flow, the delivery
+      half of the ten-minute warning, and the two ADRs. Each entry above says
+      what it decided and why; what they had in common is that the interesting
+      work was never the feature.
+
+      - #10 had no shared state to use, and the fork below says not to spend
+        the no-network property casually. The tag became the courier.
+      - #16 arrived judging correctly and unable to observe anything;
+        `ShieldControlling` gained its first *read*, and the stamp it needs had
+        to survive the process dying — which is the event a gap is made of.
+      - #3 arrived complete and unreachable. The decision that made it worth
+        anything was refusing a parameter: `agreedBy` is derived from a tag
+        tap, because an app that can be *told* two people agreed is an app
+        whose record means nothing.
+      - The warning had been decided and tested for days and delivered never,
+        which is the shape of a feature that reads as built.
+
+- [x] **A constant sweep, and what it keeps finding.** Nine constants mutated;
+      three survived and now have tests — an allowance ceiling, a request's
+      lifetime, a bounded exchange history. All three were the emergency-
+      allowance lesson again: every test spells the number symbolically, which
+      is correct style and means the whole suite moves with it.
+
+      Two mutations found something better than a missing test. A `max(0, …)`
+      on the household streak could not change any output, because the only
+      path reading it already zeroed a stale run — the clamp moved to
+      `HouseholdStreak`'s initialiser, where a test can reach it. And
+      `reconcile`'s call to sync the schedule warning was redundant, because
+      the sync above it had already made the call — except on the one path
+      where the sync fails, which is exactly when a stale warning would be left
+      standing. **A guard no test can reach is not a guard, and a call that
+      changes nothing is usually pointing at the case it should have covered.**
+
+- [x] **The two ledgers had written the same rule out twice.** `AutonomyLadder`
+      and `RewardLedger` both counted "days somebody actually did this", and
+      the copies had already drifted: one filtered on `wasEndedByAPerson`, the
+      other on `wasEndedByAPerson && !endedByEmergency`, where the second
+      clause could not change the answer. A redundant clause in a copied rule
+      is the one that survives when the original changes — and this rule
+      decides what a young person is owed. One definition now, next to the
+      field it reads, with `TwoLedgersAgreeTests` walking a history containing
+      every kind of ending and asserting the two modules agree about it.
+
+- [x] **Six commits of UI went to the macOS runner at once, and two tests
+      failed.** Runs 127 to 132 were all cancelled for queue contention, so
+      nothing had been verified since the family screens landed. Both failures
+      were the same thing: the Mode editor grew a style picker and an allowance
+      section, and `SwiftUI.List` is lazy, so Strict and the schedule footer
+      were not merely un-hittable but absent from the accessibility tree.
+
+      The tests were reaching for controls by where they used to be. The lesson
+      is the cancelling, not the tests: batching six commits into one
+      verification is how two independent regressions arrive together and each
+      makes the other harder to read.
 
 - [x] **Eleven of the eighteen ranked gaps, built by a fan-out.** Six agents
       wrote pure Core modules in isolated worktrees — roles, the ladder,
