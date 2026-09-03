@@ -269,12 +269,13 @@ platform :ios do
         UI.error("#{identifier}: NOT REGISTERED")
         next
       end
-      caps = bundle.bundle_id_capabilities.to_a.map do |c|
-        detail = c.settings.to_s
-        detail.empty? || detail == "[]" ? c.capability_type.to_s : "#{c.capability_type} #{detail}"
-      end
       UI.important("#{identifier}")
-      caps.empty? ? UI.important("    (none)") : caps.sort.each { |c| UI.important("    #{c}") }
+      bundle.bundle_id_capabilities.to_a.sort_by { |c| c.capability_type.to_s }.each do |c|
+        # settings printed raw and unconditionally. Ticking App Groups and
+        # assigning a group to it are two different actions, and only the
+        # assignment lands in a profile — it shows up here and nowhere else.
+        UI.important("    #{c.capability_type}  settings=#{c.settings.inspect}")
+      end
     end
   end
 
