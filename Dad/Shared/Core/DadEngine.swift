@@ -550,8 +550,39 @@ struct DadEngine {
 
     // MARK: - Modes
 
+    /// The ladder, computed from this phone's own history.
+    var ladder: AutonomyLadder {
+        AutonomyLadder(sessions: store.history, now: clock.now, calendar: calendar)
+    }
+
+    /// Where this phone actually sits on the ladder.
+    ///
+    /// The greater of what has been **earned** from the history and what a
+    /// grown-up has **granted** in a conversation. The maximum, not either
+    /// alone, and both halves of that matter:
+    ///
+    /// - Earning must always pay, or the ladder is decoration and the whole
+    ///   incentive is a lie. A floor set months ago must not cap somebody who
+    ///   has since held the habit for sixty days, and nobody should have to
+    ///   remember to hand a rung over on the right morning — "a reward you
+    ///   cannot predict is not an incentive".
+    /// - A granted rung is a decision between two people, and arithmetic does
+    ///   not get to undo a conversation. That includes a lapse: the ladder
+    ///   withholds *earned* rungs after a fortnight away, and it may, but it
+    ///   cannot reach below the floor a grown-up set deliberately.
+    ///
+    /// A grown-up's own level is left alone — they hold every capability
+    /// regardless, and running the ladder over their history would be
+    /// scorekeeping nobody asked for.
+    var autonomyLevel: Int {
+        guard store.household.role == .youngPerson else { return store.household.autonomyLevel }
+        return max(ladder.level, store.household.autonomyLevel)
+    }
+
     /// What this phone's household arrangement currently permits.
-    var permissions: RolePermissions { store.household.permissions }
+    var permissions: RolePermissions {
+        RolePermissions.for(role: store.household.role, autonomyLevel: autonomyLevel)
+    }
 
     /// Whether the person holding this phone may do something.
     ///
@@ -559,7 +590,7 @@ struct DadEngine {
     /// they are not the same: hiding alone is a lock on the door of a room with
     /// no walls, since an App Intent reaches the same engine from Shortcuts.
     func may(_ capability: HouseholdCapability) -> Bool {
-        store.household.may(capability)
+        permissions.may(capability)
     }
 
     /// Why an edit was refused, or `nil` if it went through.
