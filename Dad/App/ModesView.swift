@@ -99,6 +99,18 @@ struct ModeEditorView: View {
         AutoRelease(id: "1 hour", seconds: 60 * 60),
     ]
 
+    /// The list this Mode is currently using — what goes, or what stays.
+    private var currentSelection: FamilyActivitySelection {
+        mode.effectiveStyle == .blocklist ? mode.selection : mode.allowedFamilySelection
+    }
+
+    private func writeBack(_ chosen: FamilyActivitySelection) {
+        switch mode.effectiveStyle {
+        case .blocklist: mode.selection = chosen
+        case .allowlist: mode.allowedFamilySelection = chosen
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -107,13 +119,31 @@ struct ModeEditorView: View {
                 }
 
                 Section {
+                    Picker("This \(Vocab.modeNoun.lowercased())", selection: Binding(
+                        get: { mode.effectiveStyle },
+                        set: { mode.style = $0 }
+                    )) {
+                        Text("Takes these away").tag(DadMode.ModeStyle.blocklist)
+                        Text("Leaves only these").tag(DadMode.ModeStyle.allowlist)
+                    }
+                    .pickerStyle(.inline)
+                } header: {
+                    Text("Which way round")
+                } footer: {
+                    Text(mode.effectiveStyle == .blocklist
+                         ? "A list of what goes. Simple, and it decays: every app you install after today is a hole in it."
+                         : "A list of what stays. Everything else goes, including apps you haven't installed yet — the only shape here that gets better with time.")
+                }
+
+                Section {
                     Button {
                         showingPicker = true
                     } label: {
                         HStack {
-                            Text("Apps and sites to hide")
+                            Text(mode.effectiveStyle == .blocklist
+                                 ? "Apps and sites to hide" : "Apps and sites to keep")
                             Spacer()
-                            Text("\(mode.blocked.totalCount)")
+                            Text("\(mode.effectiveStyle == .blocklist ? mode.blocked.totalCount : mode.allowedSelection.totalCount)")
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -124,6 +154,8 @@ struct ModeEditorView: View {
                 AllowanceSection(mode: $mode)
 
                 ScheduleSection(mode: $mode)
+
+                SkipTonightRow(mode: mode)
 
                 Section {
                     Picker("Comes back after", selection: $mode.resumeAfter) {
@@ -153,12 +185,16 @@ struct ModeEditorView: View {
             .navigationTitle(mode.name)
             .navigationBarTitleDisplayMode(.inline)
             .familyActivityPicker(isPresented: $showingPicker, selection: $selection)
-            .onAppear { selection = mode.selection }
+            .onAppear { selection = currentSelection }
             // Take what was chosen when the picker closes. Keyed on the Bool
             // rather than on the selection itself, which need not be Equatable.
             .onChange(of: showingPicker) { _, isShowing in
-                if !isShowing { mode.selection = selection }
+                if !isShowing { writeBack(selection) }
             }
+            // Switching which way round the Mode works reloads the picker from
+            // the other list. Both are kept, so flipping to look and flipping
+            // back costs nothing.
+            .onChange(of: mode.effectiveStyle) { _, _ in selection = currentSelection }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -170,6 +206,32 @@ struct ModeEditorView: View {
     }
 }
 
+
+/// Sitting one night out, from the Mode that would otherwise run.
+///
+/// Here rather than on the home screen because it is a statement about *this*
+/// schedule, and because it must be visibly cheaper than changing the schedule
+/// — that is the difference between asking for tonight and renegotiating the
+/// rule, and a household needs both to be available and to feel different.
+private struct SkipTonightRow: View {
+    @EnvironmentObject private var model: DadModel
+    let mode: DadMode
+
+    var body: some View {
+        if mode.hasLiveSchedule {
+            Section {
+                if model.isNextNightSkipped(mode) {
+                    Label("Sitting the next one out", systemImage: "checkmark.circle")
+                        .foregroundStyle(.secondary)
+                } else if model.nextSkippableNight(mode) != nil {
+                    Button("Skip the next one") { model.skipNextNight(mode) }
+                }
+            } footer: {
+                Text("One occurrence, not the schedule. A schedule you can't bend for an evening is one that gets switched off for good.")
+            }
+        }
+    }
+}
 
 /// Lets a Mode ration instead of forbid — "fifteen minutes of these a day".
 ///

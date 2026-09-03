@@ -71,6 +71,15 @@ enum Vocab {
         }
     }
 
+    // MARK: Asking, and granting
+    static let askAction = "Ask for a few minutes"
+    static func asking(mode: String) -> String {
+        "Waiting on a grown-up. Hand them the phone, or take the ask back."
+    }
+    static func granted(mode: String, minutes: Int) -> String {
+        "\(minutes) minutes. \(mode) comes back on its own — nobody has to remember."
+    }
+
     // MARK: Break copy — a session released by hand that comes back on its own
     static let breakNoun = "break"
     static func breakRunning(mode: String, until: Date) -> String {

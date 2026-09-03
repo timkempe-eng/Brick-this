@@ -54,6 +54,7 @@ final class DadModel: ObservableObject {
         activeSession = engine.store.activeSession
         shieldState = engine.shieldState
         pendingResume = engine.pendingResume
+        pendingRequest = engine.pendingRequest
         stats = engine.stats
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
@@ -161,6 +162,24 @@ final class DadModel: ObservableObject {
     // MARK: - Tapping
 
     func tap(tagUID: String? = nil, mode: DadMode? = nil) {
+        // A tag tapped while somebody is asking answers the ask. That is the
+        // whole of "request and grant" on one phone: the grown-up is in the
+        // room, they already hold a tag, and no account, server or PIN is
+        // involved. Checked before the ordinary toggle, because otherwise the
+        // parent's tap would simply Un-Dad the phone — an unbounded release,
+        // which is the exact thing a bounded grant exists to avoid.
+        if let tagUID, engine.pendingRequest != nil,
+           let answered = engine.grantRelease(byTagUID: tagUID) {
+            switch answered {
+            case .success(let exchange):
+                banner = Vocab.granted(mode: exchange.request.modeName,
+                                       minutes: Int(GrantDuration.standard.seconds / 60))
+            case .failure:
+                banner = "That ask has already been answered."
+            }
+            return reload()
+        }
+
         switch engine.handleTap(tagUID: tagUID, preferredMode: mode) {
         case .dadded(let mode, .blocking):
             banner = "\(Vocab.verbPast) — \(mode.name)."
@@ -238,6 +257,60 @@ final class DadModel: ObservableObject {
     func may(_ capability: HouseholdCapability) -> Bool { engine.may(capability) }
 
     var household: Household { engine.store.household }
+
+    /// Where this phone sits, and what it still owes for the next rung.
+    var ladder: AutonomyLadder { engine.ladder }
+
+    /// The ask waiting for an answer, if there is one.
+    @Published private(set) var pendingRequest: GrantExchange?
+
+    /// Ask for a bounded release. The grown-up answers by tapping their tag.
+    func askForARelease(reason: String? = nil) {
+        if engine.requestRelease(reason: reason) == nil {
+            banner = "There's nothing to ask about right now."
+        }
+        reload()
+    }
+
+    func withdrawRequest() {
+        engine.withdrawRequest()
+        reload()
+    }
+
+    func declineRequest() {
+        engine.declineRequest()
+        banner = "Not this time. The phone stays \(Vocab.verbPast)."
+        reload()
+    }
+
+    /// Sit the next occurrence of a \(Vocab.modeNoun)'s schedule out.
+    func skipNextNight(_ mode: DadMode) {
+        if engine.skipNextNight(modeID: mode.id) == nil {
+            banner = "\(mode.name) has no night coming up to skip."
+        }
+        reload()
+    }
+
+    func isNextNightSkipped(_ mode: DadMode) -> Bool {
+        engine.isNextNightSkipped(modeID: mode.id)
+    }
+
+    func nextSkippableNight(_ mode: DadMode) -> ScheduleSkip? {
+        engine.nextSkippableNight(modeID: mode.id)
+    }
+
+    /// Changing whose phone this is.
+    ///
+    /// Not a permission check on the *role* itself: a phone handed over is a
+    /// conversation, and there is nobody in the app to have it with. What the
+    /// role does gate is everything else, and the ladder position survives the
+    /// change — an afternoon as a grown-up must not erase months of it.
+    func setRole(_ role: HouseholdRole) {
+        var household = engine.store.household
+        household.role = role
+        engine.store.household = household
+        reload()
+    }
 
     // MARK: - Incoming links
     //

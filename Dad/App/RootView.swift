@@ -99,6 +99,30 @@ struct HomeView: View {
                     .controlSize(.large)
                     .disabled(!scanner.isAvailable)
 
+                    // Asking is offered before the override, deliberately: on a
+                    // young person's phone the override is the last resort and
+                    // the ask is the everyday thing, and a screen that offers
+                    // the hatch first teaches you to reach for it.
+                    if model.isDadded, model.household.role == .youngPerson {
+                        if let asking = model.pendingRequest {
+                            VStack(spacing: 8) {
+                                Text(Vocab.asking(mode: asking.request.modeName))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                Button("Take the ask back") { model.withdrawRequest() }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.large)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        } else {
+                            Button(Vocab.askAction) { model.askForARelease() }
+                                .buttonStyle(.bordered)
+                                .controlSize(.large)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+
                     if model.isDadded {
                         Button(role: .destructive) {
                             model.emergencyUnDad()

@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var linkToWrite = ""
 
     @State private var showingSafePicker = false
+    @State private var showingHousehold = false
     /// The picker gets its own state and writes back on dismiss, for the
     /// reason written out on `ModeEditorView`: binding a computed bridge that
     /// JSON round-trips on every read means the modifier clobbers the value
@@ -41,6 +42,22 @@ struct SettingsView: View {
                     Text(model.pairedTagCount == 0
                          ? "No tag paired yet, so any NFC tag will work. Pair one to lock Dad to it."
                          : "Only your paired tags can \(Vocab.verb) and \(Vocab.unVerb) this phone.")
+                }
+
+                Section {
+                    Button { showingHousehold = true } label: {
+                        HStack {
+                            Text("Whose phone this is")
+                            Spacer()
+                            Text(model.household.role == .grownUp
+                                 ? "Mine" : model.ladder.rung.title)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } footer: {
+                    Text(model.household.role == .grownUp
+                         ? "Set this up for a young person and the \(Vocab.modeNoun.lowercased())s become an arrangement between two people, with a ladder they can see."
+                         : "Every rung, what it costs and what it unlocks — the same screen for both of you.")
                 }
 
                 Section {
@@ -111,6 +128,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingHousehold) { HouseholdView() }
             .familyActivityPicker(isPresented: $showingSafePicker, selection: $safeSelection)
             .onAppear { safeSelection = model.neverBlocked.familyActivitySelection }
             .onChange(of: showingSafePicker) { _, isShowing in
