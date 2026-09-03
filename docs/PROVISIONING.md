@@ -10,8 +10,8 @@ re-run the check, it isn't ✅.**
 | Item | State | Evidence | Re-runnable check |
 |---|---|---|---|
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
-| Core test suite | ✅ | 145 tests, green in CI | `swift test` |
-| Xcode wiring consistent | ✅ | 91 checks green | `python3 scripts/preflight.py` |
+| Core test suite | ✅ | 192 tests, green in CI | `swift test` |
+| Xcode wiring consistent | ✅ | 93 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ✅ | Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, every 3 days at 15:00 UTC: runs Release with `force_profiles: true` and reports whether the family-controls errors are gone. Push and email on. Delete it once approved | claude.ai → Routines |
@@ -311,9 +311,13 @@ inside the app bundle. Five App IDs, one app record.
 Actions → *Release to TestFlight* → Run workflow. Pick the branch, set
 `force_profiles: true` for the first run after enabling capabilities.
 
-**Run it from `claude/dad-phone-focus-device-tbu04b`**, not `main`: the
-certificate-reuse support (`MATCH_GIT_TOKEN`) only exists there. `main` would
-try to mint a certificate.
+**Run it from `main`.** This used to say to run it from the session branch,
+because the certificate-reuse support (`MATCH_GIT_TOKEN`) only existed there;
+that work has since landed and `main` carries it. The branch it named —
+`claude/dad-phone-focus-device-tbu04b` — never existed at all: the rename to
+the Dad verb was applied to the sentence and not to the branch, which is
+called `claude/tim-phone-focus-device-tbu04b`. Following the instruction as
+written would have sent you looking for a branch that was never there.
 
 ### What the first build will and will not show
 

@@ -3,6 +3,30 @@
 Swept after every merge: check off what closed, **correct what is now wrong**,
 add what the work revealed.
 
+## Read this first: there is a second parking lot
+
+`claude/brick-feature-gap-research-ojpswc` carries a **295-line ranked backlog
+that this file does not have** — eighteen feature gaps from a research sprint
+against Brick's reviews and the child-development literature, plus a README
+that re-pitches Dad around a household rather than one adult. It is unmerged,
+and nothing on `main` mentions it, so it is one `git log` away from being lost.
+
+Its CI is red, and **the failure is not its own**: it was branched from an
+older `main` and carries the Mode-editor UI test that has since been fixed. Its
+own jobs — core, preflight — are green, and it changes no Swift at all.
+
+Two things need deciding, and only you can decide them:
+
+1. **Is the product one adult, or a household?** That branch says household —
+   parents and teenagers, with a teenager earning autonomy rather than minutes.
+   It is a different product, and it changes what gets built next. It is also
+   well argued and sourced.
+2. **Does that backlog replace this section, or sit beside it?** If it lands,
+   most of "Next up" below becomes a subset of it.
+
+Rebase it onto `main` and the red goes away. Until it is merged or closed,
+treat this file as incomplete.
+
 ## Blocked on Apple (calendar time, not work)
 
 - [x] ~~Apple Developer Program enrolment~~ — already active, and already
@@ -11,32 +35,37 @@ add what the work revealed.
 - [ ] **Family Controls (Distribution) approved for all four bundle ids.**
       The one real long pole — a manual Apple review, and nothing in the
       existing account helps, since the other apps have no Screen Time
-      surface. Request it first; the rest can be done while waiting.
+      surface. Requested 2026-09-02. Apple sends no acknowledgement, so a
+      Release run is the only signal; a Routine runs one every three days.
 - [ ] Capability enabled on each App ID — a separate step from approval, and
       `match` does not do it. After enabling, run Release once with
       `force_profiles: true` or match reuses a profile that predates it.
-- [ ] App Store Connect API key → the three `ASC_*` secrets, `APPLE_TEAM_ID`,
-      `MATCH_PASSWORD`
+- [x] ~~App Store Connect API key → the three `ASC_*` secrets, `APPLE_TEAM_ID`,
+      `MATCH_PASSWORD`~~ — all seven secrets are set and proven: Release run
+      33713075001 got past signing to the Xcode build.
 - [ ] App Store Connect record for `app.dad.Dad`
 - [ ] First TestFlight build installed on the iPhone
 
 ## Next up
 
-- [ ] **Rename the default branch to `main`.** `main` now carries everything
-      and is green; flip it in Settings → Branches and delete the session
-      branch.
+- [ ] **Rename the default branch to `main`.** Settings → Branches. `main`
+      exists, carries everything, and is green; the default is still
+      `claude/tim-phone-focus-device-tbu04b`. Nothing in a session can flip it
+      — it is a repository setting, not a git operation. Delete the session
+      branch afterwards.
 - [ ] **Get the first build onto the phone.** Runbook in
       [docs/PROVISIONING.md](docs/PROVISIONING.md) — browser steps from an
-      iPad, none needing a Mac. Register the App IDs first, since the
-      entitlement request asks for bundle ids; that request is the only step
-      measured in weeks, so everything else happens while it is pending.
-      Nothing in the app is waiting on it: the suite is green and the only
-      unproven thing left is whether a tap actually hides an app.
-- [ ] **Reuse the existing distribution certificate; do not mint one.** Point
-      `MATCH_GIT_URL` at the repo whose `match` branch already holds it and set
-      `MATCH_GIT_TOKEN` to a PAT that can read it. Apple's ceiling is about two
-      and one is already spent. Run Apple account maintenance first to see the
-      real count.
+      iPad, none needing a Mac. Everything that can be done from here is done:
+      the certificate is minted and stored, five profiles exist, the App Group
+      is assigned, and the build now fails on exactly one thing —
+      `com.apple.developer.family-controls`, on the four targets that need it.
+- [x] ~~**Reuse the existing distribution certificate; do not mint one.**~~
+      Superseded by what the signing runs found. Apple's cap is **three**, not
+      two, and the account had room, so Dad minted its own (`53GT6F9GRZ`) into
+      its own private store rather than sharing another project's — where one
+      `match nuke` would break two shipping apps with no obvious connection
+      between cause and effect. The account is now 3/3, which makes this
+      finished rather than pending.
 - [x] ~~**Live Activity.**~~ Investigated and declined — ActivityKit can only
       start one from the foreground, which is the one path Dad exists to
       avoid. It would appear only when you Dadded by opening the app.
@@ -44,120 +73,138 @@ add what the work revealed.
 
 ## Later
 
-- [ ] Allowance-based Modes — Screen Time can throttle rather than forbid.
-- [ ] Android. `Dad/Shared/Core` would port nearly as-is; every adapter is new,
-      and blocking via `AccessibilityService` is meaningfully weaker.
-- [ ] 3D-printed puck with a magnet, instead of a bare sticker.
+- [x] ~~Allowance-based Modes~~ — **built.** A Mode can ration instead of
+      forbid: the apps stay usable for a set number of minutes a day, then go
+      until midnight. See "Closed (this sweep)".
+- [x] ~~Android~~ — **investigated and declined in the form everyone builds it
+      in**, with the version that would actually work kept open and given a
+      trigger. [ADR 004](docs/adr/004-android.md).
+- [x] ~~3D-printed puck with a magnet, instead of a bare sticker~~ — **built**,
+      and it takes a position on the magnet rather than fitting one by
+      default. [hardware/](hardware/).
 
-## Closed: the Mode editor was never broken
-
-Runs 27 to 51. The editor accepted edits the whole time. `ScreenTests` tapped
-`app.switches["Strict"]`, and XCUITest reports a SwiftUI `Toggle` in a `Form`
-as one element spanning the whole row — so `tap()` landed on the label, and
-nothing was ever flipped. Tapping at 92% across the row fixed it and the suite
-went green.
-
-Everything the failure "showed" follows from the switch never moving: the
-value stayed at 0, the schedule footer never changed branch, and `Cancel`
-worked throughout because a `Button` responds anywhere in its bounds. That
-last one was read as proof that taps reached the editor and only its state was
-broken, which sent the search into the app and kept it there.
-
-Five app-side fixes were attempted and all five failed identically — the
-custom `Binding(get:set:)`, the editor's own `@State` copy, the picker's
-binding, the nested-sheet presentation, and the `familyActivityPicker`
-modifier itself. Five unrelated changes with an unmoved symptom was the signal
-that the app was not at fault, and it took all five to notice.
-
-What actually cost the time was not the wrong theories. It was:
-
-- **A diagnostic channel that hid the answer.** `xcodebuild` was piped through
-  `tail -60`, so a compile error in the test target read as an assertion
-  failure for four runs. Fixing the log found the real cause in one look.
-- **Assertions that could not fail.** `testAModeEditorOpensAndCloses` ended by
-  asserting "Deep Work" still existed after Cancel — also the editor's
-  navigation title, so it passed either way. An earlier one used `containing`
-  on a static text, which matches by descendants and so matches nothing.
-- **Never questioning the instrument.** Every hypothesis was about the app.
-  The tap itself went unexamined until five fixes had failed.
-
-Kept from the attempts, on their own merits rather than as fixes:
-`DadMode.isScheduled` and `editableSchedule` with seven Core tests, because
-that logic belongs in Core and was previously reachable only from a Simulator;
-and the app picker holding its own state instead of a computed bridge that
-JSON round-trips on every render. Reverted: the nested-sheet-to-push change
-and gating the picker behind the UI-test flag, both made purely on failed
-theories.
+Nothing is left in *Later*. The next thing to build is a decision, not a task
+— see the second parking lot at the top of this file.
 
 ## Known limitations, carried deliberately
 
 - **Compiled, never run.** Screen Time and NFC both no-op in the Simulator, so
   nothing before TestFlight proves a tap blocks anything.
-- **No schema versioning.** Arrays decode leniently so one bad record can't
-  destroy a history, but a key rename still orphans the old value. Fine before
-  anyone relies on it; needs a migration path before it ships to anyone else.
+- **An allowance has never been counted on a device.** The rationing state
+  machine is tested end to end, but every one of those tests drives it through
+  a fake. Whether iOS delivers `eventDidReachThreshold` for a threshold
+  registered mid-day, and how promptly, is a TestFlight question. Being wrong
+  about it fails safe by construction: an allowance the system won't count
+  becomes a block, and a midnight wake that never arrives is corrected on the
+  next foreground.
 - **`DeviceActivitySchedule` pins one weekday per window.** An every-day
   schedule collapses to one window; a part-week Mode costs several against the
-  system's activity cap.
+  system's activity cap. Rationing Modes now draw on the same cap — one
+  activity each, for as long as the session runs.
 
 ## Closed (this sweep)
+
+- [x] **Allowance Modes — throttle instead of forbid.** Tap the tag and a
+      rationed Mode leaves the apps where they are, on a daily budget; when it
+      runs out the shield goes up until midnight hands back the next day's.
+      What the shield should be doing is one decision in Core (`ShieldPolicy`)
+      rather than four, because four callers in three processes need the
+      answer. A sixth port, `UsageWatching`, over DeviceActivity's usage
+      thresholds — a different mechanism from the wall-clock windows, and no
+      new entitlement.
+
+      Four things it decides rather than leaves to chance, each pinned by a
+      test: strict still holds through the free period, because that is
+      precisely when someone reaches for the delete-the-app hatch; an allowance
+      the system refuses to count becomes a block, because one nobody counts is
+      unlimited; the day boundary is derived from the stored instant rather
+      than from being told, so a lost midnight wake is corrected on the next
+      foreground; and editing a live Mode's allowance restarts today's count
+      while editing anything else about it does not — otherwise Save would be a
+      way to buy fifteen more minutes.
+
+      47 tests, 192 total. Ten mutations run against the new code, all caught.
+
+- [x] **The puck.** Two printed parts, no supports, about a dollar. The sticker
+      lives sealed inside the lid with 1.8mm of plastic over it. It ships with
+      **no magnet by default** and says why: a neodymium disc behind a plain
+      tag detunes its antenna, and the tap then fails intermittently at a
+      distance that varies by phone — the worst failure available to a product
+      that consists of one interaction. Steel is likewise the wrong ballast and
+      the README weighs four alternatives that aren't. Rendered by a workflow
+      rather than committed, and checked for holes, because a mesh that isn't
+      closed slices without complaint into a part with a side missing.
+
+- [x] **Android, decided.** Not deferred again. The mechanism everyone uses is
+      an `AccessibilityService` the user disables in three taps — which is the
+      exact failure the teardown identifies as the reason this product exists —
+      and Android 17's Advanced Protection Mode is closing that API to
+      non-accessibility apps anyway. The route that works, `setPackagesSuspended`
+      under device-owner, is *stronger* than the iOS shield and costs a factory
+      reset, which is free on exactly one day: when a phone is being set up for
+      somebody else. That makes Android a dependency of the household question
+      rather than a platform question. [ADR 004](docs/adr/004-android.md).
+
+- [x] **Four stale facts corrected.** `docs/PROVISIONING.md` told you to run
+      Release from `claude/dad-phone-focus-device-tbu04b`, a branch that has
+      never existed — the rename to the Dad verb was applied to the sentence
+      and not to the branch, which is `claude/tim-phone-focus-device-tbu04b`,
+      and `main` carries that work now regardless. `CLAUDE.md` said four
+      targets (five), listed four of the six ports, and quoted test and check
+      counts two features out of date. Schema versioning was still listed as a
+      known limitation after being built.
+
+## Closed
 
 - [x] **The verb is Dad.** Renamed throughout — code, bundle ids, App Group,
       docs — while nothing was registered with Apple, which is the only moment
       the identifiers are free to change. Done with boundary-anchored rules,
       not a blanket substitution: "tim" is a substring of time, timer,
       estimate, optimize, and of `timkempe-eng`, which appears in the release
-      workflow and must not move.
+      workflow and must not move. It reached one thing it should not have: a
+      branch name, in a runbook, pointing at a branch that then did not exist.
 - [x] **CI says what failed.** `xcodebuild` no longer goes through `tail`; the
       full log and the `.xcresult` are kept as artifacts and the failure is
       grepped out. This is what ended the editor hunt, and it was one commit.
-
-- [x] **The schedule toggle was never broken.** Four CI runs chased a
-      "schedule can't be turned on" bug that did not exist. The UI test
-      asserted the footer would promise "your phone Dads itself"; the app
-      refused, because a starter Mode blocks nothing and a Mode that blocks
-      nothing is never registered with the scheduler — so it says what is
-      still missing instead. The app was right every time. Two lessons, both
-      paid for: assert the behaviour the product actually specifies, not the
-      one you assumed; and read *which* assertion failed before theorising —
-      the first one had been passing since run 27, which alone ruled out the
-      binding.
-
-- [x] **Schema versioning.** Stored values now carry the version that wrote
-      them, so a future shape change migrates instead of silently resetting
-      Modes and history. Data written by a *later* build is detected and
-      reported rather than treated as corrupt, so a TestFlight rollback can't
-      destroy what it merely fails to understand. Done now because it costs
-      nothing before the first install and can't be retrofitted cleanly after.
+- [x] **The Mode editor was never broken.** Runs 27 to 51. `ScreenTests` tapped
+      `app.switches["Strict"]`, and XCUITest reports a SwiftUI `Toggle` in a
+      `Form` as one element spanning the whole row — so `tap()` landed on the
+      label and nothing was ever flipped. Five app-side fixes failed
+      identically before the instrument itself was questioned. What cost the
+      time was not the wrong theories: it was a diagnostic channel that hid the
+      answer (`xcodebuild` through `tail -60`), assertions that could not fail
+      (asserting a string that was also the navigation title), and never
+      doubting the tap.
+- [x] **The schedule toggle was never broken either.** The UI test asserted the
+      footer would promise "your phone Dads itself"; the app refused, because a
+      starter Mode blocks nothing and a Mode that blocks nothing is never
+      registered with the scheduler. The app was right every time.
+- [x] **Schema versioning.** Stored values carry the version that wrote them,
+      so a future shape change migrates instead of silently resetting Modes and
+      history. Data written by a *later* build is detected and reported rather
+      than treated as corrupt, so a TestFlight rollback can't destroy what it
+      merely fails to understand.
 - [x] **Simulator launch test.** The app provably launches, renders and
       survives a relaunch — which compilation never showed.
-- [x] Mutation harness (`scripts/mutate.sh`). The hand-rolled loop decided by
-      grepping for "with N failures" and XCTest prints "with 1 failure", so
+- [x] **Mutation harness** (`scripts/mutate.sh`). The hand-rolled loop decided
+      by grepping for "with N failures" and XCTest prints "with 1 failure", so
       every mutation caught by exactly one test read as a survivor. Blamed on
       stale builds three times before the regex turned out to be the cause.
-
 - [x] **Lock Screen widget.** Status and a live timer without unlocking. What
       it says lives in Core as `WidgetSnapshot` and is tested; the extension is
       layout. A fifth port, `WidgetRefreshing`, means every process that can
-      end a session — the app, the shield's emergency button, the
-      DeviceActivity monitor — clears the Lock Screen.
+      end a session clears the Lock Screen.
 - [x] An unrecognised deep link no longer toggles. `dad://open` would have
       fallen through to the toggle default, so tapping the widget to *check*
       your status would have released a live session.
-
-- [x] Full-codebase review: ten findings, nine fixed, one wired into the UI.
-      The scheduler adapter was the cluster — cross-midnight weekday windows
-      ended a week late, any edit tore down every window including open ones,
-      and registration failures were recorded as success. Window arithmetic
-      and the change-diff now live in Core and are tested; the adapter only
-      maps them onto DeviceActivity.
-- [x] A schedule boundary can no longer end a session you started by hand
-      with the same Mode — sessions carry a started-by-schedule marker.
+- [x] **Full-codebase review**: ten findings, nine fixed, one wired into the
+      UI. The scheduler adapter was the cluster — cross-midnight weekday
+      windows ended a week late, any edit tore down every window including open
+      ones, and registration failures were recorded as success.
+- [x] A schedule boundary can no longer end a session you started by hand with
+      the same Mode — sessions carry a started-by-schedule marker.
 - [x] A timed session now ends (or re-arms) at reconcile even if its release
       registration was lost with the process.
-
-## Closed
-
 - [x] Engine testable at all — ports and adapters, 98 tests (was 15)
 - [x] iOS layer compiles, on a GitHub macOS runner, every push
 - [x] Scheduled Modes

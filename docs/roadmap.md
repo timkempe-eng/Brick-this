@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 98 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 192 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -20,6 +20,12 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   on every foreground, in both directions.
 - **Lock Screen widget** — status and a live timer without unlocking, in all
   three accessory families plus a Home Screen tile.
+- **Allowance Modes** — a Mode can ration rather than forbid: the apps stay
+  usable for a set number of minutes a day, then go until midnight. Strict
+  still holds through the free period, and an allowance the system refuses to
+  count becomes a plain block rather than a rule nobody is enforcing.
+- **A puck to put the tag in** — [hardware/](../hardware/), two printed parts,
+  about a dollar, rendered by CI rather than committed.
 
 ## Not built
 
@@ -27,17 +33,15 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 the foreground, so it could never appear on the tap-and-pocket path the product
 is built around. [ADR 002](adr/002-no-live-activity.md) has the reasoning.
 
-**Allowance rather than blocking.** Screen Time can throttle instead of forbid.
-A Mode granting fifteen minutes of an app per day is a softer tool than a hard
-shield, and sometimes the right one.
-
-**Android.** A different mechanism entirely — an `AccessibilityService` watching
-the foreground package rather than a system-enforced shield. `Dad/Shared/Core`
-is Foundation-only and would port more or less directly; the adapters would all
-be new, and blocking would be meaningfully weaker.
-
-**A nicer tag.** A 3D-printed puck with a magnet and some ballast. Purely
-cosmetic, entirely worth it.
+**Android — declined in the form everyone builds it in.** The only consumer
+mechanism is an `AccessibilityService` the user turns off in three taps, which
+is the exact failure the whole product exists to avoid; and Android 17's
+Advanced Protection Mode is closing that API to non-accessibility apps
+regardless. The version that *would* work — `setPackagesSuspended` under
+device-owner — is stronger than the iOS shield and needs the phone provisioned
+from a factory reset, which is only free on the day someone sets a phone up for
+somebody else. [ADR 004](adr/004-android.md) has the reasoning and the trigger
+to revisit.
 
 ## Known limitations
 
@@ -52,6 +56,15 @@ will ever be registered. The app says so — a scheduled Mode that blocks nothin
 tells you what is still missing instead of promising to Dad your phone — and
 that honesty is the deepest a Simulator test can go. Configuring a Mode
 end-to-end is a TestFlight step.
+
+**An allowance has never been counted on a device.** The rationing state
+machine is covered by `swift test` end to end — including the day boundary, the
+refusal path and the re-arm — but every one of those tests drives it through a
+fake. Whether iOS actually delivers `eventDidReachThreshold` for a threshold
+registered mid-day, and how promptly, is the one thing only TestFlight can say.
+The engine is built so that being wrong about it fails safe: an allowance the
+system will not count becomes a block, and a midnight wake that never arrives is
+corrected on the next foreground.
 
 **`DeviceActivitySchedule` pins one weekday per window.** An every-day schedule
 collapses to a single repeating window, but a three-day-a-week Mode costs three.

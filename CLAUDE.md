@@ -6,7 +6,7 @@ break by accident and expensive to notice later.
 ## What this is
 
 A DIY [Brick](https://getbrick.com/): tap an NFC sticker, the apps you chose
-disappear until you tap it again. Native Swift, four targets, no Capacitor.
+disappear until you tap it again. Native Swift, five targets, no Capacitor.
 
 The verb is **Dad**: Dad / Dads / Dadding / Dadded, and **Un-Dad** to release.
 
@@ -19,7 +19,7 @@ is most of the skill:
 |---|---|---|
 | iPad, Safari | GitHub, App Store Connect, run workflows, set secrets | Any build, test or shell |
 | Agent container (Linux) | Edit, `swift test`, lint, preflight, commit, push | Build iOS. Persist anything unpushed |
-| GitHub runners | Compile iOS, sign, upload to TestFlight, hold secrets | Nothing relevant |
+| GitHub runners | Compile iOS, sign, upload to TestFlight, render the puck, hold secrets | Nothing relevant |
 
 **If an operation needs a machine, it is a workflow.** Not a script someone runs
 locally — there is no locally.
@@ -30,8 +30,9 @@ locally — there is no locally.
    only code that can be tested without a Mac, and an iOS import silently ends
    that. Preflight fails the build if one appears.
 2. **The engine depends on ports, not frameworks.** `Clock`,
-   `ShieldControlling`, `SessionScheduling`, `DadPersisting`. New platform
-   capability → new port + adapter, never a framework import in Core.
+   `ShieldControlling`, `SessionScheduling`, `DadPersisting`,
+   `WidgetRefreshing`, `UsageWatching`. New platform capability → new port +
+   adapter, never a framework import in Core.
    [ADR 001](docs/adr/001-ports-and-adapters.md).
 3. **Only `DadMode+FamilyControls` may interpret a `BlockedSelection` payload.**
    It is an opaque blob everywhere else. That is the privacy model made
@@ -58,14 +59,18 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 145 tests, seconds
+swift test                      # 192 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 91 checks on the Xcode wiring
+python3 scripts/preflight.py    # 93 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group
 leaves the shield showing the wrong Mode while the app works fine. It cannot
 catch a type error; the macOS job in CI does that.
+
+Touching `hardware/` adds one more, and it needs OpenSCAD, so it is a workflow:
+push and read the **Hardware** run. It renders every part and asserts the mesh
+is closed — a hole slices without complaint into a part with a side missing.
 
 ## Testing posture
 
