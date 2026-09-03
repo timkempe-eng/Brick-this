@@ -15,7 +15,7 @@ re-run the check, it isn't ✅.**
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ✅ | Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, every 3 days at 15:00 UTC: runs Release with `force_profiles: true` and reports whether the family-controls errors are gone. Push and email on. Delete it once approved | claude.ai → Routines |
-| Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
+| Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-03 15:20.** Release run 33771919392 regenerated all five profiles (`force_profiles: true`, minted 15:20) and the fresh ones still lack `com.apple.developer.family-controls`: `Provisioning profile "match AppStore app.dad.Dad 1788448784" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration` and `.ShieldAction`. Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
@@ -32,17 +32,32 @@ re-run the check, it isn't ✅.**
 
 ## The one thing between here and TestFlight
 
-Asked on 2026-09-03, and answered twice, because the answer changed while it
-was being asked. Everything in the table above is green except one row, and
-that row is not ours.
+Asked and settled on 2026-09-03. Everything in the table above is green except
+one row, and that row is not ours.
 
-**Family Controls (Distribution) approval is unconfirmed.** The capability is
-enabled on the four App IDs, which is necessary and not sufficient — see the
-table row for why a capability listing cannot tell approval from the
-self-service development variant. No Release run has been attempted since it
-was enabled: the last one, run #7 at 04:09, predates it and failed on exactly
-these four entitlements. So one Release run with `force_profiles: true` now
-settles it, and ships the build if the answer is yes.
+**Apple has not approved Family Controls (Distribution).** This is now measured
+rather than assumed. Release run 33771919392 at 15:20 regenerated every profile
+from scratch with `force_profiles: true` and the fresh ones still came back
+without `com.apple.developer.family-controls`, so the export failed on the app
+and two of the extensions. That is the signature of a pending request: `match`
+asks Apple for a profile, Apple mints one carrying only the capabilities the
+App ID is authorized for, and the entitlement is simply absent.
+
+It also retires the doubt in the row above it. The App IDs list
+`FAMILY_CONTROLS` and have since 2026-09-03 — and the profiles minted twenty
+minutes later still lacked the entitlement. So the capability listing and the
+approval are demonstrably different things, not just theoretically.
+
+Nothing in this repo can move it. The request went in 2026-09-02, Apple sends
+no acknowledgement, and the estimate remains a month rather than a week. The
+standing Routine re-runs this check every three days; the day it gets past
+export is the day the build ships, because everything else is ready.
+
+**What is ready.** Certificate, private `match` store, all seven secrets, five
+profiles regenerating cleanly, App Group assigned, the widget signing and
+building, the App Store Connect record, 106 preflight checks and the test suite
+green. The pipeline runs end to end as far as Apple permits, on a run that
+costs ninety seconds to repeat.
 
 **The App Store Connect record was the other one, and it is done.** It did not
 exist at 12:03 and did exist at 15:15, as *Dad Your Phone*. Worth recording how
