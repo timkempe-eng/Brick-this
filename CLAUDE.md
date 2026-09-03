@@ -112,11 +112,43 @@ belongs, and every number in it is written down somewhere a person reads.
 Mutation testing is what found this; the README had been claiming the opposite
 for months.
 
+Sweeping the family layer's constants the same way found three more — an
+allowance ceiling, a request's lifetime, a bounded exchange history. Those live
+in their behavioural homes rather than in `PromisedNumbersTests`, because what
+each promises is a behaviour and not a printed number. **Do the sweep after
+adding constants, not instead of it**: nine were mutated and six were already
+caught, so the survivors are not predictable by eye.
+
+Two of those mutations found something better than a missing test. **A guard no
+test can reach is not a guard** — a `max(0, …)` that could not change any
+output, because the only path reading it already handled the case. And a call
+that changed nothing when removed, because the call above it had already made
+it — on every path but the one that mattered. A surviving mutation is as often
+pointing at dead code, or at the case a redundant line should have covered, as
+at a missing assertion.
+
 Things the tests deliberately pin down, because they are decisions rather than
 implementation details: a session counts toward the day it *started*; a streak
-with nothing today but something yesterday is still current; an exhausted
-override allowance leaves the phone Dadded rather than half-released; a
-scheduled Mode never stomps a session you began by hand.
+with nothing today but something yesterday is still current; a day you Dadded
+and then spent an override on still counts toward that streak, though not
+toward a rung; an exhausted override allowance leaves the phone Dadded rather
+than half-released; a scheduled Mode never stomps a session you began by hand.
+
+From the family layer, where the decision is the feature: only a session a
+*person* ended earns a rung or a reward day, and both read one definition
+(`daysEndedByAPerson`) rather than each writing it out; the household streak
+counts days *everyone* took part, so a grown-up's phone can end it; a stale
+shared number is never shown as a live one; `agreedBy` is derived from a tag
+tap and can never be passed in; and a warning is owed only for a schedule the
+system actually accepted.
+
+**Guards of the seam kind are worth more than guards of the unit kind.** The
+fan-out's five real defects were all modules that were right alone and
+disagreed where they met, and none of their own suites could see it. The shape
+that catches those: walk the whole range, or build one input containing every
+case, and assert two modules agree about it — `RungPermissionAgreementTests`,
+`TwoLedgersAgreeTests`, `SharedStreakTests` (which runs two whole engines and
+passes strings between them).
 
 ## Where state lives
 

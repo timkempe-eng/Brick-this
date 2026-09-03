@@ -157,7 +157,7 @@ extension DadEngine {
     @discardableResult
     func claim(_ reward: RewardLedger.Reward) -> Bool {
         guard let updated = rewardLedger.claiming(reward) else { return false }
-        store.redemptions = Array(updated.suffix(3))
+        store.redemptions = Array(updated.suffix(Self.grantHistoryLimit))
         return true
     }
 
