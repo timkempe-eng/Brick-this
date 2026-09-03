@@ -31,6 +31,19 @@ protocol ShieldControlling {
     func applyRestrictionsOnly(_ mode: DadMode)
 
     func clear()
+
+    /// Whether the system would currently let us hold anything.
+    ///
+    /// A read on a port that was otherwise write-only, and the only reason it
+    /// is here: ManagedSettings restrictions do not outlive the authorization
+    /// that permitted them, so finding authorization gone while a session is
+    /// recorded as running is evidence — the one honest kind — that the shield
+    /// was not being held. See `ShieldGap`.
+    ///
+    /// `.unknown` for a status the adapter cannot read. Mapping that to
+    /// `.notApproved` is the single change that would make this feature start
+    /// accusing people, and a test pins it.
+    var authorization: ShieldAuthorization { get }
 }
 
 /// Releasing a timed session with the app closed, and running Modes on a
@@ -163,6 +176,16 @@ protocol DadPersisting: AnyObject {
     ///
     /// Optional so an install from before this existed decodes as a household
     /// of nobody, which shows no shared streak rather than a wrong one.
+    /// The last moment the app saw a session running *and* authorization
+    /// approved — the most recent instant it can honestly say the shield was
+    /// in place.
+    ///
+    /// Persisted because it is the left edge of the bound `ShieldGap` reports,
+    /// and it has to survive the process dying — which is precisely the event
+    /// a gap is usually made of. Cleared when a session starts or ends, so a
+    /// stale value from an earlier one cannot widen a later bound.
+    var lastShieldConfirmedAt: Date? { get set }
+
     var memberID: MemberID? { get set }
     var ledger: HouseholdLedger { get set }
 

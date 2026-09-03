@@ -28,6 +28,13 @@ final class DadModel: ObservableObject {
     /// Snapshotted for the same reason `stats` is — it derives this phone's own
     /// standing from the whole session history.
     @Published private(set) var householdStreak: HouseholdStreak?
+
+    /// What the records can honestly say about the shield having been missing.
+    /// Silent in the overwhelmingly common case, and always silent about
+    /// *anybody* — see `ShieldGap`.
+    @Published private(set) var shieldGap = ShieldGapReport(gaps: [],
+                                                            authorizationMissingNow: false,
+                                                            audience: .solo)
     @Published var authorization: AuthorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @Published var banner: String?
     @Published var pendingModeChoice = false
@@ -62,6 +69,7 @@ final class DadModel: ObservableObject {
         pendingRequest = engine.pendingRequest
         stats = engine.stats
         householdStreak = engine.householdStreak
+        shieldGap = engine.shieldGap
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
     }

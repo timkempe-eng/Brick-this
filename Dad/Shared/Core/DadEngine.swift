@@ -212,6 +212,11 @@ struct DadEngine {
         }
 
         store.activeSession = session
+        // A new session, so nothing has been confirmed about it yet. Carrying
+        // the previous session's stamp forward would narrow this one's bound
+        // to a moment that belongs to a different stretch of time — the
+        // direction that hides a gap rather than inventing one.
+        store.lastShieldConfirmedAt = nil
         applyShield(for: session, mode: mode)
 
         if let duration = mode.autoUnDadAfter {
@@ -238,6 +243,9 @@ struct DadEngine {
         session.endedBy = DadSession.EndReason(end)
 
         store.activeSession = nil
+        // Nothing is being held any more, so nothing can be confirmed. Left
+        // set, it would be the left edge of the *next* session's bound.
+        store.lastShieldConfirmedAt = nil
         archive(session)
 
         if end == .tapped,
@@ -618,6 +626,42 @@ struct DadEngine {
         }
 
         applyShield(for: session, mode: mode)
+
+        // The shield is up and the system says it may be. This is the most
+        // recent instant the app can honestly claim it was being held, and it
+        // is stamped *after* applying rather than before, so a failure above
+        // never records a confirmation the shield did not get.
+        //
+        // Only ever moved forward while a session is running, and cleared when
+        // one starts or ends: a stale stamp from an earlier session would
+        // narrow a later gap, which is the direction that hides one.
+        if shield.authorization == .approved {
+            store.lastShieldConfirmedAt = clock.now
+        }
+    }
+
+    /// What the records can honestly say about the shield having been missing.
+    ///
+    /// Assembled here because every input comes from this engine's own store
+    /// and ports; the judgement is `ShieldGap`'s, which is Foundation-only and
+    /// says nothing about anybody's intent. See the note there on why
+    /// "`reconcile` had to re-apply the shield" is deliberately *not* one of
+    /// the inputs.
+    var shieldGap: ShieldGapReport {
+        let intervals = (store.history + [store.activeSession].compactMap { $0 })
+            .map { DateInterval(start: $0.startedAt,
+                                end: max($0.endedAt ?? clock.now, $0.startedAt)) }
+        return ShieldGap.report(ShieldObservations(
+            now: clock.now,
+            authorization: shield.authorization,
+            activeSessionStartedAt: store.activeSession?.startedAt,
+            lastConfirmedAt: store.lastShieldConfirmedAt,
+            occurrences: ShieldGap.occurrences(of: store.modes, now: clock.now),
+            daddedIntervals: intervals,
+            // A household of one has nobody to explain anything to, and a
+            // running tally of the times Dad lost sight of the shield would
+            // turn a boundary they chose into a self-audit they did not.
+            audience: store.household.role == .grownUp ? .solo : .shared))
     }
 
     // MARK: - Breaks

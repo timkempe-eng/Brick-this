@@ -9,6 +9,7 @@ final class FakeStore: DadPersisting {
     var history: [DadSession] = []
     var tags = TagPairing()
     var neverBlocked = BlockedSelection()
+    var lastShieldConfirmedAt: Date?
     var memberID: MemberID?
     var ledger = HouseholdLedger()
     var household = Household.solo
@@ -56,6 +57,11 @@ final class SpyShield: ShieldControlling {
     }
     func applyRestrictionsOnly(_ mode: DadMode) { calls.append(.restrictionsOnly(mode.id)) }
     func clear() { calls.append(.clear) }
+
+    /// Approved by default: every test that is not about the gap report is
+    /// about a phone whose Screen Time access is in place, and making them all
+    /// say so would bury the ones that mean it.
+    var authorization: ShieldAuthorization = .approved
 }
 
 /// Records what the engine asked of the usage counter.

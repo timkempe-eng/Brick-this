@@ -36,6 +36,7 @@ final class UserDefaultsStore: DadPersisting {
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
+        static let lastShieldConfirmedAt = "lastShieldConfirmedAt"
         static let memberID = "memberID"
         static let ledger = "ledger"
     }
@@ -87,6 +88,11 @@ final class UserDefaultsStore: DadPersisting {
     /// Absent means this phone has not been in a household exchange yet.
     /// Minted lazily by the engine rather than here, so reading the store
     /// never writes to it.
+    var lastShieldConfirmedAt: Date? {
+        get { decode(Date.self, Key.lastShieldConfirmedAt) }
+        set { encode(newValue, Key.lastShieldConfirmedAt) }
+    }
+
     var memberID: MemberID? {
         get { decode(MemberID.self, Key.memberID) }
         set { encode(newValue, Key.memberID) }

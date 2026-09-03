@@ -69,6 +69,19 @@ struct ManagedSettingsShield: ShieldControlling {
     func clear() {
         store.clearAllSettings()
     }
+
+    /// `.notApproved` for both denied and not-determined, because in neither
+    /// can anything be held. Anything else — a status this build does not
+    /// recognise — is `.unknown`, not `.notApproved`: being unable to read the
+    /// answer is not an answer, and treating it as one is what would turn a
+    /// slow `AuthorizationCenter` into an accusation.
+    var authorization: ShieldAuthorization {
+        switch AuthorizationCenter.shared.authorizationStatus {
+        case .approved:                  return .approved
+        case .denied, .notDetermined:    return .notApproved
+        @unknown default:                return .unknown
+        }
+    }
 }
 
 extension ManagedSettingsStore.Name {

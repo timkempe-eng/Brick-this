@@ -100,11 +100,46 @@ struct StatsView: View {
                         }
                     }
                 }
+
+                shieldGapSection
             }
             .navigationTitle("Stats")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
+            }
+        }
+    }
+}
+
+private extension StatsView {
+
+    /// When the records cannot account for a stretch, and what that is worth.
+    ///
+    /// Outside the `sessionCount == 0` branch on purpose: the setup note — that
+    /// Screen Time access is missing, so the next tap will hold nothing — is
+    /// exactly what a phone with no sessions yet most needs to hear.
+    ///
+    /// Everything about the wording is `ShieldGap`'s and not this file's. It is
+    /// rendered as a list of bounds rather than a total, because the app is
+    /// absent during a gap by construction: it knows the shield was in place at
+    /// one edge and gone at the other, and nothing about the middle. A single
+    /// confident number would be a measurement it did not take.
+    @ViewBuilder
+    var shieldGapSection: some View {
+        if !model.shieldGap.isSilent {
+            Section {
+                if let note = model.shieldGap.setupNote {
+                    Label(note, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+                ForEach(Array(model.shieldGap.gaps.enumerated()), id: \.offset) { _, gap in
+                    LabeledContent(gap.evidenceText, value: gap.boundText)
+                }
+            } header: {
+                Text(model.shieldGap.headline ?? "Screen Time access")
+            } footer: {
+                Text(model.shieldGap.detail ?? "")
             }
         }
     }
