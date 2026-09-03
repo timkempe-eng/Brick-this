@@ -112,7 +112,12 @@ protocol DadPersisting: AnyObject {
     var modes: [DadMode] { get set }
     var activeSession: DadSession? { get set }
     var history: [DadSession] { get set }
-    var pairedTagUIDs: [String] { get set }
+    /// Which tags are paired, and which Mode each one starts.
+    ///
+    /// Was a flat `[String]`. A tag that can *name* a Mode is what turns
+    /// thirty cents of sticker into the thing Brick charges $59 a puck for:
+    /// the kitchen tag starts Dinner, the desk tag starts Deep Work.
+    var tags: TagPairing { get set }
 
     /// A break in progress: the Mode that will start itself again, and when.
     /// `nil` whenever nothing is waiting to come back.

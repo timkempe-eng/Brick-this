@@ -69,8 +69,15 @@ final class SchemaCodingTests: XCTestCase {
         // A later schema's payload may be a shape this build cannot parse at
         // all. That must still report tooNew, not unreadable, or the caller
         // would treat it as safe to overwrite.
-        let future = json(#"{"schema":2,"value":"a bare string"}"#)
-        XCTAssertEqual(SchemaCoding.read(Row.self, from: future), .tooNew(schema: 2))
+        //
+        // Written against `current + 1` rather than a literal. It said `2`
+        // until the tag migration made 2 the current version, at which point
+        // the test failed for the one reason a test should never fail: the
+        // number moved, not the behaviour. "One past whatever this build
+        // writes" is the actual subject.
+        let next = SchemaCoding.current + 1
+        let future = json(#"{"schema":\#(next),"value":"a bare string"}"#)
+        XCTAssertEqual(SchemaCoding.read(Row.self, from: future), .tooNew(schema: next))
     }
 
     func testAMalformedSchemaIsRefusedRatherThanAssumedCurrent() {

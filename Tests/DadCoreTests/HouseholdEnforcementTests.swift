@@ -65,7 +65,7 @@ final class HouseholdEnforcementTests: XCTestCase {
         h.engine.pair(tagUID: "DEADBEEF")
 
         XCTAssertEqual(h.engine.forgetAllTags(), .unpairTag)
-        XCTAssertEqual(h.store.pairedTagUIDs, ["DEADBEEF"])
+        XCTAssertEqual(h.store.tags.uids, ["DEADBEEF"])
     }
 
     // MARK: - The rungs actually differ

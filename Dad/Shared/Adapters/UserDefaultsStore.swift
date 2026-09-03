@@ -58,8 +58,12 @@ final class UserDefaultsStore: DadPersisting {
         set { encode(newValue, Key.history) }
     }
 
-    var pairedTagUIDs: [String] {
-        get { decodeArray(String.self, Key.pairedTagUIDs) ?? [] }
+    /// The key is unchanged from when this held a flat `[String]`: the value
+    /// under it is migrated on read by `SchemaCoding`, so a phone that already
+    /// had tags paired keeps them and they become plain toggles, which is
+    /// exactly what they were.
+    var tags: TagPairing {
+        get { decode(TagPairing.self, Key.pairedTagUIDs) ?? TagPairing() }
         set { encode(newValue, Key.pairedTagUIDs) }
     }
 

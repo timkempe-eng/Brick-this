@@ -124,7 +124,7 @@ final class DadModel: ObservableObject {
 
     var emergencyUnDadsRemaining: Int { engine.emergencyUnDadsRemaining }
 
-    var pairedTagCount: Int { engine.store.pairedTagUIDs.count }
+    var pairedTagCount: Int { engine.store.tags.count }
 
     /// Apps and sites no Mode may take away.
     var neverBlocked: BlockedSelection {
@@ -218,8 +218,8 @@ final class DadModel: ObservableObject {
 
     // MARK: - Tags
 
-    func pair(tagUID: String) {
-        engine.pair(tagUID: tagUID)
+    func pair(tagUID: String, to modeID: UUID? = nil) {
+        engine.pair(tagUID: tagUID, to: modeID)
         banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.verb) your phone."
         reload()
     }

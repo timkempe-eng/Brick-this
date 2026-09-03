@@ -138,7 +138,7 @@ final class DadEngineTests: XCTestCase {
         let h = Harness()
         h.engine.pair(tagUID: "ABC")
         h.engine.pair(tagUID: "ABC")
-        XCTAssertEqual(h.store.pairedTagUIDs, ["ABC"])
+        XCTAssertEqual(h.store.tags.uids, ["ABC"])
     }
 
     // MARK: - Timed release

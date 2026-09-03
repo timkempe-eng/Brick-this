@@ -7,7 +7,7 @@ final class FakeStore: DadPersisting {
     var modes: [DadMode] = []
     var activeSession: DadSession?
     var history: [DadSession] = []
-    var pairedTagUIDs: [String] = []
+    var tags = TagPairing()
     var neverBlocked = BlockedSelection()
     var household = Household.solo
     var scheduleSkips: [ScheduleSkip] = []

@@ -13,7 +13,7 @@ import Foundation
 enum SchemaCoding {
 
     /// Bump when a stored shape changes, and add the migration below.
-    static let current = 1
+    static let current = 2
 
     private enum Key {
         static let schema = "schema"
@@ -122,6 +122,23 @@ enum SchemaCoding {
                 // payload shape is unchanged; only the wrapper is new, and the
                 // caller has already unwrapped it.
                 version = 1
+            case 1:
+                // 1 → 2: paired tags stop being a flat list of UIDs and become
+                // pairs that may name a Mode, so the kitchen tag can start
+                // Dinner. The first step on this ladder that actually moves a
+                // shape — the envelope has been in place since before anything
+                // shipped, which is the whole reason it was worth adding then.
+                //
+                // Shape-directed and total: it recognises only a non-empty
+                // array of strings and returns everything else untouched, so
+                // it cannot make another key unreadable. That is safe today
+                // because the paired-tag list is the only `[String]` stored —
+                // Modes, history and schedules are arrays of objects, and the
+                // override uses are numbers. **A future key storing a bare
+                // `[String]` makes this wrong**, and the fix then is to make
+                // migration key-aware rather than to special-case here.
+                value = TagPairing.Migration.flatUIDListToNamedPairs(value)
+                version = 2
             default:
                 // A gap in the ladder is a programming error, not user data
                 // being wrong. Refuse rather than hand back a half-migrated

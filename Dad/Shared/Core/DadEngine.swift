@@ -105,8 +105,19 @@ struct DadEngine {
     ///     because then the tap can only mean "release".
     @discardableResult
     func handleTap(tagUID: String? = nil, preferredMode: DadMode? = nil) -> TapResult {
-        if let uid = tagUID, !isPaired(tagUID: uid) {
-            return .unknownTag
+        // What this particular sticker means. A tag that names a Mode is the
+        // whole point of pairing more than one: the kitchen tag starts Dinner
+        // and the desk tag starts Deep Work, without anyone opening the app.
+        var namedMode: DadMode?
+        if let uid = tagUID {
+            switch store.tags.resolve(uid, knownModeIDs: Set(store.modes.map(\.id))) {
+            case .unknownTag:
+                return .unknownTag
+            case .anyMode:
+                break
+            case .mode(let id):
+                namedMode = store.modes.first { $0.id == id }
+            }
         }
 
         if store.activeSession != nil {
@@ -137,7 +148,10 @@ struct DadEngine {
         // Starting: the Mode we were handed, else the only one that blocks
         // anything, else make the user choose. Never start an empty session —
         // it would look like it worked and block nothing.
-        guard let mode = preferredMode ?? soleUsableMode(), mode.blocksAnything else {
+        // An explicitly requested Mode still wins over the one the tag names:
+        // the request comes from a person answering a question, the tag from a
+        // sticker somebody labelled months ago.
+        guard let mode = preferredMode ?? namedMode ?? soleUsableMode(), mode.blocksAnything else {
             return .needsModeChoice
         }
         return .dadded(mode: mode, start: dad(with: mode))
@@ -721,12 +735,15 @@ struct DadEngine {
     /// An empty pairing list means "any tag works", which is what you want
     /// before the user has paired anything.
     func isPaired(tagUID: String) -> Bool {
-        store.pairedTagUIDs.isEmpty || store.pairedTagUIDs.contains(tagUID)
+        store.tags.isPaired(tagUID)
     }
 
-    func pair(tagUID: String) {
-        guard !store.pairedTagUIDs.contains(tagUID) else { return }
-        store.pairedTagUIDs.append(tagUID)
+    /// - Parameter modeID: which Mode this tag starts. `nil` leaves it a plain
+    ///   toggle, which is what every tag was before tags could name a Mode.
+    func pair(tagUID: String, to modeID: UUID? = nil) {
+        var tags = store.tags
+        tags.pair(tagUID, to: modeID)
+        store.tags = tags
     }
 
     // MARK: - Modes
@@ -837,7 +854,9 @@ struct DadEngine {
     @discardableResult
     func forgetAllTags() -> HouseholdCapability? {
         guard may(.unpairTag) else { return .unpairTag }
-        store.pairedTagUIDs = []
+        var tags = store.tags
+        tags.forgetAll()
+        store.tags = tags
         return nil
     }
 
