@@ -146,16 +146,38 @@ final class DadModel: ObservableObject {
 
     // MARK: - Authorization
 
+    /// Asks iOS for Screen Time access, as the right *kind* of user.
+    ///
+    /// The two members are not interchangeable and the difference is the whole
+    /// family layer:
+    ///
+    /// - `.individual` is somebody authorising themselves. The phone's owner
+    ///   is in charge and can revoke it in Settings whenever they like.
+    ///   Correct for an adult Dadding their own phone, and the only mode this
+    ///   app had until now.
+    /// - `.child` is genuine parental control, and it is what makes an
+    ///   arrangement *binding* rather than merely co-operative — the young
+    ///   person cannot undo it alone. Apple gates it hard: the device must be
+    ///   signed into a child iCloud account inside an iCloud Family, and must
+    ///   not be MDM-enrolled.
+    ///
+    /// That gate is a product constraint rather than a detail. It forces a
+    /// household onto Family Sharing, and when it is not set up the request
+    /// throws — so the failure has to be explained rather than reported as
+    /// "declined", which would send somebody to the Screen Time settings that
+    /// are not the problem.
     func requestAuthorization() async {
+        let member: FamilyControlsMember =
+            engine.store.household.role == .youngPerson ? .child : .individual
         do {
-            try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            try await AuthorizationCenter.shared.requestAuthorization(for: member)
             authorization = AuthorizationCenter.shared.authorizationStatus
             engine.store.hasOnboarded = true
         } catch {
             // Refresh here too: the denied state is what makes OnboardingView
             // show its explanation instead of looking like a dead button.
             authorization = AuthorizationCenter.shared.authorizationStatus
-            banner = "Screen Time access was declined. Dad can't hide apps without it."
+            banner = member == .child ? Vocab.childAuthorizationFailed : Vocab.authorizationDeclined
         }
     }
 

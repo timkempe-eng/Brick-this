@@ -71,6 +71,20 @@ enum Vocab {
         }
     }
 
+    // MARK: Authorization
+    static let authorizationDeclined =
+        "Screen Time access was declined. \(appName) can't hide apps without it."
+
+    /// Said separately from a plain decline on purpose. Sending somebody to
+    /// Screen Time settings when the actual problem is that this phone is not
+    /// in an iCloud Family wastes an evening, and the two failures are
+    /// indistinguishable from the error alone.
+    static let childAuthorizationFailed =
+        "\(appName) couldn't set this up as a young person's phone. Apple only allows that "
+        + "when the phone is signed into a child account inside an iCloud Family — check "
+        + "Settings › Family. You can also set this phone to \"Mine\" for now; everything "
+        + "works, but it can be switched off from here."
+
     // MARK: Asking, and granting
     static let askAction = "Ask for a few minutes"
     static func asking(mode: String) -> String {

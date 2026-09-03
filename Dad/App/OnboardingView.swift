@@ -38,6 +38,20 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
             }
 
+            // Asked before the permission, because the answer decides which
+            // permission is requested. `.child` is a different, stricter ask
+            // that Apple gates on an iCloud Family, and getting it wrong means
+            // a household finds out weeks later that the arrangement was never
+            // binding.
+            Picker("Whose phone is this?", selection: Binding(
+                get: { model.household.role },
+                set: { model.setRole($0) }
+            )) {
+                Text("Mine").tag(HouseholdRole.grownUp)
+                Text("A young person's").tag(HouseholdRole.youngPerson)
+            }
+            .pickerStyle(.segmented)
+
             Button {
                 Task { await model.requestAuthorization() }
             } label: {
