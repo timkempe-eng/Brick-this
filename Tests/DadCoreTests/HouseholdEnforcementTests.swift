@@ -109,13 +109,11 @@ final class HouseholdEnforcementTests: XCTestCase {
     }
 
     func testClimbingTheLadderActuallyUnlocksTheThing() {
-        let mode = Harness().addMode()
         for capability in [HouseholdCapability.editMode, .deleteMode, .changeSchedule,
                            .changeAllowance, .unpairTag, .spendEmergencyOverride] {
             guard let level = RolePermissions.minimumAutonomyLevel(for: capability) else {
                 return XCTFail("\(capability) is reachable, so it needs a rung")
             }
-            _ = mode
             let at = harness(role: .youngPerson, level: level)
             XCTAssertTrue(at.engine.may(capability), "\(capability) at its rung")
 

@@ -264,10 +264,16 @@ struct DadEngine {
         // Not Dadded: nothing to release, and no reason to charge for it.
         guard store.activeSession != nil else { return true }
 
-        // An override is a capability, but it is the *first* rung — a phone
-        // with no way out at all is one nobody will agree to carry, and the
-        // allowance is already bounded at five a month and self-restoring.
-        guard may(.spendEmergencyOverride) else { return false }
+        // No capability check here, and that is deliberate rather than an
+        // omission. `spendEmergencyOverride` is granted at rung zero to every
+        // role, so a guard on it is unreachable — a review found the one that
+        // used to be here, and `HouseholdEnforcementTests` already proves the
+        // capability is held in every state that exists. Unreachable guards
+        // are how a codebase accumulates code nobody can test and nobody dares
+        // delete.
+        //
+        // What the ladder *does* change is how many you get, which is
+        // `emergencyCeiling` below.
 
         guard let spent = EmergencyAllowance.consume(uses: store.emergencyUses,
                                                     now: clock.now,
@@ -796,6 +802,34 @@ struct DadEngine {
         return max(ladder.level, store.household.autonomyLevel)
     }
 
+    /// Records a rung the moment it is earned, so the history running out
+    /// cannot take it back.
+    ///
+    /// `AutonomyLadder` says a high-water mark "can only ever go up, so no
+    /// amount of future history, and no passage of time, can take an earned
+    /// rung away". That was false, and the review found it: the ladder reads
+    /// `store.history`, which `archive` truncates to `historyLimit`. Above
+    /// roughly eight sessions a day — which is exactly what a rationed Mode
+    /// produces — the oldest clean days fall off the end and the mark drops.
+    ///
+    /// Worse than a threshold, twice over: the demotion is instantaneous
+    /// rather than one rung a fortnight, and it is *invisible*, because
+    /// `withheldRungs` stays zero so nothing warns. `DemotionWarning` exists
+    /// precisely because "a level that changed with no warning is
+    /// indistinguishable from a bug".
+    ///
+    /// So the earned rung is written into the granted floor as it is reached.
+    /// That makes the ratchet a stored fact rather than a property of how much
+    /// history happens to fit, and it costs one integer.
+    private func recordEarnedRung() {
+        guard store.household.role == .youngPerson else { return }
+        let earned = ladder.level
+        guard earned > store.household.autonomyLevel else { return }
+        var household = store.household
+        household.autonomyLevel = RolePermissions.normalisedLevel(earned)
+        store.household = household
+    }
+
     /// What this phone's household arrangement currently permits.
     var permissions: RolePermissions {
         RolePermissions.for(role: store.household.role, autonomyLevel: autonomyLevel)
@@ -945,7 +979,19 @@ struct DadEngine {
 
     private func archive(_ session: DadSession) {
         store.history = Array((store.history + [session]).suffix(Self.historyLimit))
+        // The one moment the ladder's inputs change, so the one moment a rung
+        // can be newly earned — and the moment the oldest day can fall off the
+        // end. Recording here is what keeps the second from undoing the first.
+        recordEarnedRung()
     }
 
-    var stats: DadStats { DadStats(sessions: store.history, now: clock.now) }
+    /// The injected calendar goes through too. It was dropped here while
+    /// every neighbouring call passed it, so a test pinning a time zone got
+    /// the engine's zone from the ladder and the runner's from the stats — no
+    /// user-visible effect today, since the app passes `.current` anyway, and
+    /// exactly the kind of inconsistency that makes a future failure read as
+    /// impossible.
+    var stats: DadStats {
+        DadStats(sessions: store.history, now: clock.now, calendar: calendar)
+    }
 }

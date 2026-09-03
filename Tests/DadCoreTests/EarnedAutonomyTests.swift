@@ -191,3 +191,130 @@ final class EmergencyCeilingTests: XCTestCase {
         XCTAssertEqual(h.engine.emergencyCeiling, EmergencyAllowance.perWindow)
     }
 }
+
+/// The ratchet has to be a stored fact, not a property of how much history fits.
+///
+/// Found by review. `AutonomyLadder` promises a high-water mark that "can only
+/// ever go up, so no amount of future history, and no passage of time, can take
+/// an earned rung away". It reads `store.history`, which `archive` truncates to
+/// 500 sessions — so above roughly eight sessions a day, which is exactly what a
+/// rationed Mode produces, the oldest clean days fell off the end and the mark
+/// dropped. Instantaneously, and invisibly: `withheldRungs` stayed zero, so
+/// nothing warned, which is the one thing `DemotionWarning` exists to prevent.
+final class LadderRatchetTests: XCTestCase {
+
+    private let start = Date(timeIntervalSince1970: 1_756_000_000)
+
+    private func harness() -> Harness {
+        let h = Harness(now: start)
+        h.store.household = Household(role: .youngPerson, autonomyLevel: 0)
+        return h
+    }
+
+    /// One clean, person-ended session per day, oldest first.
+    private func day(_ offsetFromStart: Int) -> DadSession {
+        let at = start.addingTimeInterval(Double(offsetFromStart) * 24 * 60 * 60)
+        var s = DadSession(modeID: UUID(), modeName: "Deep Work", startedAt: at)
+        s.endedAt = at.addingTimeInterval(3600)
+        s.endedBy = .tapped
+        return s
+    }
+
+    func testARungIsRecordedTheMomentItIsEarned() {
+        let h = harness()
+        h.store.history = (0..<40).map(day)
+        h.clock.now = start.addingTimeInterval(41 * 24 * 60 * 60)
+        XCTAssertEqual(h.store.household.autonomyLevel, 0, "nothing written yet")
+
+        // Any finished session archives, which is the one moment the ladder's
+        // inputs change.
+        let mode = h.addMode()
+        h.engine.dad(with: mode)
+        h.engine.handleTap()
+
+        XCTAssertGreaterThan(h.store.household.autonomyLevel, 0)
+        XCTAssertEqual(h.store.household.autonomyLevel, h.engine.ladder.level)
+    }
+
+    func testHistoryFallingOffTheEndCannotTakeARungBack() {
+        // The failure, reproduced: fill the history to its cap with recent,
+        // frequent sessions so the older clean days are gone.
+        let h = harness()
+        h.store.history = (0..<60).map(day)
+        h.clock.now = start.addingTimeInterval(61 * 24 * 60 * 60)
+        let mode = h.addMode()
+        h.engine.dad(with: mode)
+        h.engine.handleTap()
+        let earned = h.store.household.autonomyLevel
+        XCTAssertGreaterThan(earned, 0, "this test needs a rung to have been earned")
+
+        // Now bury it: many sessions on one day, enough to push the cap.
+        var recent: [DadSession] = []
+        for i in 0..<DadEngine.historyLimit {
+            let at = h.clock.now.addingTimeInterval(Double(i) * 60)
+            var s = DadSession(modeID: mode.id, modeName: mode.name, startedAt: at)
+            s.endedAt = at.addingTimeInterval(30)
+            s.endedBy = .tapped
+            recent.append(s)
+        }
+        h.store.history = Array((h.store.history + recent).suffix(DadEngine.historyLimit))
+        XCTAssertLessThan(h.engine.ladder.level, earned,
+                          "the ladder alone would now demote — that is the bug")
+
+        XCTAssertEqual(h.engine.autonomyLevel, earned, "but the engine remembers")
+        XCTAssertTrue(h.engine.may(.editMode))
+    }
+
+    func testTheRecordedRungIsNeverAboveWhatThePermissionTableUnderstands() {
+        let h = harness()
+        h.store.history = (0..<200).map(day)
+        h.clock.now = start.addingTimeInterval(201 * 24 * 60 * 60)
+        let mode = h.addMode()
+        h.engine.dad(with: mode)
+        h.engine.handleTap()
+
+        XCTAssertEqual(h.store.household.autonomyLevel,
+                       RolePermissions.normalisedLevel(h.store.household.autonomyLevel))
+    }
+
+    func testAGrownUpsLevelIsNeverWrittenTo() {
+        let h = Harness(now: start)
+        h.store.history = (0..<200).map(day)
+        h.clock.now = start.addingTimeInterval(201 * 24 * 60 * 60)
+        let mode = h.addMode()
+        h.engine.dad(with: mode)
+        h.engine.handleTap()
+
+        XCTAssertEqual(h.store.household.autonomyLevel, 0)
+    }
+}
+
+/// A rung's copy and a rung's effect cannot disagree, because there is one of
+/// them.
+final class RungPermissionAgreementTests: XCTestCase {
+
+    func testTheRungBooleansAreTheSameTableTheEngineConsults() {
+        // These were four hand-written comparisons against rung numbers — a
+        // second permission table, read by nothing but its own tests, which
+        // had already drifted: `canCreateModes` claimed rung three while the
+        // engine charged a new Mode to `editMode` at rung one.
+        for rung in AutonomyLadder.Rung.allCases {
+            let permissions = RolePermissions.for(role: .youngPerson, autonomyLevel: rung.rawValue)
+            XCTAssertEqual(rung.canEditModeApps, permissions.may(.editMode), rung.title)
+            XCTAssertEqual(rung.canSetOwnSleepWindow, permissions.may(.changeSchedule), rung.title)
+            XCTAssertEqual(rung.canCreateModes, permissions.may(.deleteMode), rung.title)
+            XCTAssertEqual(rung.keepsTheTag, permissions.may(.unpairTag), rung.title)
+        }
+    }
+
+    func testWhatARungSaysItUnlocksIsWhatThatRungIsFirstToGrant() {
+        // The titles are what somebody reads, so each capability must first
+        // appear at the rung whose copy claims it.
+        XCTAssertTrue(AutonomyLadder.Rung.trusted.canEditModeApps)
+        XCTAssertFalse(AutonomyLadder.Rung.gettingStarted.canEditModeApps)
+        XCTAssertTrue(AutonomyLadder.Rung.selfScheduling.canSetOwnSleepWindow)
+        XCTAssertFalse(AutonomyLadder.Rung.trusted.canSetOwnSleepWindow)
+        XCTAssertTrue(AutonomyLadder.Rung.keeperOfTheTag.keepsTheTag)
+        XCTAssertFalse(AutonomyLadder.Rung.selfGoverning.keepsTheTag)
+    }
+}

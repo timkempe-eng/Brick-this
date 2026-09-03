@@ -160,21 +160,37 @@ struct AutonomyLadder {
         // capability that switched off again higher up the ladder would be a
         // reward for consistency that took something away.
 
+        /// What this rung actually permits.
+        ///
+        /// **Derived, never restated.** These were four hand-written
+        /// comparisons against rung numbers, and a review caught them for what
+        /// they were: a second permission table, read by nothing but its own
+        /// tests, that had already drifted — `canCreateModes` claimed rung
+        /// three while the engine charged a new Mode to `editMode` at rung
+        /// one. Two tables answering the same question is one table too many,
+        /// and the one the engine consults is `RolePermissions`.
+        ///
+        /// So the ladder now *asks*. A rung's copy and a rung's effect cannot
+        /// disagree, because there is only one of them.
+        var permissions: RolePermissions {
+            RolePermissions.for(role: .youngPerson, autonomyLevel: rawValue)
+        }
+
         /// Change which apps an existing Mode blocks, without a parent
         /// approving each edit.
-        var canEditModeApps: Bool { rawValue >= Rung.trusted.rawValue }
+        var canEditModeApps: Bool { permissions.may(.editMode) }
 
         /// Set your own Sleep window. The *range* it must sit inside stays a
         /// parent's decision at every rung — this unlocks choosing within it,
         /// not abolishing it.
-        var canSetOwnSleepWindow: Bool { rawValue >= Rung.selfScheduling.rawValue }
+        var canSetOwnSleepWindow: Bool { permissions.may(.changeSchedule) }
 
-        /// Create and name new Modes, rather than only editing the ones you
-        /// were given.
-        var canCreateModes: Bool { rawValue >= Rung.selfGoverning.rawValue }
+        /// Make and unmake your own Modes, rather than only editing the ones
+        /// you were given.
+        var canCreateModes: Bool { permissions.may(.deleteMode) }
 
         /// The tag is yours to keep and to move.
-        var keepsTheTag: Bool { rawValue >= Rung.keeperOfTheTag.rawValue }
+        var keepsTheTag: Bool { permissions.may(.unpairTag) }
 
         /// Emergency overrides on top of `EmergencyAllowance.perWindow`.
         ///
