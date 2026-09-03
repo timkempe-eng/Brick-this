@@ -284,9 +284,18 @@ platform :ios do
       end
       UI.important("#{identifier}")
       bundle.bundle_id_capabilities.to_a.sort_by { |c| c.capability_type.to_s }.each do |c|
-        # settings printed raw and unconditionally. Ticking App Groups and
+        # Settings printed raw and unconditionally. Ticking App Groups and
         # assigning a group to it are two different actions, and only the
-        # assignment lands in a profile — it shows up here and nowhere else.
+        # assignment lands in a profile.
+        #
+        # This was written expecting the assignment to show up in `settings`.
+        # It does not: run 11 printed `settings=nil` for every capability on
+        # every identifier, including FAMILY_CONTROLS and NFC_TAG_READING,
+        # which are certainly enabled and working. So a nil here means "this
+        # query did not populate the field", not "nothing is assigned" — and
+        # reading it as the latter would condemn a correct setup. What the
+        # lane does prove is which capabilities are ON, which is what the
+        # parking lot needed.
         UI.important("    #{c.capability_type}  settings=#{c.settings.inspect}")
       end
     end

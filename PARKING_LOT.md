@@ -35,9 +35,16 @@ from a household of one so the app never reads as an audit.
       existing account helps, since the other apps have no Screen Time
       surface. Requested 2026-09-02. Apple sends no acknowledgement, so a
       Release run is the only signal; a Routine runs one every three days.
-- [ ] Capability enabled on each App ID — a separate step from approval, and
-      `match` does not do it. After enabling, run Release once with
-      `force_profiles: true` or match reuses a profile that predates it.
+- [x] ~~Capability enabled on each App ID~~ — **done**, and read back from
+      Apple rather than taken on trust. Apple-maintenance run 11
+      (2026-09-03) prints `FAMILY_CONTROLS` on `app.dad.Dad`,
+      `.ShieldConfiguration`, `.ShieldAction` and `.ActivityMonitor`, and
+      correctly **not** on `.Widget` — plus `NFC_TAG_READING` on the app
+      alone. Exactly the table in docs/PROVISIONING.md.
+
+      The `force_profiles: true` caveat still applies to the *next* Release
+      run: `match` matches on expiry and certificate rather than on capability
+      set, so it will reuse a profile minted before the capability existed.
 - [x] ~~App Store Connect API key → the three `ASC_*` secrets, `APPLE_TEAM_ID`,
       `MATCH_PASSWORD`~~ — all seven secrets are set and proven: Release run
       33713075001 got past signing to the Xcode build.
