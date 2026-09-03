@@ -24,7 +24,7 @@ re-run the check, it isn't ✅.**
 | Family Controls capability on each App ID | ✅ | Apple-maintenance run 11, 2026-09-03: `FAMILY_CONTROLS` listed on `app.dad.Dad`, `.ShieldConfiguration`, `.ShieldAction`, `.ActivityMonitor`, and absent from `.Widget` — which is what rule 7 wants. `NFC_TAG_READING` on the app alone | run Apple account maintenance; the capabilities lane prints every capability per identifier |
 | App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
-| App Store Connect record | ❌ | Checked 2026-09-03: does not exist. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible | run Apple account maintenance; the capabilities lane says outright whether it exists |
+| App Store Connect record | ✅ | `app.dad.Dad` exists, named **Dad Your Phone**, confirmed 2026-09-03. Note it is a *different site and action* from registering the App ID — the two are easy to conflate | run Apple account maintenance; the capabilities lane says outright whether it exists |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
