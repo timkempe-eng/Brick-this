@@ -56,6 +56,21 @@ struct StatsView: View {
                     } footer: {
                         Text("The ratio worth watching. Overrides aren't failure — needing one every session means the \(Vocab.modeNoun.lowercased()) is wrong, not you.")
                     }
+
+                    // Only for people who actually ration something. A row of
+                    // zeroes about a feature you don't use is noise.
+                    if stats.allowancesReached > 0 {
+                        Section {
+                            LabeledContent("Sessions that hit the limit",
+                                           value: "\(stats.allowancesReached)")
+                            LabeledContent("Days you ran out",
+                                           value: "\(stats.daysAllowanceReached)")
+                        } header: {
+                            Text("Allowances")
+                        } footer: {
+                            Text("A limit you never reach is one you didn't need. A limit you reach every day is set too low — or the \(Vocab.modeNoun.lowercased()) should be hiding those apps outright.")
+                        }
+                    }
                 }
             }
             .navigationTitle("Stats")

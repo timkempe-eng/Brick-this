@@ -188,3 +188,58 @@ final class VocabularyTests: XCTestCase {
         }
     }
 }
+
+/// What the stats say about rationing.
+final class AllowanceStatsTests: XCTestCase {
+
+    private let now = Date(timeIntervalSince1970: 1_756_000_000)
+
+    private func session(startedAt: Date, spentAt: Date?) -> DadSession {
+        var s = DadSession(modeID: UUID(), modeName: "Deep Work", startedAt: startedAt)
+        s.endedAt = startedAt.addingTimeInterval(3600)
+        s.allowanceSpentAt = spentAt
+        return s
+    }
+
+    func testNothingRationedIsZeroRatherThanAbsent() {
+        let stats = DadStats(sessions: [session(startedAt: now, spentAt: nil)],
+                             now: now, calendar: .utc)
+        XCTAssertEqual(stats.allowancesReached, 0)
+        XCTAssertEqual(stats.daysAllowanceReached, 0)
+    }
+
+    func testSessionsThatReachedTheLimitAreCounted() {
+        let stats = DadStats(sessions: [
+            session(startedAt: now, spentAt: now),
+            session(startedAt: now, spentAt: nil),
+            session(startedAt: now, spentAt: now.addingTimeInterval(60)),
+        ], now: now, calendar: .utc)
+        XCTAssertEqual(stats.allowancesReached, 2)
+    }
+
+    func testTwoSessionsInOneEveningAreOneDayOfRunningOut() {
+        // Counted by day for the same reason the allowance itself is.
+        let stats = DadStats(sessions: [
+            session(startedAt: now, spentAt: now),
+            session(startedAt: now, spentAt: now.addingTimeInterval(2 * 3600)),
+        ], now: now, calendar: .utc)
+        XCTAssertEqual(stats.allowancesReached, 2)
+        XCTAssertEqual(stats.daysAllowanceReached, 1)
+    }
+
+    func testDifferentDaysCountSeparately() {
+        let stats = DadStats(sessions: [
+            session(startedAt: now, spentAt: now),
+            session(startedAt: now, spentAt: now.addingTimeInterval(24 * 3600)),
+        ], now: now, calendar: .utc)
+        XCTAssertEqual(stats.daysAllowanceReached, 2)
+    }
+
+    func testAnUnfinishedSessionIsNotCountedYet() {
+        // Same rule as every other total here: an in-flight session has no
+        // duration and no place in a tally.
+        var live = DadSession(modeID: UUID(), modeName: "Deep Work", startedAt: now)
+        live.allowanceSpentAt = now
+        XCTAssertEqual(DadStats(sessions: [live], now: now, calendar: .utc).allowancesReached, 0)
+    }
+}

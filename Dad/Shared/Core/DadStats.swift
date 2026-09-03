@@ -41,6 +41,20 @@ struct DadStats {
 
     var emergencyBails: Int { sessions.filter(\.endedByEmergency).count }
 
+    /// Sessions on a rationed Mode where the allowance actually ran out.
+    ///
+    /// The one number worth knowing about rationing: a limit you never reach
+    /// is a limit you did not need, and a limit you reach every day is one set
+    /// too low — or the wrong tool, and the Mode should be blocking outright.
+    var allowancesReached: Int { sessions.filter { $0.allowanceSpentAt != nil }.count }
+
+    /// Days on which some Mode's allowance ran out. Counted by day rather
+    /// than by session, for the same reason the allowance itself is: two
+    /// sessions in one evening are one day of reaching the limit.
+    var daysAllowanceReached: Int {
+        Set(sessions.compactMap(\.allowanceSpentAt).map { calendar.startOfDay(for: $0) }).count
+    }
+
     /// 0...1, or nil when there's nothing to divide.
     var cleanFinishRate: Double? {
         guard sessionCount > 0 else { return nil }
