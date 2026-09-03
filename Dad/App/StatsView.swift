@@ -57,6 +57,34 @@ struct StatsView: View {
                         Text("The ratio worth watching. Overrides aren't failure — needing one every session means the \(Vocab.modeNoun.lowercased()) is wrong, not you.")
                     }
 
+                    // A week's narrative, aimed at a conversation rather than
+                    // a report card. `WeeklyReview` decides what can honestly
+                    // be said — including whether there is enough of a week to
+                    // say anything — so this is layout, and the judgement that
+                    // a reviewer once called "annoying and intrusive and
+                    // somewhat judgmental" is not being made here.
+                    if case .enough = model.week.adequacy {
+                        Section {
+                            ForEach(model.week.timeByMode.prefix(4), id: \.modeID) { entry in
+                                LabeledContent(entry.modeName, value: entry.total.dadDurationText)
+                            }
+                            if case .contrast(let busiest, let quietest) = model.week.dayContrast {
+                                LabeledContent("Busiest",
+                                               value: busiest.date.formatted(.dateTime.weekday(.wide)))
+                                LabeledContent("Quietest",
+                                               value: quietest.date.formatted(.dateTime.weekday(.wide)))
+                            }
+                            if model.week.daysTheRationRanOutCount > 0 {
+                                LabeledContent("Days a limit ran out",
+                                               value: "\(model.week.daysTheRationRanOutCount)")
+                            }
+                        } header: {
+                            Text("This week")
+                        } footer: {
+                            Text(model.week.headline)
+                        }
+                    }
+
                     // Only for people who actually ration something. A row of
                     // zeroes about a feature you don't use is noise.
                     if stats.allowancesReached > 0 {

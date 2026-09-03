@@ -258,6 +258,11 @@ final class DadModel: ObservableObject {
 
     var household: Household { engine.store.household }
 
+    /// The week, as something to talk about rather than a score.
+    var week: WeeklyReview {
+        WeeklyReview(sessions: engine.store.history, now: now)
+    }
+
     /// Where this phone sits, and what it still owes for the next rung.
     var ladder: AutonomyLadder { engine.ladder }
 
