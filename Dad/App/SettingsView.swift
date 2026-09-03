@@ -63,7 +63,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("Left this month", value: "\(model.emergencyUnDadsRemaining) of \(EmergencyAllowance.perWindow)")
+                    LabeledContent("Left this month", value: "\(model.emergencyUnDadsRemaining) of \(model.emergencyUnDadCeiling)")
                 } header: {
                     Text(Vocab.emergencyUnDad)
                 } footer: {

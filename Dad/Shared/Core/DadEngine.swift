@@ -86,6 +86,10 @@ struct DadEngine {
         case system
     }
 
+    // A free function on the storage type rather than a property on
+    // `SessionEnd`, so the direction of the dependency stays the way round it
+    // should be: Core's stored shape does not know about the engine's
+    // arguments.
     enum TapResult: Equatable {
         case dadded(mode: DadMode, start: DadStart)
         case unDadded(session: DadSession)
@@ -231,6 +235,7 @@ struct DadEngine {
 
         session.endedAt = clock.now
         session.endedByEmergency = end == .emergency
+        session.endedBy = DadSession.EndReason(end)
 
         store.activeSession = nil
         archive(session)
@@ -264,7 +269,9 @@ struct DadEngine {
         // allowance is already bounded at five a month and self-restoring.
         guard may(.spendEmergencyOverride) else { return false }
 
-        guard let spent = EmergencyAllowance.consume(uses: store.emergencyUses, now: clock.now) else {
+        guard let spent = EmergencyAllowance.consume(uses: store.emergencyUses,
+                                                    now: clock.now,
+                                                    ceiling: emergencyCeiling) else {
             return false
         }
         store.emergencyUses = spent
@@ -273,7 +280,19 @@ struct DadEngine {
     }
 
     var emergencyUnDadsRemaining: Int {
-        EmergencyAllowance.remaining(uses: store.emergencyUses, now: clock.now)
+        EmergencyAllowance.remaining(uses: store.emergencyUses,
+                                     now: clock.now,
+                                     ceiling: emergencyCeiling)
+    }
+
+    /// How many overrides this phone gets per rolling window.
+    ///
+    /// The ladder's top two rungs widen it, and this is where that promise is
+    /// kept. A grown-up gets the base — they are not on a ladder, and widening
+    /// an allowance nobody is metering would mean nothing.
+    var emergencyCeiling: Int {
+        guard store.household.role == .youngPerson else { return EmergencyAllowance.perWindow }
+        return AutonomyLadder.Rung(autonomyLevel: autonomyLevel).emergencyAllowance
     }
 
     // MARK: - Recurring schedules
@@ -824,10 +843,41 @@ struct DadEngine {
         guard let previous else {
             // A new Mode is an edit in the broadest sense: it is a new rule in
             // the arrangement, and adding one is not lesser than changing one.
-            return may(.editMode) ? nil : .editMode
+            //
+            // It can also arrive carrying a schedule and an allowance, and
+            // those are dearer than `editMode`. Comparing against `previous`
+            // cannot see them — there is no previous — so a new Mode is
+            // charged for everything it brings with it. Otherwise "create a
+            // Mode" would be the way to set a schedule you may not change.
+            if !may(.editMode) { return .editMode }
+            if mode.schedule != nil, !may(.changeSchedule) { return .changeSchedule }
+            if mode.allowance != nil, !may(.changeAllowance) { return .changeAllowance }
+            return nil
         }
         if previous.schedule != mode.schedule, !may(.changeSchedule) { return .changeSchedule }
         if previous.allowance != mode.allowance, !may(.changeAllowance) { return .changeAllowance }
+
+        // What the edit *achieves*, not only what it touches.
+        //
+        // Found by review, and it is the hole that makes a ladder pointless: a
+        // young person at the rung that grants `editMode` could open Sleep,
+        // clear its app list and save. Nothing in the edit named a schedule,
+        // so `changeSchedule` was never consulted — but an empty Mode blocks
+        // nothing, `hasLiveSchedule` goes false, and `syncSchedules` takes the
+        // window down. Sleep never runs again. One rung bought the two above
+        // it, by side effect, with no screen ever saying so.
+        //
+        // Emptying a Mode is deleting it with the row left behind, so the rung
+        // that owns deletion owns this too — and since deletion sits *above*
+        // the schedule rung, that covers the schedule case a fortiori.
+        //
+        // There was briefly a second guard here for the schedule specifically.
+        // It was unreachable: `hasLiveSchedule` is `schedule` and
+        // `blocksAnything` and nothing else, and both are already judged above.
+        // A mutation removing it changed no test, which is how it was caught.
+        if previous.blocksAnything, !mode.blocksAnything, !may(.deleteMode) {
+            return .deleteMode
+        }
 
         // Anything else about the Mode — its name, its apps, strict, breaks,
         // its style. Compared by ignoring the two fields already judged, so a

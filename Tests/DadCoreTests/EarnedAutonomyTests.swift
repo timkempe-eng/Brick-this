@@ -123,3 +123,71 @@ final class EarnedAutonomyTests: XCTestCase {
         XCTAssertFalse(h.engine.may(.turnDadOff))
     }
 }
+
+/// The rungs that widen the emergency allowance actually widen it.
+///
+/// Found by review. `AutonomyLadder.Rung.selfGoverning.unlocks` told the young
+/// person the rung bought "a wider emergency Un-Dad allowance", and
+/// `emergencyAllowance` computed 7 for it — but nothing read either property.
+/// `EmergencyAllowance.remaining` was hard-wired to five, Settings rendered
+/// "of 5", and the sixth override was refused. The rung's own test asserted
+/// the ladder's arithmetic against itself and never asked the engine, which is
+/// exactly how the rung-count bug survived too.
+final class EmergencyCeilingTests: XCTestCase {
+
+    private let start = Date(timeIntervalSince1970: 1_756_000_000)
+
+    private func harness(role: HouseholdRole, level: Int) -> Harness {
+        let h = Harness(now: start)
+        h.store.household = Household(role: role, autonomyLevel: level)
+        return h
+    }
+
+    func testTheCeilingTheEngineUsesIsTheOneTheRungPromises() {
+        for rung in AutonomyLadder.Rung.allCases {
+            let h = harness(role: .youngPerson, level: rung.rawValue)
+            XCTAssertEqual(h.engine.emergencyCeiling, rung.emergencyAllowance,
+                           "\(rung.title) promises \(rung.emergencyAllowance)")
+        }
+    }
+
+    func testAWidenedAllowanceCanActuallyBeSpent() {
+        // The failure as a user meets it: the screen says the allowance grew,
+        // and the sixth press does nothing.
+        let top = AutonomyLadder.Rung.allCases.last!
+        XCTAssertGreaterThan(top.emergencyAllowance, EmergencyAllowance.perWindow,
+                             "this test is only meaningful if the top rung widens it")
+
+        let h = harness(role: .youngPerson, level: top.rawValue)
+        let mode = h.addMode()
+
+        for use in 1...top.emergencyAllowance {
+            h.engine.dad(with: mode)
+            XCTAssertTrue(h.engine.emergencyUnDad(), "override \(use) of \(top.emergencyAllowance)")
+        }
+        h.engine.dad(with: mode)
+        XCTAssertFalse(h.engine.emergencyUnDad(), "and the one past the ceiling is refused")
+    }
+
+    func testTheCountShownAgreesWithTheCountAllowed() {
+        let top = AutonomyLadder.Rung.allCases.last!
+        let h = harness(role: .youngPerson, level: top.rawValue)
+        XCTAssertEqual(h.engine.emergencyUnDadsRemaining, top.emergencyAllowance)
+
+        h.engine.dad(with: h.addMode())
+        h.engine.emergencyUnDad()
+        XCTAssertEqual(h.engine.emergencyUnDadsRemaining, top.emergencyAllowance - 1)
+    }
+
+    func testAGrownUpGetsTheBaseAllowance() {
+        // They are not on a ladder, and widening an allowance nobody is
+        // metering would mean nothing.
+        let h = harness(role: .grownUp, level: 0)
+        XCTAssertEqual(h.engine.emergencyCeiling, EmergencyAllowance.perWindow)
+    }
+
+    func testTheBottomRungIsStillFive() {
+        let h = harness(role: .youngPerson, level: 0)
+        XCTAssertEqual(h.engine.emergencyCeiling, EmergencyAllowance.perWindow)
+    }
+}

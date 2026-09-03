@@ -272,11 +272,19 @@ struct AutonomyLadder {
         Set(sessions.map { calendar.startOfDay(for: $0.startedAt) })
     }
 
-    /// Days with at least one session finished by walking back to the tag.
-    /// One clean finish makes the day clean even if another session that day
-    /// ended on the emergency button: the day contains the evidence.
+    /// Days with at least one session a *person* ended by walking back to the
+    /// tag. One such finish makes the day clean even if another session that
+    /// day ended on the emergency button: the day contains the evidence.
+    ///
+    /// "A person ended it" rather than "it wasn't an override", and the
+    /// difference is the whole premise of this file. A schedule that opens and
+    /// closes a window while the phone sits on a table is not somebody holding
+    /// a habit — and when this filtered on `endedByEmergency` alone, a nightly
+    /// Sleep schedule climbed all four rungs in sixty-one nights of nobody
+    /// touching anything. Rung four hands over the tag. Owning a scheduled
+    /// phone is not consistency.
     private var cleanDays: Set<Date> {
-        Set(sessions.filter { !$0.endedByEmergency }
+        Set(sessions.filter { $0.wasEndedByAPerson }
                     .map { calendar.startOfDay(for: $0.startedAt) })
     }
 

@@ -175,3 +175,98 @@ final class HouseholdEnforcementTests: XCTestCase {
         guard case .unDadded = h.engine.handleTap() else { return XCTFail("must Un-Dad") }
     }
 }
+
+/// An edit must not achieve, cheaply, what a dearer rung gates.
+///
+/// Found by review. The refusal check compared *fields* — did the schedule
+/// change, did the allowance change — and charged everything else to
+/// `editMode`, the cheapest rung. But a Mode that blocks nothing is never
+/// registered with the scheduler, so clearing a Mode's app list took its
+/// schedule down without ever naming a schedule. One rung bought the two above
+/// it by side effect, and no screen said so.
+final class EditSideEffectTests: XCTestCase {
+
+    private func youngPerson(at level: Int) -> Harness {
+        let h = Harness()
+        h.store.household = Household(role: .youngPerson, autonomyLevel: level)
+        return h
+    }
+
+    private var editOnly: Int { RolePermissions.minimumAutonomyLevel(for: .editMode) ?? 0 }
+
+    func testEmptyingAModeCannotTakeDownItsScheduleFromTheEditRung() {
+        // Protected by the *deletion* rung rather than the schedule one, and
+        // that is not a coincidence: deletion sits above schedules, so the
+        // rung that owns unmaking a Mode covers unmaking it by emptying it.
+        let h = youngPerson(at: editOnly)
+        XCTAssertTrue(h.engine.may(.editMode))
+        XCTAssertFalse(h.engine.may(.changeSchedule))
+        XCTAssertFalse(h.engine.may(.deleteMode))
+
+        var sleep = h.addMode(name: "Sleep",
+                              schedule: ModeSchedule(startHour: 22, startMinute: 0,
+                                                     endHour: 7, endMinute: 0,
+                                                     weekdays: ModeSchedule.everyDay))
+        h.engine.syncSchedules()
+        XCTAssertEqual(h.engine.desiredSchedules.count, 1)
+
+        sleep.blocked = BlockedSelection()          // "pick apps" → none
+        XCTAssertNotNil(h.engine.upsert(sleep), "refused")
+
+        XCTAssertEqual(h.engine.desiredSchedules.count, 1, "Sleep still runs tonight")
+        XCTAssertTrue(h.store.modes.first?.blocksAnything ?? false)
+    }
+
+    func testEmptyingAModeIsChargedToDeletingIt() {
+        // Emptying a Mode is deleting it with the row left behind.
+        let h = youngPerson(at: editOnly)
+        var mode = h.addMode()
+        mode.blocked = BlockedSelection()
+
+        XCTAssertEqual(h.engine.upsert(mode), .deleteMode)
+    }
+
+    func testCreatingAModeCannotSmuggleInAScheduleYouMayNotChange() {
+        // Comparing against a previous cannot see what a *new* Mode brings, so
+        // "create a Mode" would otherwise be the way to set a schedule the
+        // rung above you owns.
+        let h = youngPerson(at: editOnly)
+        var fresh = DadMode(name: "Homework", symbol: "book",
+                            blocked: BlockedSelection(payload: Data([1]), appCount: 1))
+        fresh.schedule = ModeSchedule(startHour: 18, startMinute: 0,
+                                      endHour: 20, endMinute: 0,
+                                      weekdays: ModeSchedule.everyDay)
+
+        XCTAssertEqual(h.engine.upsert(fresh), .changeSchedule)
+        XCTAssertTrue(h.store.modes.filter { $0.name == "Homework" }.isEmpty)
+    }
+
+    func testCreatingAModeCannotSmuggleInAnAllowanceEither() {
+        let h = youngPerson(at: editOnly)
+        var fresh = DadMode(name: "Games", symbol: "gamecontroller",
+                            blocked: BlockedSelection(payload: Data([1]), appCount: 1))
+        fresh.allowance = ModeAllowance(minutesPerDay: 120)
+
+        XCTAssertEqual(h.engine.upsert(fresh), .changeAllowance)
+    }
+
+    func testAPlainNewModeIsStillAllowedAtTheEditRung() {
+        // The guard must not become "no new Modes at all" — creating one is
+        // what the rung is for.
+        let h = youngPerson(at: editOnly)
+        let fresh = DadMode(name: "Reading", symbol: "book",
+                            blocked: BlockedSelection(payload: Data([1]), appCount: 1))
+        XCTAssertNil(h.engine.upsert(fresh))
+        XCTAssertEqual(h.store.modes.count, 1)
+    }
+
+    func testASoloAdultIsUnaffectedByAnyOfThis() {
+        let h = Harness()
+        var mode = h.addMode(name: "Sleep",
+                             schedule: ModeSchedule(startHour: 22, startMinute: 0,
+                                                    endHour: 7, endMinute: 0,
+                                                    weekdays: ModeSchedule.everyDay))
+        mode.blocked = BlockedSelection()
+        XCTAssertNil(h.engine.upsert(mode), "their own phone, their own rules")
+    }
+}

@@ -124,6 +124,10 @@ final class DadModel: ObservableObject {
 
     var emergencyUnDadsRemaining: Int { engine.emergencyUnDadsRemaining }
 
+    /// How many this phone gets — the ladder widens it at the top two rungs,
+    /// so Settings must not go on saying "of 5".
+    var emergencyUnDadCeiling: Int { engine.emergencyCeiling }
+
     var pairedTagCount: Int { engine.store.tags.count }
 
     /// Apps and sites no Mode may take away.

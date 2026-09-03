@@ -18,15 +18,21 @@ enum EmergencyAllowance {
         return uses.filter { $0 > cutoff }
     }
 
-    static func remaining(uses: [Date], now: Date) -> Int {
-        max(0, perWindow - recent(uses: uses, now: now).count)
+    /// - Parameter ceiling: how many this phone gets. Defaults to `perWindow`,
+    ///   which is what a grown-up's phone has always had — but the autonomy
+    ///   ladder widens it at its top two rungs, and until this took a
+    ///   parameter that widening was a promise the app displayed and nothing
+    ///   honoured. A young person reached Self-governing, was told the
+    ///   allowance had grown, and Settings went on saying "of 5".
+    static func remaining(uses: [Date], now: Date, ceiling: Int = perWindow) -> Int {
+        max(0, ceiling - recent(uses: uses, now: now).count)
     }
 
     /// The new list of uses after spending one, or `nil` when the allowance is
     /// gone. Returning the list rather than mutating keeps this pure — and
     /// pruning expired entries here stops the array growing without bound.
-    static func consume(uses: [Date], now: Date) -> [Date]? {
-        guard remaining(uses: uses, now: now) > 0 else { return nil }
+    static func consume(uses: [Date], now: Date, ceiling: Int = perWindow) -> [Date]? {
+        guard remaining(uses: uses, now: now, ceiling: ceiling) > 0 else { return nil }
         return recent(uses: uses, now: now) + [now]
     }
 }
