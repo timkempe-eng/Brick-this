@@ -72,16 +72,6 @@ left is calendar time and a browser.
       teenager would rather it didn't. That distinction is the difference
       between the product and a co-operative version of it.
 
-## Repository settings
-
-- [ ] **Rename the default branch to `main`.** Settings → General → Default branch (Settings → Branches is Rulesets, not this). `main`
-      carries everything and CI is green on its head; the default is still
-      `claude/tim-phone-focus-device-tbu04b`. Nothing in a session can flip it —
-      it is a repository setting, not a git operation. Afterwards, run the
-      *Branch cleanup* workflow in `delete-merged` mode from `main`; it
-      refuses the default branch, so the rename has to come first.
-      [docs/branches.md](docs/branches.md).
-
 ## Deliberately deferred
 
 - [ ] **Remote granting.** `GrantRequest` defines a `PINHashing` port and

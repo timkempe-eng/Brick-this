@@ -85,9 +85,10 @@ not survive.
 
 ## Default branch
 
-The repository's default branch is still `claude/tim-phone-focus-device-tbu04b`
-(PARKING_LOT.md tracks the rename). GitHub refuses to delete the default
-branch, and the script marks it `kept`, so it will survive `delete-merged`
-until the rename is done under Settings → General → Default branch. After the rename, one more
-`delete-merged` run from `main` removes it and the branch this workflow first
-shipped on.
+The default branch was `claude/tim-phone-focus-device-tbu04b` until
+2026-09-03, which mattered twice: GitHub refuses to delete the default
+branch, so the script marks it `kept`, and a `workflow_dispatch` workflow
+registers only from the default branch. It is `main` now, switched under
+Settings → General → Default branch, and the first `delete-merged` run from
+`main` took the old one with the rest: seven branches, all on `main`, one
+left.
