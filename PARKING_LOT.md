@@ -47,7 +47,8 @@ from a household of one so the app never reads as an audit.
 ## Next up
 
 - [ ] **Rename the default branch to `main`.** Settings → Branches. `main`
-      exists, carries everything, and is green; the default is still
+      carries everything including the whole family layer, and CI is green on
+      its head (run 161, `38c204c`); the default is still
       `claude/tim-phone-focus-device-tbu04b`. Nothing in a session can flip it
       — it is a repository setting, not a git operation. Delete the session
       branch afterwards.
