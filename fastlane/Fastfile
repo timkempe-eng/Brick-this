@@ -255,6 +255,29 @@ platform :ios do
     )
   end
 
+  desc "What capabilities each App ID actually carries, straight from Apple."
+  lane :capabilities do
+    connect_api_key
+
+    # The portal's checkboxes are not the source of truth for what a profile
+    # will carry — an App Group has to be ticked AND assigned, and only the
+    # assignment shows up here. Reading it back beats asking someone to
+    # re-examine five pages in a browser.
+    ALL_IDS.each do |identifier|
+      bundle = Spaceship::ConnectAPI::BundleId.find(identifier, includes: "bundleIdCapabilities")
+      if bundle.nil?
+        UI.error("#{identifier}: NOT REGISTERED")
+        next
+      end
+      caps = bundle.bundle_id_capabilities.to_a.map do |c|
+        detail = c.settings.to_s
+        detail.empty? || detail == "[]" ? c.capability_type.to_s : "#{c.capability_type} #{detail}"
+      end
+      UI.important("#{identifier}")
+      caps.empty? ? UI.important("    (none)") : caps.sort.each { |c| UI.important("    #{c}") }
+    end
+  end
+
   desc "List and revoke distribution certificates. Apple caps them at about two."
   lane :certs do |options|
     connect_api_key
