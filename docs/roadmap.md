@@ -40,6 +40,13 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 the foreground, so it could never appear on the tap-and-pocket path the product
 is built around. [ADR 002](adr/002-no-live-activity.md) has the reasoning.
 
+**The rest of the family layer.** Two distinct roles, earned autonomy,
+co-authored rules, the shared dashboard, request-and-grant. This is the
+product's point and most of it does not exist yet; `PARKING_LOT.md` ranks and
+costs it. The prerequisite is Family Controls **child authorization** — Dad
+authorizes as an *individual* today, which means the phone's owner is in
+charge, which is useless for a young person who can revoke it in Settings.
+
 **Android — declined in the form everyone builds it in.** The only consumer
 mechanism is an `AccessibilityService` the user turns off in three taps, which
 is the exact failure the whole product exists to avoid; and Android 17's
