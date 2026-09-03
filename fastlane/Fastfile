@@ -135,6 +135,17 @@ platform :ios do
       match_git_token = require_env("GITHUB_TOKEN", "Provided by Actions.")
     end
 
+    # MATCH_PASSWORD is checked HERE, before match runs, not left to match.
+    #
+    # match creates the certificate with Apple first and encrypts it to the
+    # store last. Without the password it fails at that final step — after
+    # Apple has already issued a certificate whose private key lived only in
+    # the runner's keychain. The slot is spent and nothing can recover the key.
+    # That is exactly the stranding the ceiling guard below exists to prevent,
+    # and it happened on 2026-09-03 because this line was not here: the run
+    # stranded LTZ92335U6 and five profiles that reference it.
+    require_env("MATCH_PASSWORD", "Any passphrase; it encrypts the stored certificate. Losing it means revoking and re-minting.")
+
     # A public store would publish the encrypted certificate to the world.
     # MATCH_PASSWORD is then the only thing between a reader and the ability to
     # sign as this team, which is not a position to be in by accident.
