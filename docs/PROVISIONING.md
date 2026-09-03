@@ -14,6 +14,7 @@ re-run the check, it isn't ✅.**
 | Xcode wiring consistent | ✅ | 91 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
+| Approval check runs itself | ✅ | Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, every 3 days at 15:00 UTC: runs Release with `force_profiles: true` and reports whether the family-controls errors are gone. Push and email on. Delete it once approved | claude.ai → Routines |
 | Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement | Certificates, IDs & Profiles → the four App IDs show a Family Controls row that is not development-only |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
