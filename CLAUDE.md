@@ -59,7 +59,7 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 240 tests, seconds
+swift test                      # 244 tests, seconds
 ./scripts/lint-vocabulary.sh
 python3 scripts/preflight.py    # 94 checks on the Xcode wiring
 ```
@@ -86,6 +86,16 @@ singular, so every mutation caught by exactly one test reads as a survivor.
 That misdiagnosis was blamed on stale incremental builds three times before the
 regex turned out to be the culprit. The script decides by exit code, and tells
 a mutation that failed to compile apart from one that survived.
+
+**A constant every test spells symbolically is a constant no test covers.**
+Referring to `EmergencyAllowance.perWindow` rather than `5` is correct style
+and means the suite moves with the value — which is exactly why changing 5 to
+500 left 240 tests passing while Settings said "of 500" and the README said
+five. Three of them were like that: the override allowance, its 30-day window,
+and the history bound. `PromisedNumbersTests` is the one place a literal
+belongs, and every number in it is written down somewhere a person reads.
+Mutation testing is what found this; the README had been claiming the opposite
+for months.
 
 Things the tests deliberately pin down, because they are decisions rather than
 implementation details: a session counts toward the day it *started*; a streak

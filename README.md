@@ -50,7 +50,7 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test                      # 240 tests, seconds, no Mac
+swift test                      # 244 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
 python3 scripts/preflight.py    # 94 checks on the Xcode wiring
 ```
@@ -163,12 +163,18 @@ A Live Activity and Android are both **declined with reasons written down**
 rather than pending — [ADR 002](docs/adr/002-no-live-activity.md) and
 [ADR 004](docs/adr/004-android.md). [What is and isn't built](docs/roadmap.md).
 
-`swift test` passes — 240 tests covering the whole engine state machine,
+`swift test` passes — 244 tests covering the whole engine state machine,
 recurring schedules, allowances across a day boundary, breaks, the override
 allowance, and the session/streak maths. The suite is mutation-checked with
 `scripts/mutate.sh`: deliberately breaking the tag guard, the rationing branch,
 the allowance's day comparison, the empty-Mode guard, the history bound, the
 scheduler floor or the reconcile clear each turns it red.
+
+That claim used to be partly false, which is the argument for the harness. The
+override allowance, its 30-day window and the history bound were all written
+symbolically in every test, so changing 5 to 500 left the whole suite green
+while the app went on saying "of 500". `PromisedNumbersTests` now pins the
+numbers the product actually promises.
 
 The app and all four extensions compile cleanly against the iOS SDK on a
 GitHub macOS runner, on every push. Nothing has run on a device yet — Screen
