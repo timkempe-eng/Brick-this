@@ -24,6 +24,10 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   usable for a set number of minutes a day, then go until midnight. Strict
   still holds through the free period, and an allowance the system refuses to
   count becomes a plain block rather than a rule nobody is enforcing.
+- **Breaks — release on a leash.** Opt-in per Mode: tapping out gives the apps
+  back for a set time, then the Mode starts itself again, so checking one thing
+  doesn't cost the evening. Tapping a second time calls the break off. An
+  emergency override never starts one.
 - **A never-blocked list** — apps and sites no Mode may take away, whatever it
   names. One list, not one per Mode, because the failure it exists to prevent
   is forgetting.

@@ -16,6 +16,9 @@ final class DadModel: ObservableObject {
     /// never be drawing from different answers mid-render.
     @Published private(set) var shieldState: ShieldState = .off
 
+    /// A break in progress: the phone is free, and a Mode is coming back.
+    @Published private(set) var pendingResume: PendingResume?
+
     /// Snapshotted rather than computed on demand: reading it walks the whole
     /// session history out of `UserDefaults` and back through JSON, and the
     /// stats screen touches it a dozen times per render.
@@ -50,6 +53,7 @@ final class DadModel: ObservableObject {
         modes = engine.store.modes
         activeSession = engine.store.activeSession
         shieldState = engine.shieldState
+        pendingResume = engine.pendingResume
         stats = engine.stats
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
@@ -77,7 +81,10 @@ final class DadModel: ObservableObject {
     /// telling someone their phone is Dadded while their apps still open is
     /// how a product stops being believed.
     var statusSubtitle: String {
-        guard let session = activeSession else { return Vocab.idleSubtitle }
+        guard let session = activeSession else {
+            guard let resume = pendingResume else { return Vocab.idleSubtitle }
+            return "\(Vocab.breakRunning(mode: resume.modeName, until: resume.at)) \(Vocab.breakTapHint)"
+        }
         guard let mode = activeMode, mode.rations else {
             return Vocab.activeSubtitle(mode: session.modeName)
         }
@@ -87,11 +94,24 @@ final class DadModel: ObservableObject {
             : Vocab.allowanceSpent(mode: session.modeName, minutes: minutes)
     }
 
+    var statusTitle: String {
+        if isDadded { return Vocab.activeTitle }
+        return pendingResume == nil ? Vocab.idleTitle : Vocab.breakTitle
+    }
+
+    /// What the button under it will do. A tap during a break calls the break
+    /// off rather than Dadding, and saying so is the difference between a
+    /// discoverable rule and a surprising one.
+    var tapActionText: String {
+        if isDadded { return Vocab.unDadAction }
+        return pendingResume == nil ? Vocab.dadAction : Vocab.breakCancelAction
+    }
+
     /// The glyph at the top. Rationing gets its own, the same way the widget
     /// and the shield do — one look, one answer.
     var statusSymbol: String {
         switch shieldState {
-        case .off:       return "iphone.gen3"
+        case .off:       return pendingResume == nil ? "iphone.gen3" : "arrow.clockwise.circle"
         case .rationing: return "hourglass"
         case .blocking:  return "lock.iphone"
         }
@@ -147,7 +167,15 @@ final class DadModel: ObservableObject {
             // and their apps vanished instead.
             banner = "\(Vocab.verbPast) — \(mode.name). \(Vocab.allowanceRefused)"
         case .unDadded(let session):
-            banner = Vocab.sessionSummary(duration: session.duration.dadDurationText)
+            let summary = Vocab.sessionSummary(duration: session.duration.dadDurationText)
+            // Read the break off the store rather than the result: it is armed
+            // inside `unDad`, so the engine already knows and the view model
+            // does not need a second copy of the rule.
+            banner = engine.pendingResume.map {
+                "\(summary) \(Vocab.breakRunning(mode: $0.modeName, until: $0.at))"
+            } ?? summary
+        case .breakCancelled(let mode):
+            banner = Vocab.breakCancelled(mode: mode.name)
         case .needsModeChoice:
             pendingModeChoice = true
         case .unknownTag:

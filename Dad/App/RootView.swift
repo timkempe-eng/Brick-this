@@ -54,7 +54,7 @@ struct HomeView: View {
                     .foregroundStyle(model.isDadded ? Color.accentColor : .secondary)
 
                 VStack(spacing: 8) {
-                    Text(model.isDadded ? Vocab.activeTitle : Vocab.idleTitle)
+                    Text(model.statusTitle)
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
 
@@ -92,8 +92,7 @@ struct HomeView: View {
                             model.tap(tagUID: uid)
                         }
                     } label: {
-                        Label(model.isDadded ? Vocab.unDadAction : Vocab.dadAction,
-                              systemImage: "wave.3.right")
+                        Label(model.tapActionText, systemImage: "wave.3.right")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)

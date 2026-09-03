@@ -47,6 +47,18 @@ enum Vocab {
         "\(mode) · tap your \(tagNoun) again to \(unVerb)."
     }
 
+    // MARK: Break copy — a session released by hand that comes back on its own
+    static let breakNoun = "break"
+    static func breakRunning(mode: String, until: Date) -> String {
+        "\(mode) comes back at \(until.formatted(date: .omitted, time: .shortened))."
+    }
+    static func breakCancelled(mode: String) -> String {
+        "\(breakNoun.capitalized) called off. \(mode) won't come back on its own."
+    }
+    static let breakTapHint = "Tap your \(tagNoun) again to call the break off."
+    static let breakTitle = "You're on a \(breakNoun)"
+    static let breakCancelAction = "Call off the \(breakNoun)"
+
     // MARK: Allowance copy
     static func allowanceRunning(mode: String, minutes: Int) -> String {
         "\(mode) · \(minutes) minutes of those apps today, then they go."

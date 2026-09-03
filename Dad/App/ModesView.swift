@@ -89,6 +89,16 @@ struct ModeEditorView: View {
         AutoRelease(id: "4 hours", seconds: 4 * 60 * 60),
     ]
 
+    /// How long a break lasts before the Mode comes back. Nothing under 15
+    /// minutes: DeviceActivity will not watch a shorter interval, and a break
+    /// that never ends is worse than no break.
+    private let breaks: [AutoRelease] = [
+        AutoRelease(id: "Released means released", seconds: nil),
+        AutoRelease(id: "15 minutes", seconds: 15 * 60),
+        AutoRelease(id: "30 minutes", seconds: 30 * 60),
+        AutoRelease(id: "1 hour", seconds: 60 * 60),
+    ]
+
     var body: some View {
         NavigationStack {
             Form {
@@ -114,6 +124,20 @@ struct ModeEditorView: View {
                 AllowanceSection(mode: $mode)
 
                 ScheduleSection(mode: $mode)
+
+                Section {
+                    Picker("Comes back after", selection: $mode.resumeAfter) {
+                        ForEach(breaks) { option in
+                            Text(option.id).tag(option.seconds)
+                        }
+                    }
+                } header: {
+                    Text("Breaks")
+                } footer: {
+                    Text(mode.takesBreaks
+                         ? "Tapping out gives you the apps back for a while, then this \(Vocab.modeNoun.lowercased()) starts itself again — so checking one thing doesn't cost you the evening. Tap a second time to call the break off. An emergency override never starts one."
+                         : "Off. Tapping out ends the session, and nothing brings it back until you tap again.")
+                }
 
                 Section {
                     Picker("\(Vocab.unVerb) automatically", selection: $mode.autoUnDadAfter) {

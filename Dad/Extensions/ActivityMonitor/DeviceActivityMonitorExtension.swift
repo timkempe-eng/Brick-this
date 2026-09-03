@@ -28,7 +28,8 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             // window that is already open.
             DadEngine.live.renewAllowance(modeID: modeID)
 
-        case .release, .unrecognised:
+        case .release, .resume, .unrecognised:
+            // A one-shot window's *start* is now; both of ours act at the end.
             break
         }
     }
@@ -38,7 +39,11 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         switch ScheduleActivityNaming.activity(named: activity.rawValue) {
         case .release:
-            DadEngine.live.unDad(byEmergency: false)
+            DadEngine.live.unDad(.system)
+
+        case .resume:
+            // The break is over: the Mode brings itself back.
+            DadEngine.live.resumeFromBreak()
 
         case .scheduledWindow(let modeID):
             DadEngine.live.endScheduledSession(modeID: modeID)

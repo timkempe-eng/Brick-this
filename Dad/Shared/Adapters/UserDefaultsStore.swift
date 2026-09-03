@@ -29,6 +29,7 @@ final class UserDefaultsStore: DadPersisting {
         static let history = "history"
         static let pairedTagUIDs = "pairedTagUIDs"
         static let neverBlocked = "neverBlocked"
+        static let pendingResume = "pendingResume"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
@@ -65,6 +66,11 @@ final class UserDefaultsStore: DadPersisting {
     var neverBlocked: BlockedSelection {
         get { decode(BlockedSelection.self, Key.neverBlocked) ?? BlockedSelection() }
         set { encode(newValue, Key.neverBlocked) }
+    }
+
+    var pendingResume: PendingResume? {
+        get { decode(PendingResume.self, Key.pendingResume) }
+        set { encode(newValue, Key.pendingResume) }
     }
 
     var emergencyUses: [Date] {

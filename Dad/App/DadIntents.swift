@@ -38,7 +38,12 @@ struct ToggleDadIntent: AppIntent {
         case .dadded(let mode, let start):
             return .result(dialog: Self.dialog(mode: mode, start: start))
         case .unDadded(let session):
-            return .result(dialog: "\(Vocab.sessionSummary(duration: session.duration.dadDurationText))")
+            guard let resume = engine.pendingResume else {
+                return .result(dialog: "\(Vocab.sessionSummary(duration: session.duration.dadDurationText))")
+            }
+            return .result(dialog: "\(Vocab.sessionSummary(duration: session.duration.dadDurationText)) \(Vocab.breakRunning(mode: resume.modeName, until: resume.at))")
+        case .breakCancelled(let mode):
+            return .result(dialog: "\(Vocab.breakCancelled(mode: mode.name))")
         case .needsModeChoice:
             throw $modeName.needsValueError("Which \(Vocab.modeNoun.lowercased())?")
         case .unknownTag:
@@ -94,7 +99,9 @@ struct StopDadIntent: AppIntent {
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let finished = DadEngine.live.unDad(byEmergency: false) else {
+        // `.tapped`: this is a person deliberately releasing, so it starts a
+        // break on a Mode that takes them, exactly as the tag would.
+        guard let finished = DadEngine.live.unDad(.tapped) else {
             return .result(dialog: "Your phone isn't \(Vocab.verbPast).")
         }
         return .result(dialog: "\(Vocab.sessionSummary(duration: finished.duration.dadDurationText))")

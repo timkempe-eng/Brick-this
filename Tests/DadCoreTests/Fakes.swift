@@ -9,6 +9,7 @@ final class FakeStore: DadPersisting {
     var history: [DadSession] = []
     var pairedTagUIDs: [String] = []
     var neverBlocked = BlockedSelection()
+    var pendingResume: PendingResume?
     var emergencyUses: [Date] = []
     var hasOnboarded = false
     var syncedSchedules: [RecurringSchedule] = []
@@ -84,6 +85,11 @@ final class SpyScheduler: SessionScheduling {
     private(set) var scheduled: [Date] = []
     private(set) var cancelCount = 0
 
+    /// The break's one-shot window, kept apart from the release's so a test
+    /// can tell "come back at 5" from "let me go at 5".
+    private(set) var resumes: [Date] = []
+    private(set) var resumeCancelCount = 0
+
     /// Every window ever started/stopped, in order — so tests can assert not
     /// just the end state but that an unchanged window was never touched.
     private(set) var started: [ScheduledWindow] = []
@@ -102,6 +108,8 @@ final class SpyScheduler: SessionScheduling {
 
     func scheduleRelease(at date: Date) { scheduled.append(date) }
     func cancelScheduledRelease() { cancelCount += 1 }
+    func scheduleResume(at date: Date) { resumes.append(date) }
+    func cancelScheduledResume() { resumeCancelCount += 1 }
     func stopWindows(named names: [String]) { stopped += names }
     func startWindows(_ windows: [ScheduledWindow]) -> [String] {
         started += windows
@@ -150,12 +158,14 @@ struct Harness {
                  strict: Bool = false,
                  autoRelease: TimeInterval? = nil,
                  schedule: ModeSchedule? = nil,
-                 allowance: ModeAllowance? = nil) -> DadMode {
+                 allowance: ModeAllowance? = nil,
+                 breakLength: TimeInterval? = nil) -> DadMode {
         let mode = DadMode(name: name,
                            symbol: "circle",
                            blocked: BlockedSelection(payload: Data([1]), appCount: apps),
                            isStrict: strict,
                            autoUnDadAfter: autoRelease,
+                           resumeAfter: breakLength,
                            schedule: schedule,
                            allowance: allowance)
         store.modes.append(mode)

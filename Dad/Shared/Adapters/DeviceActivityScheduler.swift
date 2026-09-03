@@ -14,6 +14,7 @@ import DeviceActivity
 struct DeviceActivityScheduler: SessionScheduling {
 
     static let releaseActivity = DeviceActivityName(ScheduleActivityNaming.release)
+    static let resumeActivity = DeviceActivityName(ScheduleActivityNaming.resume)
 
     private let calendar: Calendar
     private let center = DeviceActivityCenter()
@@ -52,6 +53,31 @@ struct DeviceActivityScheduler: SessionScheduling {
 
     func cancelScheduledRelease() {
         center.stopMonitoring([Self.releaseActivity])
+    }
+
+    // MARK: - One-shot resume, after a break
+
+    /// The mirror of `scheduleRelease`, and deliberately identical in shape:
+    /// same full date components (a bare {14:23} resolves to the *next* such
+    /// time, which for a break is tomorrow), and the same skip when it is
+    /// already registered, because `reconcile()` re-arms on every foreground.
+    func scheduleResume(at date: Date) {
+        guard !center.activities.contains(Self.resumeActivity) else { return }
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: calendar.dateComponents([.year, .month, .day, .hour, .minute],
+                                                   from: Date()),
+            intervalEnd: calendar.dateComponents([.year, .month, .day, .hour, .minute],
+                                                 from: date),
+            repeats: false
+        )
+        // reconcile() is the backstop, as with the release: an overdue break
+        // is resumed on the next foreground whether or not this registered.
+        try? center.startMonitoring(Self.resumeActivity, during: schedule)
+    }
+
+    func cancelScheduledResume() {
+        center.stopMonitoring([Self.resumeActivity])
     }
 
     // MARK: - Recurring windows

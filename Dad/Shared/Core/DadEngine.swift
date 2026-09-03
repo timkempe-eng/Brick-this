@@ -63,9 +63,32 @@ struct DadEngine {
         case rationRefused
     }
 
+    /// Why a session ended.
+    ///
+    /// It decides two things — whether the stats count it as a clean finish,
+    /// and whether the Mode's break is armed — and those two answers do not
+    /// line up with a single boolean, which is what this used to be. An
+    /// emergency override and a schedule boundary are both "not by tapping",
+    /// and only one of them should count against you.
+    enum SessionEnd: Equatable {
+        /// The tag, the in-app button, or the Un-Dad intent. The only ending
+        /// that starts a break.
+        case tapped
+        /// An override spent. Never starts a break: an override is for when
+        /// the tag is out of reach, and coming back in fifteen minutes would
+        /// leave someone blocked with no way out.
+        case emergency
+        /// A timed release, a schedule boundary, a Mode deleted underneath a
+        /// running session. Each has already said when this Mode should stop.
+        case system
+    }
+
     enum TapResult: Equatable {
         case dadded(mode: DadMode, start: DadStart)
         case unDadded(session: DadSession)
+        /// Tapped during a break, which calls it off. Reaching a Mode that
+        /// takes breaks is the only way to get here.
+        case breakCancelled(mode: DadMode)
         case needsModeChoice
         case unknownTag
     }
@@ -84,8 +107,21 @@ struct DadEngine {
         }
 
         if store.activeSession != nil {
-            guard let ended = unDad(byEmergency: false) else { return .needsModeChoice }
+            guard let ended = unDad(.tapped) else { return .needsModeChoice }
             return .unDadded(session: ended)
+        }
+
+        // Free, but a break is running. Both readings of a tap here are
+        // defensible — call the break off, or start the session early — and
+        // calling it off wins because it is the one the user cannot get any
+        // other way. Waiting gets you the session; nothing else gets you your
+        // evening back. It also keeps every state change at the tag, which is
+        // the whole product.
+        if let pending = store.pendingResume {
+            let mode = store.modes.first { $0.id == pending.modeID }
+            cancelBreak()
+            guard let mode else { return .needsModeChoice }
+            return .breakCancelled(mode: mode)
         }
 
         // Starting: the Mode we were handed, else the only one that blocks
@@ -105,8 +141,12 @@ struct DadEngine {
         // history without ever ending it. Close it out first so the record
         // stays honest, whoever called us.
         if store.activeSession != nil {
-            unDad(byEmergency: false)
+            unDad(.system)
         }
+
+        // Whatever we were waiting to bring back, it is here now — or
+        // something else is, which supersedes it either way.
+        cancelBreak()
 
         // State first, then the shield. If the process dies between the two,
         // `reconcile()` on next launch puts the shield back — whereas a shield
@@ -149,7 +189,7 @@ struct DadEngine {
     /// Ends the active session. Returns the finished session, or `nil` if
     /// there wasn't one.
     @discardableResult
-    func unDad(byEmergency: Bool) -> DadSession? {
+    func unDad(_ end: SessionEnd) -> DadSession? {
         guard var session = store.activeSession else { return nil }
 
         shield.clear()
@@ -157,10 +197,17 @@ struct DadEngine {
         usage.stopWatching(modeID: session.modeID)
 
         session.endedAt = clock.now
-        session.endedByEmergency = byEmergency
+        session.endedByEmergency = end == .emergency
 
         store.activeSession = nil
         archive(session)
+
+        if end == .tapped,
+           let mode = store.modes.first(where: { $0.id == session.modeID }),
+           mode.takesBreaks,
+           let length = mode.resumeAfter {
+            startBreak(mode: mode, length: length)
+        }
 
         // Whichever process ended this — the app, the shield's emergency
         // button, the DeviceActivity monitor — the Lock Screen must stop
@@ -182,7 +229,7 @@ struct DadEngine {
             return false
         }
         store.emergencyUses = spent
-        unDad(byEmergency: true)
+        unDad(.emergency)
         return true
     }
 
@@ -246,7 +293,7 @@ struct DadEngine {
         guard let active = store.activeSession,
               active.modeID == modeID,
               active.startedBySchedule == true else { return }
-        unDad(byEmergency: false)
+        unDad(.system)
     }
 
     // MARK: - Reconciliation
@@ -262,14 +309,30 @@ struct DadEngine {
 
         guard var session = store.activeSession else {
             shield.clear()
+
+            // A break whose end never arrived. The registration can be lost
+            // with the process, exactly as a timed release can, and the
+            // consequence is the same shape: a Mode that promised to come back
+            // and silently didn't. Overdue resumes now; otherwise it is
+            // re-armed, and the adapter no-ops when it is already registered.
+            if let pending = store.pendingResume {
+                if pending.isDue(now: clock.now) {
+                    resumeFromBreak()
+                } else {
+                    scheduler.scheduleResume(at: pending.at)
+                }
+            }
             return
         }
+
+        // A session is running, so nothing is waiting to come back.
+        cancelBreak()
 
         guard let mode = store.modes.first(where: { $0.id == session.modeID }) else {
             // The Mode was deleted while a session was running. Nothing
             // left to re-apply, so end the session rather than leave a
             // shield we can no longer describe.
-            unDad(byEmergency: false)
+            unDad(.system)
             return
         }
 
@@ -283,7 +346,7 @@ struct DadEngine {
             let release = session.startedAt.addingTimeInterval(
                 max(duration, Self.minimumScheduledRelease))
             if clock.now >= release {
-                unDad(byEmergency: false)
+                unDad(.system)
                 return
             }
             scheduler.scheduleRelease(at: release)
@@ -311,6 +374,50 @@ struct DadEngine {
 
         applyShield(for: session, mode: mode)
     }
+
+    // MARK: - Breaks
+
+    /// Arms the Mode to start itself again once the break is over.
+    private func startBreak(mode: DadMode, length: TimeInterval) {
+        // The same 15-minute floor the timed release has, and for the same
+        // reason: DeviceActivity will not monitor a shorter interval, so a
+        // ten-minute break would simply never fire. Rounding up is visible;
+        // silently not coming back is not.
+        let at = clock.now.addingTimeInterval(max(length, Self.minimumScheduledRelease))
+        store.pendingResume = PendingResume(modeID: mode.id, modeName: mode.name, at: at)
+        scheduler.scheduleResume(at: at)
+    }
+
+    /// Calls off a break — by tapping, or because something superseded it.
+    private func cancelBreak() {
+        guard store.pendingResume != nil else { return }
+        store.pendingResume = nil
+        scheduler.cancelScheduledResume()
+        widget.reload()
+    }
+
+    /// The break is over. Called by the DeviceActivity monitor, with the app
+    /// most likely closed.
+    func resumeFromBreak() {
+        guard let pending = store.pendingResume else { return }
+
+        // Something started a session during the break. Nothing to bring back,
+        // and stomping it would be worse than doing nothing.
+        guard store.activeSession == nil else { return cancelBreak() }
+
+        guard let mode = store.modes.first(where: { $0.id == pending.modeID }),
+              mode.blocksAnything else {
+            // Deleted or emptied while we were away. Drop the break rather
+            // than leave a resume that can never happen.
+            return cancelBreak()
+        }
+
+        cancelBreak()
+        dad(with: mode)
+    }
+
+    /// The break in progress, if any — for the home screen and the widget.
+    var pendingResume: PendingResume? { store.pendingResume }
 
     // MARK: - Allowances
 

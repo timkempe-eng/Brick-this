@@ -41,6 +41,11 @@ protocol SessionScheduling {
     func scheduleRelease(at date: Date)
     func cancelScheduledRelease()
 
+    /// The mirror of `scheduleRelease`: bring a Mode *back* at `date`, after a
+    /// break. Same one-shot mechanism, opposite direction.
+    func scheduleResume(at date: Date)
+    func cancelScheduledResume()
+
     /// Stops exactly these windows, by name. Never called for a window whose
     /// schedule is unchanged — see `ScheduleWindows.diff`.
     func stopWindows(named names: [String])
@@ -108,6 +113,10 @@ protocol DadPersisting: AnyObject {
     var activeSession: DadSession? { get set }
     var history: [DadSession] { get set }
     var pairedTagUIDs: [String] { get set }
+
+    /// A break in progress: the Mode that will start itself again, and when.
+    /// `nil` whenever nothing is waiting to come back.
+    var pendingResume: PendingResume? { get set }
 
     /// Apps and sites no Mode may take away, whatever it blocks.
     ///

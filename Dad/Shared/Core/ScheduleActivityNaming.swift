@@ -13,6 +13,9 @@ enum ScheduleActivityNaming {
     /// particular Mode.
     static let release = "dad.autoUnDad"
 
+    /// The one-shot "the break is over, bring the Mode back" window.
+    static let resume = "dad.resume"
+
     /// The event within an allowance window that fires once the Mode's apps
     /// have been used for as long as the allowance permits. One name for all
     /// Modes: the *activity* already says which Mode this is, and a second
@@ -55,6 +58,8 @@ enum ScheduleActivityNaming {
     enum Activity: Equatable {
         /// A timed session's one-shot release.
         case release
+        /// The end of a break, when the Mode starts itself again.
+        case resume
         /// One end of a Mode's recurring wall-clock window.
         case scheduledWindow(modeID: UUID)
         /// The day within which a rationing Mode's allowance is counted.
@@ -65,6 +70,7 @@ enum ScheduleActivityNaming {
 
     static func activity(named name: String) -> Activity {
         if isRelease(name) { return .release }
+        if name == resume { return .resume }
         // Order matters: both prefixes start "dad.", and only an exact prefix
         // match distinguishes them.
         if name.hasPrefix(allowancePrefix),

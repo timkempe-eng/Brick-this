@@ -70,7 +70,7 @@ final class AllowanceModeTests: XCTestCase {
             h.engine.dad(with: mode)
             XCTAssertEqual(h.shield.appliedMode, mode.id,
                            "a Mode that cannot ration must still block")
-            h.engine.unDad(byEmergency: false)
+            h.engine.unDad(.tapped)
         }
     }
 
@@ -184,7 +184,7 @@ final class AllowanceModeTests: XCTestCase {
         h.clock.advance(15 * 60)
         h.engine.spendAllowance(modeID: mode.id)
         h.clock.advance(60)
-        h.engine.unDad(byEmergency: false)
+        h.engine.unDad(.tapped)
 
         XCTAssertNotNil(h.store.history.last?.allowanceSpentAt,
                         "whether you reached the limit is the one number worth "
@@ -308,7 +308,7 @@ final class AllowanceModeTests: XCTestCase {
         let h = Harness()
         let mode = h.addMode(allowance: fifteen)
         h.engine.dad(with: mode)
-        h.engine.unDad(byEmergency: false)
+        h.engine.unDad(.tapped)
 
         XCTAssertFalse(h.usage.watching.contains(mode.id))
     }
@@ -317,7 +317,7 @@ final class AllowanceModeTests: XCTestCase {
         let h = Harness()
         let mode = h.addMode(allowance: fifteen)
         h.engine.dad(with: mode)
-        h.engine.unDad(byEmergency: false)
+        h.engine.unDad(.tapped)
         h.engine.deleteMode(id: mode.id)
 
         XCTAssertEqual(h.usage.calls.last, .stop(mode.id))

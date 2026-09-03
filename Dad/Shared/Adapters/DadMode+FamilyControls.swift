@@ -1,5 +1,11 @@
 import Foundation
 import FamilyControls
+// `ApplicationToken`, `ActivityCategoryToken` and `WebDomainToken` are
+// declared by ManagedSettings, not FamilyControls — a `FamilyActivitySelection`
+// hands them out but does not vend the types. Preflight already requires every
+// target that compiles this file to link what it imports, and all four that do
+// already link ManagedSettings; the widget does not compile it at all.
+import ManagedSettings
 
 /// The only place a `BlockedSelection`'s payload is interpreted.
 ///

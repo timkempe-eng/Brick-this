@@ -17,6 +17,16 @@ struct DadMode: Codable, Identifiable, Hashable {
     /// tapped again.
     var autoUnDadAfter: TimeInterval?
 
+    /// How long a break lasts before this Mode starts itself again, or `nil`
+    /// for the ordinary behaviour: releasing means released.
+    ///
+    /// Only a release *by hand* arms it — a tap, or the Un-Dad intent. An
+    /// emergency override never does, because an override is for when the tag
+    /// is genuinely out of reach and re-blocking someone in fifteen minutes
+    /// would trap them; and neither does a timed release or a schedule
+    /// boundary, both of which have already said when this Mode should stop.
+    var resumeAfter: TimeInterval?
+
     /// Optional recurring window during which this Mode runs on its own.
     /// Optional so that Modes stored before schedules existed still decode.
     var schedule: ModeSchedule?
@@ -75,10 +85,16 @@ struct DadMode: Codable, Identifiable, Hashable {
     var blocksAnything: Bool { !blocked.isEmpty }
 
     /// Shown under the name in the Modes list.
+    /// Whether releasing this Mode by hand starts a break rather than ending it.
+    var takesBreaks: Bool { (resumeAfter ?? 0) > 0 && blocksAnything }
+
     var summary: String {
         var parts = [blocked.summary]
         if let allowance, allowance.isEnabled, allowance.isValid {
             parts.append(allowance.displayText)
+        }
+        if takesBreaks, let seconds = resumeAfter {
+            parts.append("\(seconds.dadDurationText) breaks")
         }
         if isStrict { parts.append("strict") }
         if let schedule, schedule.isEnabled, schedule.isValid {

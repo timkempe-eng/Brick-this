@@ -18,6 +18,9 @@ enum WidgetSnapshot: Equatable {
     ///   than a plain Dadded session, and it is the whole question the widget
     ///   exists to settle from the Lock Screen.
     case dadded(modeName: String, since: Date, rationing: Bool)
+    /// Free, but a Mode is coming back — the phone is on a break, and knowing
+    /// that from the Lock Screen is the whole point of the leash.
+    case onBreak(modeName: String, until: Date)
     case free(streakDays: Int)
 
     /// - Parameter mode: the Mode the session names, so the snapshot can tell
@@ -27,6 +30,7 @@ enum WidgetSnapshot: Equatable {
     static func make(session: DadSession?,
                      mode: DadMode? = nil,
                      stats: DadStats,
+                     pendingResume: PendingResume? = nil,
                      now: Date = Date(),
                      calendar: Calendar = .current) -> WidgetSnapshot {
         if let session {
@@ -36,14 +40,18 @@ enum WidgetSnapshot: Equatable {
                            since: session.startedAt,
                            rationing: state == .rationing)
         }
+        if let pendingResume, !pendingResume.isDue(now: now) {
+            return .onBreak(modeName: pendingResume.modeName, until: pendingResume.at)
+        }
         return .free(streakDays: stats.currentStreak)
     }
 
     /// The one word you read from across the room.
     var headline: String {
         switch self {
-        case .dadded: return Vocab.verbPast
-        case .free:   return "Free"
+        case .dadded:  return Vocab.verbPast
+        case .onBreak: return Vocab.breakNoun.capitalized
+        case .free:    return "Free"
         }
     }
 
@@ -52,6 +60,8 @@ enum WidgetSnapshot: Equatable {
         switch self {
         case .dadded(let modeName, _, let rationing):
             return rationing ? "\(modeName) · \(Vocab.rationedNoun)" : modeName
+        case .onBreak(let modeName, let until):
+            return Vocab.breakRunning(mode: modeName, until: until)
         case .free(let streak):
             guard streak > 0 else { return Vocab.dadAction }
             return "\(streak) day\(streak == 1 ? "" : "s") in a row"
@@ -63,6 +73,7 @@ enum WidgetSnapshot: Equatable {
     var symbolName: String {
         switch self {
         case .dadded(_, _, let rationing): return rationing ? "hourglass" : "lock.iphone"
+        case .onBreak:                     return "arrow.clockwise.circle"
         case .free:                        return "iphone.gen3"
         }
     }
@@ -75,6 +86,8 @@ enum WidgetSnapshot: Equatable {
             return rationing
                 ? "\(modeName) · \(Vocab.rationedNoun)"
                 : "\(Vocab.verbPast) · \(modeName)"
+        case .onBreak(let modeName, _):
+            return "\(Vocab.breakNoun.capitalized) · \(modeName)"
         case .free(let streak):
             guard streak > 0 else { return Vocab.appName }
             return "\(streak) day \(Vocab.streakNoun)"
@@ -96,6 +109,9 @@ enum WidgetSnapshot: Equatable {
     /// While free, the streak can lapse silently at midnight with nothing to
     /// announce it, so that is the one moment worth waking up for.
     func nextRefresh(after now: Date, calendar: Calendar = .current) -> Date? {
+        // A break has a known end and nothing announces it from this process,
+        // so this is the one state with a deadline rather than an event.
+        if case .onBreak(_, let until) = self { return until }
         guard case .free = self else { return nil }
         return calendar.nextDate(after: now,
                                  matching: DateComponents(hour: 0, minute: 0, second: 0),

@@ -53,7 +53,8 @@ struct DadProvider: TimelineProvider {
         let mode = session.flatMap { s in store.modes.first(where: { $0.id == s.modeID }) }
         return .make(session: session,
                      mode: mode,
-                     stats: DadStats(sessions: store.history))
+                     stats: DadStats(sessions: store.history),
+                     pendingResume: store.pendingResume)
     }
 }
 
@@ -107,6 +108,11 @@ struct DadWidgetView: View {
             if case .dadded(_, let since, _) = entry.snapshot {
                 // Ticks on its own, without the system rebuilding the timeline.
                 Text(since, style: .timer)
+                    .font(.title3.weight(.semibold))
+                    .monospacedDigit()
+            } else if case .onBreak(_, let until) = entry.snapshot {
+                // The same self-updating view, counting the other way.
+                Text(until, style: .timer)
                     .font(.title3.weight(.semibold))
                     .monospacedDigit()
             }
