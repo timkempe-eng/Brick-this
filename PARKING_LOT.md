@@ -539,6 +539,21 @@ anyone's time.
   system's activity cap. Rationing Modes now draw on the same cap — one
   activity each, for as long as the session runs.
 
+## Open, and worth deciding rather than drifting
+
+- [ ] **Should an in-flight session count toward today's streak?** It does not:
+      `DadStats` filters to finished sessions, documented against totals
+      drifting upward as you watch them. But the streak rule is "at least one
+      session *started* that day", and an in-flight session has a start. So
+      somebody who Dadded an hour ago sees a streak that does not include
+      today until they tap out — on the home screen, on the widget, and in the
+      shared household streak.
+
+      Both answers are defensible and the current one is not obviously wrong,
+      which is exactly why it should be decided rather than left to the
+      accident of a filter written for a different purpose. Whichever wins,
+      the totals and the streak probably want different filters.
+
 ## Closed (this sweep)
 
 - [x] **The backlog is clear.** All eighteen ranked gaps are built or declined

@@ -117,6 +117,19 @@ tells you what is still missing instead of promising to Dad your phone — and
 that honesty is the deepest a Simulator test can go. Configuring a Mode
 end-to-end is a TestFlight step.
 
+**The shared streak is always one tap behind on the phone that writes it.**
+The ledger has to be computed before the NFC session opens — the merge runs on
+a background queue where nothing may touch the store — and the tap that ends
+tonight's session is processed after the session closes. So the standing this
+phone leaves on the tag is the one it had *before* the tap, and tonight only
+reaches the tag on the next one.
+
+It lags rather than lies: `HouseholdStreak.asOf` carries the day the number is
+true as of, and the copy says it. Fixing it properly needs a second NFC session
+after the tap — a second "hold your iPhone near the tag" prompt for something
+nobody asked for — which is a worse trade than a number that is honest about
+being a tap old.
+
 **An allowance has never been counted on a device.** The rationing state
 machine is covered by `swift test` end to end — including the day boundary, the
 refusal path and the re-arm — but every one of those tests drives it through a
