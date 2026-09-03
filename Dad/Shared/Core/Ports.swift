@@ -118,6 +118,13 @@ protocol DadPersisting: AnyObject {
     /// `nil` whenever nothing is waiting to come back.
     var pendingResume: PendingResume? { get set }
 
+    /// Asks for a bounded release, and what was decided about them.
+    ///
+    /// Kept as a list rather than one current value because a declined ask is
+    /// part of the record both people can see — a household that can only ever
+    /// read the answers it liked is one where the log is worth nothing.
+    var grantExchanges: [GrantExchange] { get set }
+
     /// Nights a scheduled Mode has been told to sit out.
     ///
     /// Stored rather than derived because "not tonight" is a decision somebody

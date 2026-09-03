@@ -32,6 +32,7 @@ final class UserDefaultsStore: DadPersisting {
         static let pendingResume = "pendingResume"
         static let household = "household"
         static let scheduleSkips = "scheduleSkips"
+        static let grantExchanges = "grantExchanges"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
@@ -87,6 +88,11 @@ final class UserDefaultsStore: DadPersisting {
     var scheduleSkips: [ScheduleSkip] {
         get { decodeArray(ScheduleSkip.self, Key.scheduleSkips) ?? [] }
         set { encode(newValue, Key.scheduleSkips) }
+    }
+
+    var grantExchanges: [GrantExchange] {
+        get { decodeArray(GrantExchange.self, Key.grantExchanges) ?? [] }
+        set { encode(newValue, Key.grantExchanges) }
     }
 
     var emergencyUses: [Date] {

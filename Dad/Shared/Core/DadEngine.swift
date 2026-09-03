@@ -324,6 +324,114 @@ struct DadEngine {
         dad(with: mode, startedBySchedule: true)
     }
 
+    // MARK: - Asking, and granting
+
+    /// How many finished exchanges to keep, for the same reason the session
+    /// history is bounded: the shield extension decodes this file under a
+    /// tight memory budget.
+    static let grantHistoryLimit = 100
+
+    /// The ask still waiting for an answer, if there is one.
+    var pendingRequest: GrantExchange? {
+        store.grantExchanges.first {
+            if case .pending = $0.state(at: clock.now) { return true }
+            return false
+        }
+    }
+
+    /// The grant currently releasing the phone, if one is.
+    var activeGrant: GrantExchange? {
+        store.grantExchanges.first { $0.isReleasing(at: clock.now) }
+    }
+
+    /// Ask for a bounded release.
+    ///
+    /// Returns `nil` when there is nothing to ask about — the phone is free,
+    /// or an ask is already outstanding. Two asks at once is not a stricter
+    /// product, it is a queue nobody wanted.
+    @discardableResult
+    func requestRelease(reason: String? = nil) -> GrantExchange? {
+        guard let session = store.activeSession, pendingRequest == nil else { return nil }
+        let exchange = GrantExchange(
+            request: GrantRequest(modeID: session.modeID,
+                                  modeName: session.modeName,
+                                  askedAt: clock.now,
+                                  reason: reason)
+        )
+        store.grantExchanges = Array((store.grantExchanges + [exchange])
+            .suffix(Self.grantHistoryLimit))
+        widget.reload()
+        return exchange
+    }
+
+    /// Grant the outstanding ask, and release the phone for that long.
+    ///
+    /// The granter is a **tag tap**, not a PIN. `GrantRequest` defines a
+    /// `PINHashing` port for a version where the grown-up is not in the room,
+    /// and nothing implements it yet on purpose: the first shape of this is
+    /// in-person, because the parent already holds a tag and a tag needs no
+    /// account, no server, no network and no crypto anyone here would have to
+    /// get right. It also works on a plane.
+    ///
+    /// The release reuses the break mechanism exactly. A grant and a break are
+    /// the same shape — released by hand, coming back on its own — and two
+    /// implementations of "comes back" would be two chances to disagree about
+    /// what that means.
+    @discardableResult
+    func grantRelease(_ requested: TimeInterval = GrantDuration.standard.seconds,
+                      byTagUID tagUID: String) -> Result<GrantExchange, GrantExchange.Refusal>? {
+        guard let exchange = pendingRequest else { return nil }
+        guard isPaired(tagUID: tagUID) else { return nil }
+
+        let answered = exchange.granting(requested, by: .inPerson(tagUID: tagUID), now: clock.now)
+        guard case .success(let granted) = answered else { return answered }
+
+        replace(granted)
+        if case .granted(let grant) = granted.decision { release(under: grant) }
+        return answered
+    }
+
+    @discardableResult
+    func declineRequest() -> Result<GrantExchange, GrantExchange.Refusal>? {
+        answerPending { $0.declining(now: clock.now) }
+    }
+
+    /// The young person taking their own ask back.
+    @discardableResult
+    func withdrawRequest() -> Result<GrantExchange, GrantExchange.Refusal>? {
+        answerPending { $0.withdrawing(now: clock.now) }
+    }
+
+    private func answerPending(
+        _ answer: (GrantExchange) -> Result<GrantExchange, GrantExchange.Refusal>
+    ) -> Result<GrantExchange, GrantExchange.Refusal>? {
+        guard let exchange = pendingRequest else { return nil }
+        let result = answer(exchange)
+        if case .success(let answered) = result { replace(answered) }
+        return result
+    }
+
+    private func replace(_ exchange: GrantExchange) {
+        var all = store.grantExchanges
+        if let i = all.firstIndex(where: { $0.id == exchange.id }) { all[i] = exchange }
+        store.grantExchanges = all
+        widget.reload()
+    }
+
+    /// Ends the session for the length of a grant, and brings the Mode back
+    /// when it runs out.
+    private func release(under grant: Grant) {
+        guard let session = store.activeSession,
+              let mode = store.modes.first(where: { $0.id == session.modeID }) else { return }
+
+        // `.system`, not `.tapped`: the Mode's own break must not *also* arm,
+        // or a Mode that takes fifteen-minute breaks would quietly extend
+        // every granted hour by another fifteen minutes.
+        unDad(.system)
+        startBreak(mode: mode, length: grant.duration.seconds,
+                   startedBySchedule: session.startedBySchedule)
+    }
+
     // MARK: - Skipping one night
 
     /// The next occurrence of this Mode's schedule that a skip would land on,

@@ -11,6 +11,7 @@ final class FakeStore: DadPersisting {
     var neverBlocked = BlockedSelection()
     var household = Household.solo
     var scheduleSkips: [ScheduleSkip] = []
+    var grantExchanges: [GrantExchange] = []
     var pendingResume: PendingResume?
     var emergencyUses: [Date] = []
     var hasOnboarded = false
