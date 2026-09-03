@@ -77,8 +77,10 @@ left is calendar time and a browser.
 - [ ] **Rename the default branch to `main`.** Settings → Branches. `main`
       carries everything and CI is green on its head; the default is still
       `claude/tim-phone-focus-device-tbu04b`. Nothing in a session can flip it —
-      it is a repository setting, not a git operation. Delete the session
-      branches afterwards.
+      it is a repository setting, not a git operation. Afterwards, run the
+      *Branch cleanup* workflow in `delete-merged` mode from `main`; it
+      refuses the default branch, so the rename has to come first.
+      [docs/branches.md](docs/branches.md).
 
 ## Deliberately deferred
 

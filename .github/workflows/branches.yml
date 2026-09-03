@@ -1,0 +1,62 @@
+name: Branch cleanup
+
+# Deletes remote branches, which nothing else in this project can. A session's
+# token is refused with a 403 on any ref deletion (it can create and update
+# refs), and there is no Mac or local shell. The runner's GITHUB_TOKEN can, so
+# per the contract this is a workflow. Run it from the Actions tab on
+# github.com, which works from an iPad, or trigger it from a session.
+#
+# `list` changes nothing and is the default. `delete-merged` removes every
+# branch whose work is already on main — by ancestry, or commit for commit by
+# patch — and never one with changes main lacks. `archive` tags the named
+# branches' tips as archive/<name> before deleting them, for unmerged work
+# worth keeping without a branch. `delete` is by name and asks no questions.
+#
+# The branch the workflow runs from is kept, as is main and the repository's
+# default branch. The full report goes to the run summary, with the tip sha of
+# every branch, so anything deleted can be restored from that sha.
+# docs/branches.md is the process around this.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to do"
+        type: choice
+        required: true
+        default: list
+        options:
+          - list
+          - delete-merged
+          - archive
+          - delete
+      branches:
+        description: "Branch names, space or comma separated (required for archive and delete; narrows delete-merged)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency: branches
+
+jobs:
+  branches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ${{ inputs.mode }}
+        env:
+          MODE: ${{ inputs.mode }}
+          NAMES: ${{ inputs.branches }}
+          BRANCHES_KEEP: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          read -ra names <<< "$(tr ',' ' ' <<< "$NAMES")"
+          set -o pipefail
+          ./scripts/branches.sh "$MODE" "${names[@]}" | tee out.txt
+          { echo '## Branch cleanup: `'"$MODE"'`'; echo; echo '```'; cat out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

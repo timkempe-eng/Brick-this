@@ -67,7 +67,10 @@ locally — there is no locally.
    family-controls entitlement — otherwise it would be a fifth bundle id
    waiting on Apple's manual approval.
 8. **`main` is the trunk.** A session branch is a scratch vehicle, not a home.
-   Land finished, green work on `main` before the session ends.
+   Land finished, green work on `main` before the session ends, then delete
+   the branch — which a session cannot do (its token gets a 403 on any ref
+   deletion), so it is the *Branch cleanup* workflow.
+   [docs/branches.md](docs/branches.md) has the audit and the modes.
 
 ## Before you push
 
