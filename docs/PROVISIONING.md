@@ -20,7 +20,8 @@ re-run the check, it isn't ✅.**
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
 | Private `match` store | ✅ | `timkempe-eng/dad-certificates`, holding certificate `53GT6F9GRZ` encrypted | run Apple account maintenance; it prints whether the store has a match branch |
 | Five provisioning profiles | ✅ | Created and installed; `All required keys, certificates and provisioning profiles are installed` | run Release |
-| App Group assigned to the App IDs | ❌ | The build fails with "doesn't include the App Groups capability" although the capability is enabled — ticking it and assigning a group are separate | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
+| App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
+| Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
 | App Store Connect record | ❓ | — | Connect → Apps shows `app.dad.Dad` |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
@@ -47,8 +48,13 @@ what each thing turned out to be:
   one before it: Spaceship authenticated with a sliced key hash, `pip3` refused
   on the runner's PEP 668 Python, `apply_signing.py` demanded a profile for the
   test bundle, and `../` meant two different directories to `sh` and to gym.
-- **The build now stops exactly where it should**: on entitlements the profiles
-  cannot carry until Apple approves Family Controls.
+- **The build now stops exactly where it should.** After the App Group was
+  assigned and the profiles regenerated, every remaining error is
+  `com.apple.developer.family-controls`, on the four targets that need it.
+  Nothing else is wrong, and nothing else can be fixed from here.
+- **The widget builds and signs today.** It is absent from the failures, which
+  is hard rule 7 paying for itself: keeping its source set narrow means one of
+  the five targets was never waiting on Apple at all.
 
 ## What is genuinely new for Dad
 
