@@ -48,12 +48,11 @@ from a household of one so the app never reads as an audit.
 - [x] ~~App Store Connect API key → the three `ASC_*` secrets, `APPLE_TEAM_ID`,
       `MATCH_PASSWORD`~~ — all seven secrets are set and proven: Release run
       33713075001 got past signing to the Xcode build.
-- [ ] **App Store Connect record for `app.dad.Dad`.** Confirmed absent again
-      2026-09-03 12:03. iPad work, minutes, blocked on nobody: Apps → + → New
-      App → iOS → that bundle id. The `beta` lane now says so at the top of the
-      log and refuses at the upload, having built and exported first — a run
-      before this exists still cannot ship, but it does settle whether Family
-      Controls is approved, which is the answer worth twenty minutes.
+- [x] ~~App Store Connect record for `app.dad.Dad`~~ — created 2026-09-03 as
+      **Dad Your Phone**; the maintenance run at 15:15 reads it back from Apple.
+      The `beta` lane checks for it, says so at the top of the log, and refuses
+      at the upload rather than after it — a run before it existed would still
+      have built and exported, which is what settles Family Controls.
 - [ ] First TestFlight build installed on the iPhone
 
 ## Next up

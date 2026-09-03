@@ -24,32 +24,33 @@ re-run the check, it isn't ✅.**
 | Family Controls capability on each App ID | ✅ | Apple-maintenance run 11 and again 2026-09-03 12:03: `FAMILY_CONTROLS` listed on `app.dad.Dad`, `.ShieldConfiguration`, `.ShieldAction`, `.ActivityMonitor`, and absent from `.Widget` — which is what rule 7 wants. `NFC_TAG_READING` on the app alone. **This says the capability is on, not that distribution is approved:** Apple's API reports a single `FAMILY_CONTROLS` type and cannot tell the self-service development variant from the reviewed distribution one, so this row would read identically either way | run Apple account maintenance; the capabilities lane prints every capability per identifier |
 | App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
-| App Store Connect record | ❌ | Re-checked 2026-09-03 12:03, still absent. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible. The `beta` lane now names this at the top of the log and refuses at the upload step, having still built and exported — so a run spent before the record exists is not wasted: reaching the export is what proves Family Controls is approved | run Apple account maintenance; the capabilities lane says outright whether it exists |
+| App Store Connect record | ✅ | Created 2026-09-03 between 12:03 and 15:15, named **Dad Your Phone**. Maintenance run at 15:15: `App Store Connect record: app.dad.Dad exists (Dad Your Phone)`. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible | run Apple account maintenance; the capabilities lane says outright whether it exists |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
 ❓ means unverified, not false. ⏳ means waiting on someone else.
 
-## The two things between here and TestFlight
+## The one thing between here and TestFlight
 
-Asked and answered on 2026-09-03. Everything else in the table above is green,
-so these are the whole list — and only one of them is ours.
+Asked on 2026-09-03, and answered twice, because the answer changed while it
+was being asked. Everything in the table above is green except one row, and
+that row is not ours.
 
-1. **The App Store Connect record does not exist.** Minutes of browser work on
-   the iPad, blocked on nobody: appstoreconnect.apple.com → Apps → + → New App
-   → iOS → bundle id `app.dad.Dad`. Until it exists there is nothing for a
-   build to upload *to*, so this is worth doing before spending a runner.
-2. **Family Controls (Distribution) approval is unconfirmed.** The capability
-   is enabled on the four App IDs, which is necessary and not sufficient — see
-   the table row. No Release run has been attempted since it was enabled: the
-   last one, run #7 at 04:09, predates it and failed on exactly these four
-   entitlements. So whether Apple has approved is genuinely unknown right now,
-   and one Release run with `force_profiles: true` answers it.
+**Family Controls (Distribution) approval is unconfirmed.** The capability is
+enabled on the four App IDs, which is necessary and not sufficient — see the
+table row for why a capability listing cannot tell approval from the
+self-service development variant. No Release run has been attempted since it
+was enabled: the last one, run #7 at 04:09, predates it and failed on exactly
+these four entitlements. So one Release run with `force_profiles: true` now
+settles it, and ships the build if the answer is yes.
 
-The order does not matter for the answer — a Release run settles (2) either
-way, because the missing record stops the upload and not the build. It matters
-for the cost: doing (1) first means the run that settles (2) also delivers the
-build, instead of being spent twice.
+**The App Store Connect record was the other one, and it is done.** It did not
+exist at 12:03 and did exist at 15:15, as *Dad Your Phone*. Worth recording how
+that read from inside a session: this file said ❌ on evidence three hours old,
+and the honest-looking move — trusting the written state — was the wrong one.
+The table is a cache of somebody else's system, so a ❌ on an Apple row means
+"absent when last asked", never "absent". Re-run the check before believing it;
+it costs ninety seconds.
 
 ## What the first signing runs settled (2026-09-03)
 

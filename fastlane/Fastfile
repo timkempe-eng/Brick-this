@@ -68,20 +68,27 @@ rescue StandardError => e
   0
 end
 
-# The App Store Connect app record, or nil if Connect says there is none.
+# The App Store Connect app record, or nil if this key can see none.
 #
 # Registering an App ID at developer.apple.com and creating the app record at
 # appstoreconnect.apple.com are different actions on different sites, and only
 # the second one makes TestFlight possible. The two are easy to conflate, and
-# on 2026-09-03 the App IDs existed while the record did not.
+# for most of 2026-09-03 the five App IDs existed while the record did not.
 #
 # Nothing between the top of the beta lane and its last line notices: match
 # mints profiles, gym compiles for twenty minutes, and upload_to_testflight is
 # the first thing to ask Connect anything.
 #
-# An exception is not an answer. It means the question could not be asked, and
-# a release must not be blocked by that — so a failed query returns :unknown
-# and only a clean nil means "absent".
+# Three answers, not two, because two of them are wrong in opposite directions:
+#
+# - a record: ship.
+# - :unknown, from a raised exception: the question could not be asked, which
+#   is not the same as "no record". A release must not be blocked by a network
+#   blip, so this continues.
+# - nil: this key can see no record. Note what that does NOT say — Connect
+#   keys can be limited to specific apps, so a real record can read as nil.
+#   The callers say so rather than asserting the record is missing, because
+#   the two causes need opposite fixes and one of them is "create a duplicate".
 def connect_app_record
   Spaceship::ConnectAPI::App.find(APP_ID)
 rescue StandardError => e
@@ -145,7 +152,7 @@ platform :ios do
     record = connect_app_record
     if record.nil?
       UI.important(
-        "App Store Connect has no app record for #{APP_ID} yet, so this run cannot ship. " \
+        "This key can see no app record for #{APP_ID}, so this run cannot ship. " \
         "It will still build, sign and export — which is what says whether Family Controls " \
         "(Distribution) has been approved — and then stop before the upload."
       )
@@ -303,14 +310,17 @@ platform :ios do
 
     if record.nil?
       UI.user_error!(
-        "Built and exported successfully, but App Store Connect has no app record for " \
-        "#{APP_ID}, so there is nothing to upload to. The .ipa is kept as a build " \
-        "artifact. Create the record — appstoreconnect.apple.com → Apps → + → New App " \
-        "→ iOS → bundle id #{APP_ID} — and run this again. Registering the App ID in " \
-        "the developer portal is a different action on a different site and does not " \
-        "create this. Only the app needs a record; the four extensions ship inside its " \
-        "bundle. Reaching this line means signing and export worked, so Family Controls " \
-        "(Distribution) is approved."
+        "Built and exported successfully, but this key can see no App Store Connect " \
+        "record for #{APP_ID}, so there is nothing to upload to. The .ipa is kept as a " \
+        "build artifact. Two things produce this, and they need opposite fixes. " \
+        "Either the record does not exist — appstoreconnect.apple.com → Apps → + → New " \
+        "App → iOS → bundle id #{APP_ID}; registering the App ID in the developer portal " \
+        "is a different action on a different site and does not create this, and only " \
+        "the app needs a record because the four extensions ship inside its bundle. " \
+        "Or it exists and this key cannot see it: Users and Access → Integrations, where " \
+        "a key can be limited to specific apps. Look before creating a duplicate. " \
+        "Either way, reaching this line means signing and export worked, so Family " \
+        "Controls (Distribution) is approved."
       )
     end
 
@@ -335,11 +345,12 @@ platform :ios do
     app = connect_app_record
     if app == :unknown
       UI.error("App Store Connect record: could not tell — the query failed, which is not the same as absent.")
-    elsif app
-      UI.success("App Store Connect record: #{APP_ID} exists (#{app.name})")
+    elsif app.nil?
+      UI.error("App Store Connect record: this key can see no record for #{APP_ID}. Either it does not " \
+               "exist (appstoreconnect.apple.com → Apps → + → iOS → bundle id #{APP_ID}) or this key is " \
+               "limited to specific apps (Users and Access → Integrations). TestFlight upload will fail.")
     else
-      UI.error("App Store Connect record: #{APP_ID} DOES NOT EXIST. TestFlight upload will fail. " \
-               "appstoreconnect.apple.com → Apps → + → iOS → bundle id #{APP_ID}")
+      UI.success("App Store Connect record: #{APP_ID} exists (#{app.name})")
     end
 
     ALL_IDS.each do |identifier|
