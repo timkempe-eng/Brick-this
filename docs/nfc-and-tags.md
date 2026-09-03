@@ -49,8 +49,11 @@ Good places to put one: the back of a coaster on the kitchen table, inside a
 drawer in another room, the underside of a bedside table, the inside of the
 front door. The whole mechanism is that walking to it costs you something.
 
-Want something more like the real puck? Embed a tag in a 3D-printed disc with a
-few grams of ballast and a magnet. Function is identical; it just feels nicer.
+Want something more like the real puck? There is one:
+[hardware/](../hardware/) has a printable two-part puck that seals the sticker
+inside, takes ballast and an optional magnet, and costs about a dollar. Read
+its notes on magnets before fitting one — a neodymium disc behind a plain tag
+is the same "metal kills NFC" problem as the fridge door, just closer.
 
 ## The three tap paths
 

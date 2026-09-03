@@ -1,0 +1,57 @@
+name: Hardware
+
+# The puck is source too, and there is no local shell in this project — so the
+# STLs are rendered here rather than committed, the same way Dad.xcodeproj is
+# generated rather than checked in. Download them from this run's artifacts.
+
+on:
+  push:
+    paths:
+      - "hardware/**"
+      - "scripts/check_stl.py"
+      - ".github/workflows/hardware.yml"
+  pull_request:
+    paths:
+      - "hardware/**"
+      - "scripts/check_stl.py"
+      - ".github/workflows/hardware.yml"
+  workflow_dispatch:
+
+jobs:
+  puck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenSCAD
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends openscad
+
+      # Both printable parts, the assembly, a cutaway for reading a parameter
+      # change at a glance, and the magnet variant — which has a different
+      # floor and a smaller chamber, so it is a different part and has to be
+      # rendered rather than assumed.
+      - name: Render
+        run: |
+          mkdir -p build
+          set -e
+          for part in cup lid assembled section; do
+            openscad --export-format=binstl \
+              -D "part=\"$part\"" -o "build/puck-$part.stl" hardware/puck.scad
+          done
+          openscad --export-format=binstl \
+            -D 'part="cup"' -D 'magnet_diameter=20' \
+            -o build/puck-cup-magnet.stl hardware/puck.scad
+          ls -la build
+
+      # A mesh with a hole in it slices without complaint into a part with a
+      # side missing, which you find out four hours into the print.
+      - name: Check the meshes are closed
+        run: python3 scripts/check_stl.py build/*.stl
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: puck-stl
+          path: build/*.stl
+          retention-days: 90
