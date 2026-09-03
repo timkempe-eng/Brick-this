@@ -130,19 +130,28 @@ platform :ios do
     api_key = connect_api_key
     team_id = require_env("APPLE_TEAM_ID", "Developer account → Membership, 10 characters.")
 
-    # One API call, spent before anything expensive, because the alternative is
-    # learning this on the last line of a twenty-minute signed build.
+    # Say up front whether there is anywhere to upload to — one API call, and
+    # the answer belongs at the top of the log rather than in its last line.
+    #
+    # It is deliberately a warning and not a refusal. Most of this lane exists
+    # to answer a question the record has nothing to do with: whether Apple has
+    # approved Family Controls (Distribution), which only shows in whether
+    # match and the export succeed. Aborting here would save twenty minutes and
+    # cost the only probe there is for the long pole — including the standing
+    # Routine that runs this lane every three days to watch for approval.
+    #
+    # So the run proceeds, and refuses at the upload instead. The guard is
+    # there, not here.
     record = connect_app_record
     if record.nil?
-      UI.user_error!(
-        "App Store Connect has no app record for #{APP_ID}, so the upload at the end " \
-        "of this build would fail. Create it: appstoreconnect.apple.com → Apps → + → " \
-        "New App → iOS → bundle id #{APP_ID}. Registering the App ID in the developer " \
-        "portal is a different action on a different site and does not create this. " \
-        "Only the app needs a record; the four extensions ship inside its bundle."
+      UI.important(
+        "App Store Connect has no app record for #{APP_ID} yet, so this run cannot ship. " \
+        "It will still build, sign and export — which is what says whether Family Controls " \
+        "(Distribution) has been approved — and then stop before the upload."
       )
+    elsif record != :unknown
+      UI.success("App Store Connect record: #{record.name}")
     end
-    UI.success("App Store Connect record: #{record.name}") unless record == :unknown
 
     # Where match's certificates live, and what may read them.
     #
@@ -282,6 +291,28 @@ platform :ios do
       output_directory: File.join(REPO_ROOT, "build"),
       clean: true,
     )
+
+    # Ask again rather than trusting the answer from twenty minutes ago. The
+    # record takes minutes to create, so a run that started without one can
+    # legitimately finish with one — and re-asking turns that race into a
+    # shipped build instead of a re-run.
+    if record.nil?
+      record = connect_app_record
+      UI.success("App Store Connect record appeared during the build: #{record.name}") if record && record != :unknown
+    end
+
+    if record.nil?
+      UI.user_error!(
+        "Built and exported successfully, but App Store Connect has no app record for " \
+        "#{APP_ID}, so there is nothing to upload to. The .ipa is kept as a build " \
+        "artifact. Create the record — appstoreconnect.apple.com → Apps → + → New App " \
+        "→ iOS → bundle id #{APP_ID} — and run this again. Registering the App ID in " \
+        "the developer portal is a different action on a different site and does not " \
+        "create this. Only the app needs a record; the four extensions ship inside its " \
+        "bundle. Reaching this line means signing and export worked, so Family Controls " \
+        "(Distribution) is approved."
+      )
+    end
 
     upload_to_testflight(
       api_key: api_key,

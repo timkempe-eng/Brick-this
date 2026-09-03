@@ -24,7 +24,7 @@ re-run the check, it isn't ✅.**
 | Family Controls capability on each App ID | ✅ | Apple-maintenance run 11 and again 2026-09-03 12:03: `FAMILY_CONTROLS` listed on `app.dad.Dad`, `.ShieldConfiguration`, `.ShieldAction`, `.ActivityMonitor`, and absent from `.Widget` — which is what rule 7 wants. `NFC_TAG_READING` on the app alone. **This says the capability is on, not that distribution is approved:** Apple's API reports a single `FAMILY_CONTROLS` type and cannot tell the self-service development variant from the reviewed distribution one, so this row would read identically either way | run Apple account maintenance; the capabilities lane prints every capability per identifier |
 | App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
-| App Store Connect record | ❌ | Re-checked 2026-09-03 12:03, still absent. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible. The `beta` lane now refuses up front on this rather than failing at the upload after a twenty-minute build | run Apple account maintenance; the capabilities lane says outright whether it exists |
+| App Store Connect record | ❌ | Re-checked 2026-09-03 12:03, still absent. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible. The `beta` lane now names this at the top of the log and refuses at the upload step, having still built and exported — so a run spent before the record exists is not wasted: reaching the export is what proves Family Controls is approved | run Apple account maintenance; the capabilities lane says outright whether it exists |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
@@ -46,9 +46,10 @@ so these are the whole list — and only one of them is ours.
    entitlements. So whether Apple has approved is genuinely unknown right now,
    and one Release run with `force_profiles: true` answers it.
 
-The order does not matter for the answer, but it does for the cost: doing (1)
-first means the run that settles (2) can also deliver the build, instead of
-being spent twice.
+The order does not matter for the answer — a Release run settles (2) either
+way, because the missing record stops the upload and not the build. It matters
+for the cost: doing (1) first means the run that settles (2) also delivers the
+build, instead of being spent twice.
 
 ## What the first signing runs settled (2026-09-03)
 

@@ -50,9 +50,10 @@ from a household of one so the app never reads as an audit.
       33713075001 got past signing to the Xcode build.
 - [ ] **App Store Connect record for `app.dad.Dad`.** Confirmed absent again
       2026-09-03 12:03. iPad work, minutes, blocked on nobody: Apps → + → New
-      App → iOS → that bundle id. The `beta` lane now refuses at its first API
-      call rather than at the upload, so a run spent before this exists costs
-      seconds instead of twenty minutes — but it still cannot ship.
+      App → iOS → that bundle id. The `beta` lane now says so at the top of the
+      log and refuses at the upload, having built and exported first — a run
+      before this exists still cannot ship, but it does settle whether Family
+      Controls is approved, which is the answer worth twenty minutes.
 - [ ] First TestFlight build installed on the iPhone
 
 ## Next up
