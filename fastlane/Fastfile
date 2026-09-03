@@ -10,6 +10,12 @@
 
 require "base64"
 
+# Fastlane has TWO working directories: `sh` blocks run in fastlane/, while
+# actions like build_app resolve paths from the repo root. A "../" that is
+# right for one is wrong for the other — "../Dad.xcodeproj" sent gym looking
+# one level ABOVE the checkout. Anchor everything here instead.
+REPO_ROOT = File.expand_path("..", __dir__)
+
 APP_ID       = "app.dad.Dad"
 EXTENSION_IDS = [
   "app.dad.Dad.ShieldConfiguration",
@@ -220,14 +226,16 @@ platform :ios do
     # rather than set in an Xcode UI nobody here can open. CODE_SIGN_ENTITLEMENTS
     # stays per-target: a global one forces the app's entitlements onto an
     # extension whose profile doesn't authorize them, and the export fails.
-    sh("python3", "../scripts/apply_signing.py",
+    sh("python3", File.join(REPO_ROOT, "scripts/apply_signing.py"),
        team_id,
        *profiles.flat_map { |id, name| [id, name] })
 
-    sh("xcodegen", "generate", "--spec", "../project.yml", "--project", "..")
+    sh("xcodegen", "generate",
+       "--spec", File.join(REPO_ROOT, "project.yml"),
+       "--project", REPO_ROOT)
 
     build_app(
-      project: "../Dad.xcodeproj",
+      project: File.join(REPO_ROOT, "Dad.xcodeproj"),
       scheme: "Dad",
       configuration: "Release",
       export_method: "app-store",
@@ -236,7 +244,7 @@ platform :ios do
         teamID: team_id,
         provisioningProfiles: profiles,
       },
-      output_directory: "../build",
+      output_directory: File.join(REPO_ROOT, "build"),
       clean: true,
     )
 
