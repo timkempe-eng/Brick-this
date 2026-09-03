@@ -37,6 +37,11 @@ is most of the skill:
 **If an operation needs a machine, it is a workflow.** Not a script someone runs
 locally — there is no locally.
 
+The container's image ships without Swift. `.claude/hooks/session-start.sh`
+installs the toolchain and builds the tests before a session starts, so
+`swift test` is there when the contract says it is; a session where it is
+missing is a session whose hook did not run, not a reason to push untested.
+
 ## Hard rules
 
 1. **`Dad/Shared/Core` imports Foundation and nothing else.** Ever. It is the

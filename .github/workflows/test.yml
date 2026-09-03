@@ -1,9 +1,24 @@
 name: Test
 
+# Every push that could change what the app does. A commit that only touches
+# docs, Markdown or the hardware tree skips this entirely — the Linux jobs
+# read none of it and the macOS job would rent a Mac for six minutes to prove
+# nothing. A newer push to the same branch cancels the run it supersedes:
+# with sessions landing a commit every few minutes, three builds of three
+# stale heads were running at once before this existed.
+
 on:
   push:
     branches: ["**"]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "hardware/**"
   pull_request:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # The Foundation-only core: the engine, schedules, allowance and stats maths.
