@@ -16,14 +16,39 @@ re-run the check, it isn't ✅.**
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Family Controls (Distribution) | ⏳ | Requested 2026-09-02. Apple issues no case id or acknowledgement | Certificates, IDs & Profiles → the four App IDs show a Family Controls row that is not development-only |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
-| `ASC_*` / `APPLE_TEAM_ID` secrets | ❓ | Values exist (hydive uses them); secrets are **per repo**, so they still have to be copied into this one | run Release; the Fastfile names any missing one |
-| Distribution certs below the cap | ❓ | The other apps hold at least one; Dad mints its own, so there has to be room | run Apple account maintenance; it prints the count |
-| Private `match` store | ❓ | Needs a private repo of its own — this one is public and cannot hold a signing key | `git ls-remote <MATCH_GIT_URL> match` returns a ref |
+| All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
+| Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
+| Private `match` store | ✅ | `timkempe-eng/dad-certificates`, holding certificate `53GT6F9GRZ` encrypted | run Apple account maintenance; it prints whether the store has a match branch |
+| Five provisioning profiles | ✅ | Created and installed; `All required keys, certificates and provisioning profiles are installed` | run Release |
+| App Group assigned to the App IDs | ❌ | The build fails with "doesn't include the App Groups capability" although the capability is enabled — ticking it and assigning a group are separate | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | App Store Connect record | ❓ | — | Connect → Apps shows `app.dad.Dad` |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
 ❓ means unverified, not false. ⏳ means waiting on someone else.
+
+## What the first signing runs settled (2026-09-03)
+
+The pipeline now runs end to end as far as Apple permits. What it cost, and
+what each thing turned out to be:
+
+- **Apple's distribution certificate cap is three.** Not two. Established by
+  minting the third, which the guard had been refusing to attempt.
+- **A certificate can be stranded, and once was.** `match` asks Apple for the
+  certificate first and encrypts it to the store last, so a missing
+  `MATCH_PASSWORD` produced a real certificate whose private key existed only
+  in the runner's keychain. `LTZ92335U6` was revoked to recover the slot. The
+  lane now requires that password before it calls Apple at all.
+- **The certificate list alone cannot tell you what is safe to revoke.** The
+  `certs` lane prints the profiles referencing each certificate, and whether
+  the store holds anything, because "revoke one of these two" was otherwise a
+  coin flip over two other shipping apps.
+- **Four bugs sat between the secrets and the build**, each hidden behind the
+  one before it: Spaceship authenticated with a sliced key hash, `pip3` refused
+  on the runner's PEP 668 Python, `apply_signing.py` demanded a profile for the
+  test bundle, and `../` meant two different directories to `sh` and to gym.
+- **The build now stops exactly where it should**: on entitlements the profiles
+  cannot carry until Apple approves Family Controls.
 
 ## What is genuinely new for Dad
 
