@@ -15,6 +15,9 @@ name: Branch cleanup
 # The branch the workflow runs from is kept, as is main and the repository's
 # default branch. The full report goes to the run summary, with the tip sha of
 # every branch, so anything deleted can be restored from that sha.
+#
+# Like any workflow_dispatch workflow, it can only be run once this file is on
+# the repository's default branch; a copy on another branch alone gets a 404.
 # docs/branches.md is the process around this.
 
 on:

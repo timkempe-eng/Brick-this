@@ -57,10 +57,18 @@ and fails the run if any of them is unmerged — so a session that wants
 exactly one branch gone can say so and be told if it was wrong.
 
 From a session, the same thing is the GitHub connector's *actions run
-trigger* on `branches.yml`, with `ref` set to a branch that carries the
-workflow file, `mode: delete-merged`. Then `scripts/branches.sh list` to
-confirm. The workflow file must exist on the ref it is dispatched from, so
-until `main` carries it, dispatch from the branch that does.
+trigger* on `branches.yml` with `mode: delete-merged` and `ref` set to a
+branch that carries the workflow file. Then `scripts/branches.sh list` to
+confirm.
+
+A `workflow_dispatch` workflow can only be dispatched once its file is on
+the **default branch**; until then the API answers 404 and the Actions tab
+has no *Run workflow* button, whatever other branches carry it. Measured on
+2026-09-03: dispatching this workflow from the session branch that
+introduced it returned 404 while the four workflows on the default branch
+listed fine. So a new or changed workflow lands on the default branch
+before it can be tried — one more reason the default branch should be
+`main`.
 
 Deleting a merged branch under an active session is safe. Its next push
 recreates the ref; nothing on the container's disk is affected.
