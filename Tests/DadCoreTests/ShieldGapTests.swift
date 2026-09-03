@@ -77,6 +77,30 @@ final class ShieldGapTests: XCTestCase {
         XCTAssertNil(report.setupNote)
     }
 
+    // MARK: - Where the week ends
+
+    func testTheHorizonCutsOnTheWindowsStartAndTheEdgeIsExact() {
+        // now is Wednesday 2025-08-20 09:00; the horizon is 2025-08-13 09:00.
+        // A window starting at 10:00 on the horizon day is inside it by an
+        // hour; one starting at 08:00 that same day is outside by one. Both
+        // are the same distance from "a week ago" in ordinary speech, and the
+        // edge has to fall somewhere.
+        //
+        // This also pins what was an unreachable extra day of search. Its
+        // comment said an overnight window beginning just outside the horizon
+        // could still end inside it — which `start >= horizon` forbids — and a
+        // mutation removing the day survived the whole suite.
+        let inside = ShieldGap.occurrences(
+            of: [mode(startHour: 10, endHour: 11)], now: now, calendar: utc)
+        let outside = ShieldGap.occurrences(
+            of: [mode(startHour: 8, endHour: 9)], now: now, calendar: utc)
+
+        XCTAssertEqual(inside.map(\.interval.start).min(), at(2025, 8, 13, 10),
+                       "the oldest window found starts on the horizon day, after the horizon")
+        XCTAssertEqual(outside.map(\.interval.start).min(), at(2025, 8, 14, 8),
+                       "an 08:00 window on the horizon day began before it, so the run starts a day later")
+    }
+
     func testAConfirmationFromTheFutureDoesNotCrashTheReport() {
         // The guard on the left edge is a crash guard, not tidiness, and a
         // mutation removing it survived the whole suite — so it had no test

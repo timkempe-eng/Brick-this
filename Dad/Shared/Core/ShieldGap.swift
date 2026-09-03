@@ -423,9 +423,24 @@ extension ShieldGap {
 
         for mode in modes where mode.hasLiveSchedule {
             guard let schedule = mode.schedule else { continue }
-            // One extra day back: an overnight window that began just outside
-            // the horizon can still end inside it.
-            let days = Int(lookback / (24 * 60 * 60)) + 1
+            // Exactly the lookback, and no extra day.
+            //
+            // There was one, with a comment saying an overnight window that
+            // began just outside the horizon can still end inside it. The
+            // guard below forbids precisely that — `start >= horizon` — so the
+            // extra day could never produce a result: a window starting on the
+            // day before the horizon starts before the horizon instant, always.
+            // A mutation removing the `+ 1` survived the whole suite, which is
+            // what unreachable code looks like from the outside.
+            //
+            // The boundary that does matter is the one on the horizon *day*:
+            // a window starting after the horizon instant counts, one starting
+            // before it does not, and an overnight window that began before it
+            // is deliberately out even though part of it ran inside. Past a
+            // week a gap stops being "go and check Screen Time" and becomes a
+            // grievance with a timestamp; the edge has to fall somewhere and
+            // the start is the edge somebody can point at.
+            let days = Int(lookback / (24 * 60 * 60))
 
             for offset in 0...days {
                 guard let day = calendar.date(byAdding: .day, value: -offset, to: now) else { continue }
