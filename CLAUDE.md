@@ -59,7 +59,7 @@ locally — there is no locally.
 ## Before you push
 
 ```bash
-swift test                      # 237 tests, seconds
+swift test                      # 240 tests, seconds
 ./scripts/lint-vocabulary.sh
 python3 scripts/preflight.py    # 94 checks on the Xcode wiring
 ```

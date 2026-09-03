@@ -114,17 +114,24 @@ struct DadEngine {
             return .unDadded(session: ended)
         }
 
-        // Free, but a break is running. Both readings of a tap here are
+        // Free, but a break is running. Both readings of a bare tap here are
         // defensible — call the break off, or start the session early — and
         // calling it off wins because it is the one the user cannot get any
         // other way. Waiting gets you the session; nothing else gets you your
         // evening back. It also keeps every state change at the tag, which is
         // the whole product.
-        if let pending = store.pendingResume {
+        //
+        // A tap that *names* a Mode is not a bare tap, though. It comes from
+        // the "which Mode?" dialog, or from a Shortcut built around one
+        // particular Mode, and both mean "start this now" — so the break is
+        // superseded rather than cancelled, which `dad` does on its own.
+        if preferredMode == nil, let pending = store.pendingResume {
             let mode = store.modes.first { $0.id == pending.modeID }
             cancelBreak()
-            guard let mode else { return .needsModeChoice }
-            return .breakCancelled(mode: mode)
+            // A break whose Mode has since been deleted is stale. Drop it and
+            // let the tap mean what a tap normally means, rather than
+            // reporting a cancellation of something we cannot name.
+            if let mode { return .breakCancelled(mode: mode) }
         }
 
         // Starting: the Mode we were handed, else the only one that blocks

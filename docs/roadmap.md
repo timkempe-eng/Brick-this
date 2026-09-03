@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 237 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 240 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built

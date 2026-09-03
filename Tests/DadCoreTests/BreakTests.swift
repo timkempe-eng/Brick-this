@@ -380,3 +380,57 @@ final class BreakInsideAScheduleTests: XCTestCase {
         XCTAssertNotNil(h.store.activeSession, "yours means until you tap again")
     }
 }
+
+/// A tap that names a Mode is not a bare tap.
+final class BreakWithAChosenModeTests: XCTestCase {
+
+    private let fifteen: TimeInterval = 15 * 60
+
+    func testChoosingAModeDuringABreakStartsItRatherThanCancelling() {
+        // This is the path out of the "which Mode?" dialog, and out of a
+        // Shortcut built around one particular Mode. Both mean "start this
+        // now", and neither should be spent calling off a break.
+        let h = Harness()
+        let deep = h.addMode(name: "Deep Work", breakLength: fifteen)
+        let sleep = h.addMode(name: "Sleep")
+        h.engine.dad(with: deep)
+        h.engine.handleTap()                      // out, break running
+
+        let result = h.engine.handleTap(preferredMode: sleep)
+
+        guard case .dadded(let started, _) = result else {
+            return XCTFail("expected .dadded, got \(result)")
+        }
+        XCTAssertEqual(started.id, sleep.id)
+        XCTAssertNil(h.store.pendingResume, "superseded, not left pending")
+        XCTAssertEqual(h.shield.appliedMode, sleep.id)
+    }
+
+    func testABareTapDuringABreakStillCancelsIt() {
+        let h = Harness()
+        let deep = h.addMode(name: "Deep Work", breakLength: fifteen)
+        h.engine.dad(with: deep)
+        h.engine.handleTap()
+
+        XCTAssertEqual(h.engine.handleTap(), .breakCancelled(mode: deep))
+    }
+
+    func testABreakWhoseModeWasDeletedDoesNotSwallowTheTap() {
+        // Otherwise the tap would report cancelling something it cannot name,
+        // and a second tap would be needed to do the obvious thing.
+        let h = Harness()
+        let going = h.addMode(name: "Deep Work", breakLength: fifteen)
+        h.engine.dad(with: going)
+        h.engine.handleTap()
+        h.engine.deleteMode(id: going.id)
+        let other = h.addMode(name: "Sleep")
+
+        let result = h.engine.handleTap()
+
+        guard case .dadded(let started, _) = result else {
+            return XCTFail("expected .dadded, got \(result)")
+        }
+        XCTAssertEqual(started.id, other.id, "the only usable Mode left")
+        XCTAssertNil(h.store.pendingResume)
+    }
+}
