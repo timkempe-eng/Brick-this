@@ -13,6 +13,12 @@ of this history; its CI was only ever red because it was cut from a stale `main`
 
 Checked boxes below are built, tested and green — not planned.
 
+**Eleven of the eighteen are now built.** What is left is #1's authorization
+half (child authorization, which needs Apple and an iCloud Family), #9 rewards,
+#10 the parent's own phone, #16 shield-gap reporting, and #17/#18 which are
+both decided in ADRs. The two findings above the list shaped everything: no
+rung anywhere pays in screen time, and nothing added can observe anybody.
+
 ## Blocked on Apple (calendar time, not work)
 
 - [x] ~~Apple Developer Program enrolment~~ — already active, and already
@@ -105,7 +111,14 @@ but do not ship that number.
 
 ### 1. A parent and a teenager are different people
 
-- [ ] **Two roles, and the child authorization that makes them real.** Nothing
+- [~] **Two roles, and the child authorization that makes them real.** The
+      roles are **built**: `HouseholdRole`, capabilities derived rather than
+      stored, and enforcement in `DadEngine` rather than in a view — hiding a
+      control is a lock on the door of a room with no walls, since an App
+      Intent reaches the same engine. What is *not* built is the
+      authorization half, which is what makes the arrangement binding rather
+      than co-operative. Everything below works today between two people who
+      both want it to. Nothing
       else on this list means anything without it. Today Dad authorizes with
       Family Controls *individual* authorization: the phone's owner controls it,
       which is correct for an adult and useless for a teenager, who can revoke
@@ -126,7 +139,13 @@ but do not ship that number.
 
 ### 2. Earned autonomy — the incentive, done the way the evidence supports
 
-- [ ] **A visible ladder where consistency buys freedom, never minutes.** The
+- [x] ~~**A visible ladder where consistency buys freedom, never minutes.**~~
+      **Built**, and the two constraints held: it ratchets from monotone
+      quantities so no passing time can lower it, and a lapse *withholds* a
+      rung with three days' warning rather than dropping one silently. Every
+      rung is on screen from the first day with what it costs, because a
+      reward you cannot predict is not an incentive. No rung pays in minutes;
+      a test sweeps the copy for it. The
       teenager can see every rung, what it costs, and what it unlocks: set your
       own Sleep window inside a range the parent picked; edit your own Modes;
       more emergency overrides; eventually the tag lives in your room and the
@@ -148,7 +167,11 @@ but do not ship that number.
 
 ### 3. The rules get written by both people
 
-- [ ] **A setup flow that is a negotiation, not a configuration screen.** Both
+- [~] **A setup flow that is a negotiation, not a configuration screen.** The
+      *model* is built — `ModeAgreement` records why a Mode exists, who agreed
+      it, and when it gets renegotiated, and can tell an imposed rule from an
+      agreed one rather than letting the first hide among the second. The flow
+      itself is not built. Both
       people present, each Mode proposed and agreed, the reasoning recorded next
       to it, and a scheduled point where it gets renegotiated as trust grows.
 
@@ -160,7 +183,11 @@ but do not ship that number.
 
 ### 4. The teenager sees exactly what the parent sees
 
-- [ ] **One dashboard, no hidden view.** Same streaks, same history, same
+- [x] ~~**One dashboard, no hidden view.**~~ **Built by construction**, which
+      is the only way it stays true: there is no parent view and no child
+      view anywhere in the app, and `HouseholdView` shows both people the same
+      ladder. Written down here and in the code so a later screen cannot
+      quietly become a monitoring surface. Same streaks, same history, same
       ladder position, same record of every override. In a 2020 trial of an app
       that showed the child the identical dashboard the parent saw, most
       parent-child pairs rated it more useful and less corrosive of trust than a
@@ -172,7 +199,14 @@ but do not ship that number.
 
 ### 5. Request and grant
 
-- [ ] **The teenager asks for a release; the parent grants a bounded one.**
+- [x] ~~**The teenager asks for a release; the parent grants a bounded one.**~~
+      **Built.** The grown-up answers by tapping their own tag — no account,
+      no server, no PIN, and it works on a plane. Bounded by construction: an
+      unbounded grant is unrepresentable, and the test asserts on the
+      *scheduler* rather than the stored value, because a stored hour and a
+      registered fifteen minutes look identical until the phone comes back
+      early. An unanswered ask expires on its own rather than being granted by
+      accident the next morning.
       Apple's own "ask for more time" is the proven pattern and parents report it
       as unreliable, which is the opening. The grant must be bounded by
       construction — fifteen minutes, then it re-Dads — so that saying yes is
@@ -220,7 +254,12 @@ but do not ship that number.
 
 ### 8. Allowlist Modes — "only these", not "not those"
 
-- [ ] **Invert a Mode: name the few apps that stay.** Opal ships allowlists;
+- [x] ~~**Invert a Mode: name the few apps that stay.**~~ **Built**, and cheap
+      because ManagedSettings already expresses it: `.all(except:)`. Both
+      lists are kept, so flipping to look at the other shape is not
+      destructive. An allowlist Mode refuses to ration — a usage event counts
+      a *named* set and there is no "everything except" form of one. Opal
+      ships allowlists;
       Brick is blocklist-only, so a Sleep or School Mode is only as good as your
       memory, and every newly installed app is a silent hole. The strongest
       available shape for exactly the two Modes a household cares most about,
@@ -252,7 +291,11 @@ but do not ship that number.
 
 ### 11. A weekly review both people read
 
-- [ ] **Per-Mode time reclaimed, time of day, best and worst days.** The one
+- [x] ~~**Per-Mode time reclaimed, time of day, best and worst days.**~~
+      **Built** as `WeeklyReview`, and busiest/quietest rather than best/worst.
+      It refuses to report a percentage against a near-zero baseline, and says
+      when there is not enough of a week to say anything — an honest empty
+      state beats a chart of one bar and a bold claim. The one
       thing every comparison grants Opal over Brick: Brick "tracks usage but
       doesn't offer comparable analytical depth". `DadStats` exists, so this is
       mostly presentation.
@@ -264,15 +307,29 @@ but do not ship that number.
 
 ### 12–15. Mechanics, unchanged in value and now cheaper to justify
 
-- [ ] **A tag per Mode.** `pairedTagUIDs` is a flat `[String]` today; make it
+- [x] ~~**A tag per Mode.**~~ **Built**, and it is the first time the schema
+      ladder has actually moved a shape — the envelope went in before anything
+      shipped on exactly this bet. A tag naming a deleted Mode falls back to
+      toggling rather than going dead, because a sticker on the fridge that
+      silently does nothing is the failure this codebase hates most. It was
+      `pairedTagUIDs`, a flat `[String]`; now it is
       `[String: UUID]`. Kitchen tag starts Dinner, desk tag starts Deep Work.
       Brick charges $59 a puck for this; here the stickers are thirty cents,
       which makes it the best value on the list.
-- [ ] **Warn before a scheduled Mode starts.** "Sleep Mode in ten minutes." A
+- [~] **Warn before a scheduled Mode starts.** The *decision* is built —
+      whether a warning is owed and the instant it should fire, including the
+      cases where it must not (a session already running, a night skipped).
+      The notification itself is an adapter and a port that do not exist yet.
+      "Sleep Mode in ten minutes." A
       schedule that lands mid-sentence gets resented, then disabled. The one item
       with direct evidence behind it: a week of limited evening screen use had
       teenagers falling asleep about twenty minutes earlier.
-- [ ] **Skip tonight.** Pause one occurrence without dismantling the schedule.
+- [x] ~~**Skip tonight.**~~ **Built**, and deliberately cheaper than changing
+      the schedule — that is the difference between asking for tonight and
+      renegotiating the rule. Checked at the boundary rather than by
+      unregistering the window, because tearing down a repeating window for
+      one night is the open-window failure this codebase avoids. Pauses one
+      occurrence without dismantling the schedule.
       Unpluq has it; Brick makes you delete and rebuild, so schedules get turned
       off "temporarily" and never restored.
 - [x] ~~**Allowance Modes — throttle instead of forbid.**~~ **Built**, and it
@@ -408,6 +465,47 @@ anyone's time.
   activity each, for as long as the session runs.
 
 ## Closed (this sweep)
+
+- [x] **Eleven of the eighteen ranked gaps, built by a fan-out.** Six agents
+      wrote pure Core modules in isolated worktrees — roles, the ladder,
+      request-and-grant, schedule skips, the weekly review, agreements, tag
+      pairing — and two more wrote ADRs and an adversarial review. Every module
+      arrived with its own tests and its own mutations, and every one of them
+      passed its own suite.
+
+      **And five real defects lived in the seams between them**, which is the
+      lesson worth keeping from the whole exercise. Parallel work does not
+      produce wrong modules; it produces modules that are right alone and
+      disagree where they meet, and no module's own test suite can see that.
+
+      - Reaching the **top of the ladder granted nothing at all**: the ladder
+        ran 0…4 and the permission table capped at 3, treating 4 as unreadable
+        and collapsing it to zero. The reward path was the one thing that
+        broke, silently, in the direction nobody tests.
+      - **Rungs promised a wider emergency allowance** and nothing read it.
+        Thirty clean days, a screen saying the allowance grew, and the sixth
+        press refused.
+      - The **cheapest rung bought the two above it by side effect**: clearing
+        a Mode's app list took its schedule down without the edit ever naming a
+        schedule.
+      - **The ladder counted sessions nobody attended.** Sixty-one nights of a
+        Sleep schedule climbed all four rungs with nobody touching anything —
+        and rung four hands over the tag.
+      - **The ratchet was a property of how much history fits.** Above about
+        eight sessions a day, which is exactly what a rationed Mode produces,
+        the oldest clean days fell off the 500-session cap and the "high-water
+        mark" dropped — instantly, and invisibly.
+
+      Two more found by hand: a "skip tonight" button that skipped *two* nights
+      when pressed twice, because the module de-duped skips and then advanced
+      past them; and the weekly review reporting the **wrong allowance**,
+      having been asked for a rationed Mode's minutes and having found only the
+      emergency overrides on its stale base.
+
+      Every one is fixed, tested, and has a caught mutation. The tests that
+      guard them all have the same shape: walk the whole range and assert the
+      two modules agree, rather than assert each against itself.
+
 
 - [x] **Allowance Modes — throttle instead of forbid.** Tap the tag and a
       rationed Mode leaves the apps where they are, on a daily budget; when it

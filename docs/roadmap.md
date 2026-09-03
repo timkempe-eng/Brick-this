@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 244 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 634 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -28,6 +28,18 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   back for a set time, then the Mode starts itself again, so checking one thing
   doesn't cost the evening. Tapping a second time calls the break off. An
   emergency override never starts one.
+- **The family layer, most of it.** Two roles with permissions derived rather
+  than stored; an **autonomy ladder** where consistency buys control and never
+  minutes, with every rung visible from day one; **request and grant**, where a
+  young person asks and a grown-up answers by tapping their own tag, bounded by
+  construction so saying yes is not giving up for the evening; **skip tonight**
+  for one occurrence of a schedule; a **weekly review** aimed at a conversation
+  rather than a report card; and **co-authored agreements** recording why a Mode
+  exists and when it gets renegotiated.
+- **Allowlist Modes** — a Mode can name what stays rather than what goes, which
+  is the only shape here that improves with time instead of decaying.
+- **A tag per Mode** — the kitchen tag starts Dinner, the desk tag starts Deep
+  Work. The first migration the schema ladder has actually run.
 - **A never-blocked list** — apps and sites no Mode may take away, whatever it
   names. One list, not one per Mode, because the failure it exists to prevent
   is forgetting.
@@ -40,12 +52,22 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 the foreground, so it could never appear on the tap-and-pocket path the product
 is built around. [ADR 002](adr/002-no-live-activity.md) has the reasoning.
 
-**The rest of the family layer.** Two distinct roles, earned autonomy,
-co-authored rules, the shared dashboard, request-and-grant. This is the
-product's point and most of it does not exist yet; `PARKING_LOT.md` ranks and
-costs it. The prerequisite is Family Controls **child authorization** — Dad
-authorizes as an *individual* today, which means the phone's owner is in
-charge, which is useless for a young person who can revoke it in Settings.
+**Family Controls child authorization.** The one piece of the family layer
+still missing, and the one that makes the rest binding rather than
+co-operative: Dad authorizes as an *individual*, so the phone's owner is in
+charge and a young person can revoke it in Settings. `.child` authorization is
+Apple's blessed route and needs the device signed into a child iCloud account
+inside an iCloud Family. Everything above works today as an agreement between
+two people who both want it to; this is what makes it hold when one of them
+doesn't.
+
+**A rewards ledger** (#9) and **the parent's own phone in the streaks** (#10)
+— both ranked below the ladder deliberately, and both still unbuilt.
+
+**Remote granting.** `GrantRequest` defines a `PINHashing` port and nothing
+implements it: the first shape of granting is in-person, because the parent
+already holds a tag and a tag needs no account, server or crypto. A PIN is what
+that becomes when they are not in the room.
 
 **Android — declined in the form everyone builds it in.** The only consumer
 mechanism is an `AccessibilityService` the user turns off in three taps, which

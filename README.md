@@ -158,9 +158,9 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test                      # 244 tests, seconds, no Mac
+swift test                      # 634 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
-python3 scripts/preflight.py    # 94 checks on the Xcode wiring
+python3 scripts/preflight.py    # 101 checks on the Xcode wiring
 ```
 
 CI runs all three on Linux, plus a fourth job on a macOS runner that actually
@@ -274,7 +274,7 @@ A Live Activity and Android are both **declined with reasons written down**
 rather than pending — [ADR 002](docs/adr/002-no-live-activity.md) and
 [ADR 004](docs/adr/004-android.md). [What is and isn't built](docs/roadmap.md).
 
-`swift test` passes — 244 tests covering the whole engine state machine,
+`swift test` passes — 634 tests covering the whole engine state machine,
 recurring schedules, allowances across a day boundary, breaks, the override
 allowance, and the session/streak maths. The suite is mutation-checked with
 `scripts/mutate.sh`: deliberately breaking the tag guard, the rationing branch,
