@@ -99,8 +99,16 @@ Use `scripts/mutate.sh` rather than a hand-rolled loop. Deciding by grepping
 the output for "with N failures" is wrong — XCTest prints "with 1 failure",
 singular, so every mutation caught by exactly one test reads as a survivor.
 That misdiagnosis was blamed on stale incremental builds three times before the
-regex turned out to be the culprit. The script decides by exit code, and tells
-a mutation that failed to compile apart from one that survived.
+regex turned out to be the culprit. The script decides by exit code.
+
+It tells **three** outcomes apart, and the third was a later bug in the tool
+itself. A mutation can compile and then *crash* the test binary before any test
+runs — a trap in a stored property's initialiser takes the whole class down
+during static setup — and that prints no "Executed N tests" line either. The
+old check therefore reported a mutation the suite had caught in the loudest way
+possible as invalid Swift. An adversarial review discarded three verdicts
+because of it, and a discarded verdict looks exactly like a covered one. The
+script now compiles first and decides "did not build" on the compiler alone.
 
 **A constant every test spells symbolically is a constant no test covers.**
 Referring to `EmergencyAllowance.perWindow` rather than `5` is correct style
