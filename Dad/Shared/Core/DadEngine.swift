@@ -774,6 +774,17 @@ struct DadEngine {
     // MARK: - Modes
 
     /// The ladder, computed from this phone's own history.
+    ///
+    /// **Reading this is not cheap and callers should hoist it.**
+    /// `store.history` is JSON in the App Group, decoded afresh on every
+    /// access — up to five hundred sessions — and the ladder then walks all of
+    /// them. `refusal(editing:from:)` reached `may()` four times in a row and
+    /// paid for four decodes to answer one question.
+    ///
+    /// Nowhere near fatal: this is the app's own foreground, not the shield
+    /// extension, which never asks about permissions at all. It is wasteful
+    /// rather than dangerous, and it is the kind of waste that gets copied
+    /// into somewhere it does matter.
     var ladder: AutonomyLadder {
         AutonomyLadder(sessions: store.history, now: clock.now, calendar: calendar)
     }
@@ -874,6 +885,12 @@ struct DadEngine {
     /// those out at different rungs and collapsing them would make one rung do
     /// the work of three.
     private func refusal(editing mode: DadMode, from previous: DadMode?) -> HouseholdCapability? {
+        // Hoisted once. Every `may()` below would otherwise re-derive the
+        // autonomy level, and deriving it decodes the whole session history
+        // out of the App Group — see the note on `ladder`.
+        let permissions = self.permissions
+        func may(_ capability: HouseholdCapability) -> Bool { permissions.may(capability) }
+
         guard let previous else {
             // A new Mode is an edit in the broadest sense: it is a new rule in
             // the arrangement, and adding one is not lesser than changing one.
