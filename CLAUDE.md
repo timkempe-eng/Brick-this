@@ -13,9 +13,9 @@ playing, with a teenager earning more control over their own phone as they hold
 the habit. The reward for a good decision is autonomy — never more screen time,
 which is a trap an entire category fell into. Dad is a boundary, not a spy: it
 cannot monitor, by construction (rule 3), and that is a commitment rather than
-an omission. The README carries the philosophy in full; PARKING_LOT.md ranks the
-family work, all of which is now built or declined in an ADR — what is left
-there needs Apple, not code.
+an omission. The README carries the philosophy in full; the family work is all
+built or declined in an ADR — what is left in `PARKING_LOT.md` needs Apple, not
+code.
 
 This began as a DIY [Brick](https://getbrick.com/) and the teardown still holds
 — the $59 puck is a $0.30 sticker. That is no longer the objective. It is what
@@ -175,7 +175,12 @@ passes strings between them).
 
 - `docs/PROVISIONING.md` — Apple state, which is invisible from a session.
   Every ✅ cites evidence and a re-runnable check.
-- `PARKING_LOT.md` — the backlog. Swept after every merge.
+- `PARKING_LOT.md` — open work only. A closed item is *removed*, not struck
+  through — the commit that closed it is the record. Every time something is
+  built, check whether it closes something here, and take the entry out in
+  the same commit. A backlog nobody trims is one nobody trusts; it stayed
+  correct once by being cut from 914 lines to open work only, and it stays
+  correct now by never being allowed to grow stale again.
 - `docs/roadmap.md` — what is built, what isn't, and the honest limitations.
 
 ## A new target is not just a target
