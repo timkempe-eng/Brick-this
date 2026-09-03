@@ -83,8 +83,20 @@ treat this file as incomplete.
       and it takes a position on the magnet rather than fitting one by
       default. [hardware/](hardware/).
 
-Nothing is left in *Later*. The next thing to build is a decision, not a task
-— see the second parking lot at the top of this file.
+Nothing is left in *Later*. Two items were then taken off the *other* parking
+lot as well — the two that stand on their own merits whichever way the
+household question goes, and that make the single-phone product better today:
+
+- [x] ~~**Essential apps no Mode can ever take** (was #7)~~ — built. A
+      never-blocked list in Settings, subtracted inside
+      `DadMode+FamilyControls`, which is rule 3 as a location.
+- [x] ~~**Timed Un-Dad — release on a leash** (was #6)~~ — built, opt-in per
+      Mode. Tapping out gives the apps back for a while, then the Mode starts
+      itself again.
+
+Everything still on that list either presupposes the household framing or
+depends on child authorization, so it waits on the decision rather than on
+anyone's time.
 
 ## Known limitations, carried deliberately
 
@@ -134,6 +146,28 @@ Nothing is left in *Later*. The next thing to build is a decision, not a task
       the README weighs four alternatives that aren't. Rendered by a workflow
       rather than committed, and checked for holes, because a mesh that isn't
       closed slices without complaint into a part with a side missing.
+
+- [x] **Breaks — release on a leash.** Opt-in per Mode. Every review of this
+      category has the same sentence in it — you unblock to check one thing
+      and lose an hour — and Brick's answer is "you're back to full access".
+      Tapping out now gives the apps back for a set time and then the Mode
+      starts itself again; tapping a second time calls the break off, which is
+      the outcome the tag is the only route to.
+
+      `unDad` gained a reason rather than a second boolean, because two
+      questions ride on how a session ended — clean finish, and start a break
+      — and they do not line up on one flag. An emergency override never
+      starts a break: the override is for when the tag is out of reach, and
+      coming back in fifteen minutes is exactly the trap it exists to prevent.
+
+      25 tests, six mutations, all caught.
+
+- [x] **A never-blocked list.** The most-repeated complaint in the review
+      corpus is someone locking themselves out of something they needed — an
+      incoming call from family, a banking app, ride-sharing. One list, not one
+      per Mode, because the failure being prevented is forgetting. Categories
+      are excepted rather than dropped, since `.specific(categories, except:
+      apps)` is native and "Social except WhatsApp" beats not shielding Social.
 
 - [x] **Android, decided.** Not deferred again. The mechanism everyone uses is
       an `AccessibilityService` the user disables in three taps — which is the
