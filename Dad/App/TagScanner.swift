@@ -190,9 +190,14 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                 // the difference between the cheapest chip and the one this
                 // project recommends is 144 bytes against 504, and a constant
                 // in Core was how the member cap came to be five.
-                let others = existing
-                    .filter { !HouseholdLedgerFormat.isOurRecord($0.wellKnownTypeTextPayload().0) }
-                    .reduce(0) { $0 + $1.length }
+                // Measured by building the message the other records make,
+                // because `length` is on `NFCNDEFMessage` and not on a
+                // payload — summing `$0.length` over the records does not
+                // compile, which is the sort of thing this file cannot find
+                // out without a Mac and found out from a red CI job.
+                let others = NFCNDEFMessage(records: existing.filter {
+                    !HouseholdLedgerFormat.isOurRecord($0.wellKnownTypeTextPayload().0)
+                }).length
                 let budget = max(0, capacity - others - Self.recordFraming)
 
                 let written = mine.afterExchange(with: found, own: self.exchange.own)
