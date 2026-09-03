@@ -59,20 +59,28 @@ final class HouseholdTests: XCTestCase {
 
     // MARK: - The rungs
 
-    func testMovingAWindowUnlocksBeforeChangingWhatIsInIt() {
-        XCTAssertTrue(youngPerson(at: 1).may(.changeSchedule))
-        XCTAssertFalse(youngPerson(at: 1).may(.editMode))
-        XCTAssertFalse(youngPerson(at: 0).may(.changeSchedule))
+    func testChangingWhatIsInAModeUnlocksBeforeMovingItsWindow() {
+        // This ordering is the ladder's, not this table's, and it was the
+        // other way round until the two were compared: `AutonomyLadder` tells
+        // the young person that rung 1 is "Trusted — choose which apps each
+        // Mode takes away" and rung 2 is "Self-scheduling — set your own Sleep
+        // window". A rung that promises one thing and pays another is a broken
+        // promise, and the titles are what somebody reads.
+        XCTAssertTrue(youngPerson(at: 1).may(.editMode))
+        XCTAssertFalse(youngPerson(at: 1).may(.changeSchedule))
+        XCTAssertFalse(youngPerson(at: 0).may(.editMode))
+        XCTAssertTrue(youngPerson(at: 2).may(.changeSchedule))
     }
 
-    func testEditingAndDeletingAModeUnlockTogether() {
-        // A Mode you can edit is a Mode you can empty, and an empty Mode
-        // blocks nothing. Splitting these would be a restriction that isn't.
-        XCTAssertEqual(RolePermissions.minimumAutonomyLevel(for: .editMode),
-                       RolePermissions.minimumAutonomyLevel(for: .deleteMode))
-        XCTAssertTrue(youngPerson(at: 2).may(.editMode))
-        XCTAssertTrue(youngPerson(at: 2).may(.deleteMode))
-        XCTAssertFalse(youngPerson(at: 1).may(.deleteMode))
+    func testDeletingAModeCostsMoreThanEditingOne() {
+        // They used to unlock together, on the argument that a Mode you can
+        // edit is a Mode you can empty. True, and it is the *visibility* that
+        // separates them: an emptied Mode still reads "Nothing blocked yet" in
+        // the list, where a deleted one leaves no row to read at all.
+        XCTAssertEqual(RolePermissions.minimumAutonomyLevel(for: .editMode), 1)
+        XCTAssertEqual(RolePermissions.minimumAutonomyLevel(for: .deleteMode), 3)
+        XCTAssertTrue(youngPerson(at: 3).may(.deleteMode))
+        XCTAssertFalse(youngPerson(at: 2).may(.deleteMode))
     }
 
     func testTheAllowanceAndTheTagAreTheLastThingsToUnlock() {
@@ -213,7 +221,7 @@ final class HouseholdTests: XCTestCase {
         let phone = Household(role: .youngPerson, autonomyLevel: 1)
         let raised = phone.changingAutonomyLevel(to: 2, by: .grownUp)
         XCTAssertEqual(raised, Household(role: .youngPerson, autonomyLevel: 2))
-        XCTAssertTrue(raised?.may(.deleteMode) ?? false, "the derived permissions must move with it")
+        XCTAssertTrue(raised?.may(.changeSchedule) ?? false, "the derived permissions must move with it")
     }
 
     // MARK: - The household itself
@@ -232,7 +240,7 @@ final class HouseholdTests: XCTestCase {
 
         phone.role = .youngPerson
         XCTAssertEqual(phone.autonomyLevel, 2, "an afternoon as a grown-up must not erase months of ladder")
-        XCTAssertTrue(phone.may(.deleteMode))
+        XCTAssertTrue(phone.may(.changeSchedule))
         XCTAssertFalse(phone.may(.unpairTag))
     }
 

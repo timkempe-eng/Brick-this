@@ -110,8 +110,16 @@ struct AutonomyLadder {
         /// top rung this build knows about instead of returning nil and
         /// silently collapsing the user to zero.
         init(autonomyLevel: Int) {
-            let clamped = min(max(autonomyLevel, 0), Rung.allCases.count - 1)
-            self = Rung(rawValue: clamped) ?? .gettingStarted
+            // Deliberately the *same* normalisation `RolePermissions` uses,
+            // rather than a clamp of its own. These two files answer the same
+            // question — what does this stored number mean — and when they
+            // answered it differently, a level written by a newer build
+            // displayed "Keeper of the \(Vocab.tagNoun)" while granting no
+            // capability at all. Clamping up here reads generously and is the
+            // tempting version; failing closed in both places, with the
+            // store's existing newer-build banner to explain it, is the honest
+            // one.
+            self = Rung(rawValue: RolePermissions.normalisedLevel(autonomyLevel)) ?? .gettingStarted
         }
 
         var title: String {

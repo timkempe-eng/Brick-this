@@ -91,20 +91,21 @@ final class HouseholdEnforcementTests: XCTestCase {
         XCTAssertEqual(h.engine.upsert(mode), .changeAllowance)
     }
 
-    func testAScheduleChangeIsNotAlsoChargedAsAnEditWhenScheduleIsPermitted() {
+    func testAnEditIsNotAlsoChargedAsAScheduleChange() {
         // The normalisation that stops one change being refused twice for two
-        // different reasons — which would make the second rung unreachable.
-        let level = RolePermissions.minimumAutonomyLevel(for: .changeSchedule) ?? 0
+        // different reasons — which would make the higher rung unreachable.
+        // Rung 1 grants `editMode` and not `changeSchedule`, so renaming a
+        // Mode here must go through while touching its window would not.
+        let level = RolePermissions.minimumAutonomyLevel(for: .editMode) ?? 0
         let h = harness(role: .youngPerson, level: level)
-        XCTAssertFalse(h.engine.may(.editMode), "this test is only meaningful below editMode")
+        XCTAssertFalse(h.engine.may(.changeSchedule),
+                       "this test is only meaningful below changeSchedule")
 
         var mode = h.addMode()
-        mode.schedule = ModeSchedule(startHour: 22, startMinute: 0,
-                                     endHour: 7, endMinute: 0,
-                                     weekdays: ModeSchedule.everyDay)
+        mode.name = "Homework"
 
         XCTAssertNil(h.engine.upsert(mode))
-        XCTAssertNotNil(h.store.modes.first?.schedule)
+        XCTAssertEqual(h.store.modes.first?.name, "Homework")
     }
 
     func testClimbingTheLadderActuallyUnlocksTheThing() {

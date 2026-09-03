@@ -455,12 +455,56 @@ final class AutonomyLadderTests: XCTestCase {
                        EmergencyAllowance.perWindow + 3)
     }
 
-    func testAnOutOfRangeLevelClampsInsteadOfCollapsingToZero() {
-        // A level written by a newer build with a fifth rung must read as the
-        // top rung this build knows, not as "no autonomy at all".
-        XCTAssertEqual(AutonomyLadder.Rung(autonomyLevel: 99), .keeperOfTheTag)
+    func testALevelThisBuildCannotUnderstandFailsClosedInBothFiles() {
+        // This used to clamp upward — a level from a newer build read as the
+        // top rung this build knows — which is the generous-looking answer and
+        // was wrong. `RolePermissions` normalises the same number *downward*,
+        // so the two disagreed: the app displayed "Keeper of the Dad tag"
+        // while granting no capability at all. One normalisation now, failing
+        // closed, and the store's existing newer-build banner is what explains
+        // it to the person holding the phone.
+        XCTAssertEqual(AutonomyLadder.Rung(autonomyLevel: 99), .gettingStarted)
         XCTAssertEqual(AutonomyLadder.Rung(autonomyLevel: -4), .gettingStarted)
         XCTAssertEqual(AutonomyLadder.Rung(autonomyLevel: 2), .selfScheduling)
+        XCTAssertEqual(AutonomyLadder.Rung(autonomyLevel: 99).rawValue,
+                       RolePermissions.normalisedLevel(99))
+    }
+
+    /// The bug that made all of this necessary, as a test.
+    func testTheLadderAndThePermissionTableAgreeOnHowManyRungsThereAre() {
+        // They did not, and nothing said so. The ladder ran 0…4 and the
+        // permission table capped at 3, so a young person who reached the top
+        // — the whole point of the product, "the tag lives in your room" —
+        // hit a level `RolePermissions` treated as unreadable and collapsed to
+        // *zero* capabilities. The reward path was the one thing that broke,
+        // and it broke silently, in the direction nobody tests.
+        XCTAssertEqual(AutonomyLadder.Rung.allCases.count - 1,
+                       RolePermissions.maxAutonomyLevel)
+    }
+
+    func testEveryRungTheLadderCanProduceBuysSomethingTheOneBelowDidNot() {
+        // The promise the ladder makes, checked end to end rather than rung by
+        // rung: climbing must never be lateral and must never go backwards.
+        var previous = Set<HouseholdCapability>()
+        for rung in AutonomyLadder.Rung.allCases {
+            let allowed = Set(HouseholdCapability.allCases.filter {
+                RolePermissions.for(role: .youngPerson, autonomyLevel: rung.rawValue).may($0)
+            })
+            XCTAssertTrue(previous.isSubset(of: allowed),
+                          "\(rung.title) took something away")
+            if rung != .gettingStarted {
+                XCTAssertGreaterThan(allowed.count, previous.count,
+                                     "\(rung.title) unlocks nothing")
+            }
+            previous = allowed
+        }
+    }
+
+    func testTheTopRungIsWhereTheTagIs() {
+        // The ladder's last rung is titled for a permission, and this is the
+        // assertion that keeps the title honest.
+        XCTAssertEqual(RolePermissions.minimumAutonomyLevel(for: .unpairTag),
+                       AutonomyLadder.Rung.keeperOfTheTag.rawValue)
     }
 
     func testRungsCompareInLadderOrder() {

@@ -145,7 +145,14 @@ struct RolePermissions: Hashable {
     /// The top rung. Also the contract between this file and whatever computes
     /// the level: a ladder that can produce a number above this one will find
     /// it treated as unreadable, not as "even more trusted".
-    static let maxAutonomyLevel = 3
+    /// **Must equal the top rung of `AutonomyLadder`.** They are two halves of
+    /// one promise — the ladder names a rung and this table pays for it — and
+    /// when they disagreed, reaching the top of the ladder read as a level
+    /// this file did not understand and collapsed the young person to *zero*
+    /// capabilities while the app displayed "Keeper of the Dad tag". The
+    /// reward path was the one thing that broke. `AutonomyLadderTests` now
+    /// asserts the two numbers match, because a comment cannot.
+    static let maxAutonomyLevel = 4
 
     static let autonomyLevels = 0...maxAutonomyLevel
 
@@ -211,38 +218,61 @@ struct RolePermissions: Hashable {
         case .spendEmergencyOverride:
             return 0
 
-        // Level 1 — moving the window, not choosing what is in it.
+        // The rungs below are ordered to match what `AutonomyLadder` *tells the
+        // young person each rung unlocks*. That ordering wins over any other,
+        // including the "how visible is the misuse" argument this table was
+        // first built on, for a blunt reason: the ladder's titles are what
+        // somebody reads. A rung that says "Trusted — choose which apps each
+        // Mode takes away" and then refuses is not a stricter arrangement, it
+        // is a broken promise, and a young person who catches the app in one
+        // stops believing the rest of it.
         //
-        // Shifting Sleep to start at eleven is the smallest real negotiation
-        // there is, and `ModeSchedule.displayText()` prints the result under
-        // the Mode: a window quietly whittled to fifteen minutes reads as
-        // "22:00–22:15" to anyone who looks at the list.
-        case .changeSchedule:
+        // Where the two arguments agree, they agree loudly: the tag ends up
+        // alone at the top, which is also where the visibility argument put it
+        // — an unpaired tag ends the arrangement without changing a single
+        // Mode, so nobody finds out by looking at the Modes list.
+
+        // Level 1, "Trusted" — choosing what a Mode takes away.
+        //
+        // The everyday negotiation, and a visible one: the Mode summary prints
+        // what is in it, so a Mode quietly whittled to nothing reads as
+        // "Nothing blocked yet" to anyone who glances at the list.
+        case .editMode:
             return 1
 
-        // Level 2 — what is blocked at all.
+        // Level 2, "Self-scheduling" — setting your own window.
         //
-        // Also visible, via the Mode summary, but a step further: it is the
-        // difference between agreeing when the phone goes away and agreeing
-        // what "away" means.
-        case .editMode, .deleteMode:
+        // A bigger step than it looks, because the window is the boundary a
+        // grown-up cares most about. Still visible:
+        // `ModeSchedule.displayText()` prints it under the Mode, so a window
+        // whittled to fifteen minutes reads as "22:00–22:15".
+        case .changeSchedule:
             return 2
 
-        // Level 3 — the two that hide.
+        // Level 3, "Self-governing" — making and unmaking your own rules.
         //
-        // A raised allowance looks like nothing on the Modes list; you find
-        // out because the phone was never really away. An unpaired tag is
-        // worse — the tag is the product, and a tag paired in a pocket ends
-        // the arrangement without changing a single Mode. Top rung, and only
-        // because a young person who has spent months at level 2 is, at that
-        // point, a person who could simply be trusted with the whole thing.
-        case .changeAllowance, .unpairTag:
+        // Deleting a Mode and raising an allowance sit together because both
+        // are how a rule stops applying without anyone announcing it. A raised
+        // allowance in particular looks like nothing on the Modes list; you
+        // find out because the phone was never really away.
+        case .deleteMode, .changeAllowance:
             return 3
+
+        // Level 4, "Keeper of the Dad tag" — the tag lives in your room.
+        //
+        // Alone at the top, and the only rung where the ladder's title is
+        // literally a permission: the tag is the product, and a tag re-paired
+        // in a pocket ends the arrangement without changing a single Mode.
+        // A young person who has held the habit long enough to reach here is,
+        // at that point, someone who could simply be trusted with the whole
+        // thing — which is the ending this product is supposed to have.
+        case .unpairTag:
+            return 4
 
         // Never, at any rung.
         //
         // This is what separates the top of the ladder from being a grown-up,
-        // and there is nothing to unlock: the exit from level 3 is the role
+        // and there is nothing to unlock: the exit from level 4 is the role
         // changing, which is a conversation between two people, not a toggle
         // one of them can reach. A ladder whose last rung is "switch the whole
         // thing off" was never a ladder, and both people know it.
