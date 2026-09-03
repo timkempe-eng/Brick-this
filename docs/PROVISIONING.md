@@ -10,7 +10,7 @@ re-run the check, it isn't ✅.**
 | Item | State | Evidence | Re-runnable check |
 |---|---|---|---|
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
-| Core test suite | ✅ | 98 tests, green in CI | `swift test` |
+| Core test suite | ✅ | 145 tests, green in CI | `swift test` |
 | Xcode wiring consistent | ✅ | 59 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | Family Controls (Distribution) | ❓ | — | Certificates, IDs & Profiles → the four App IDs show the capability |

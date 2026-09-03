@@ -5,8 +5,20 @@ break by accident and expensive to notice later.
 
 ## What this is
 
-A DIY [Brick](https://getbrick.com/): tap an NFC sticker, the apps you chose
-disappear until you tap it again. Native Swift, four targets, no Capacitor.
+A household's off switch for phones: tap an NFC sticker, the apps you chose
+disappear until someone taps it again. Native Swift, five targets, no Capacitor.
+
+**The unit is the home, not one adult.** Parents and teenagers both, everyone
+playing, with a teenager earning more control over their own phone as they hold
+the habit. The reward for a good decision is autonomy — never more screen time,
+which is a trap an entire category fell into. Dad is a boundary, not a spy: it
+cannot monitor, by construction (rule 3), and that is a commitment rather than
+an omission. The README carries the philosophy in full; PARKING_LOT.md ranks the
+family work, none of which is built yet.
+
+This began as a DIY [Brick](https://getbrick.com/) and the teardown still holds
+— the $59 puck is a $0.30 sticker. That is no longer the objective. It is what
+makes tags in four rooms for four phones affordable at all.
 
 The verb is **Dad**: Dad / Dads / Dadding / Dadded, and **Un-Dad** to release.
 

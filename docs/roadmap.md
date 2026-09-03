@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 98 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 145 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -26,6 +26,14 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 **A Live Activity — declined, not pending.** ActivityKit only starts one from
 the foreground, so it could never appear on the tap-and-pocket path the product
 is built around. [ADR 002](adr/002-no-live-activity.md) has the reasoning.
+
+**The family layer — the whole of it.** Two distinct roles, earned autonomy,
+co-authored rules, the shared dashboard, request-and-grant. This is now the
+product's point and none of it exists; the single-phone loop below is what is
+actually built. `PARKING_LOT.md` ranks and costs it. The prerequisite is Family
+Controls child authorization — Dad authorizes as an *individual* today, which
+means the phone's owner is in charge, which is useless for a teenager who can
+revoke it in Settings.
 
 **Allowance rather than blocking.** Screen Time can throttle instead of forbid.
 A Mode granting fifteen minutes of an app per day is a softer tool than a hard
