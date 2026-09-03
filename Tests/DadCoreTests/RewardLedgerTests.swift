@@ -39,17 +39,28 @@ final class RewardLedgerTests: XCTestCase {
     /// `now` — which is itself just before two in the morning. A session dated
     /// after `now` is excluded by the ledger on purpose, and it would be an
     /// unwelcome surprise inside a test that is about something else.
+    ///
+    /// `endedBy` is derived rather than passed, because these tests are about
+    /// what a session *was* and not about the field: a scheduled one that
+    /// nobody attended ended `.system`, an override ended `.emergency`, and
+    /// everything else ended at the tag. Written this way after the ledger's
+    /// own `wasEndedByAPerson` extension was deleted — `DadSession` records
+    /// how a session ended now, and inferring it twice is how two files come
+    /// to disagree.
     private func session(daysAgo: Int,
                          minuteOfDay: Double = 10,
                          minutes: Double = 5,
                          emergency: Bool = false,
                          bySchedule: Bool? = nil) -> DadSession {
         let start = day(daysAgo).addingTimeInterval(minuteOfDay * 60)
+        let ending: DadSession.EndReason = emergency ? .emergency
+            : (bySchedule == true ? .system : .tapped)
         return DadSession(modeID: UUID(),
                           modeName: "Sleep",
                           startedAt: start,
                           endedAt: start.addingTimeInterval(minutes * 60),
                           endedByEmergency: emergency,
+                          endedBy: ending,
                           startedBySchedule: bySchedule)
     }
 

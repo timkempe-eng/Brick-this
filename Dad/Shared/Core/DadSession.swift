@@ -95,3 +95,35 @@ extension DadSession.EndReason {
         }
     }
 }
+
+/// The one definition of "days somebody actually did this".
+///
+/// Two ledgers count these days — `AutonomyLadder`, which spends them on
+/// rungs, and `RewardLedger`, which spends them on rewards — and for a while
+/// they each wrote the rule out. The copies had already drifted: one filtered
+/// on `wasEndedByAPerson`, the other on `wasEndedByAPerson && !endedByEmergency`,
+/// where the second clause could not change the answer. A rule stated twice is
+/// a rule that will mean two things, and this one decides what somebody is
+/// owed.
+///
+/// A session counts toward the day it *started*, exactly as in `DadStats`: an
+/// evening that runs past midnight credits the evening you began, because that
+/// is how anybody would describe it out loud.
+///
+/// One qualifying session makes the day, even if another session that day
+/// ended on the emergency button. The day contains the evidence, and counting
+/// the bad one against it would let a single override cancel something already
+/// earned that morning.
+extension Collection where Element == DadSession {
+
+    func daysEndedByAPerson(calendar: Calendar) -> Set<Date> {
+        Set(lazy.filter(\.wasEndedByAPerson)
+                .map { calendar.startOfDay(for: $0.startedAt) })
+    }
+
+    /// Any day there was a session at all, however it ended. What stops a
+    /// lapse clock: bailing out with an override is still engagement.
+    func daysWithASession(calendar: Calendar) -> Set<Date> {
+        Set(lazy.map { calendar.startOfDay(for: $0.startedAt) })
+    }
+}

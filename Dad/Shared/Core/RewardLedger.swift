@@ -292,11 +292,13 @@ struct RewardLedger {
     /// day ended on the emergency button. The day contains the evidence, and
     /// counting the bad one against it would mean a single override could
     /// cancel a reward that had already been earned that morning.
-    private var earningDays: Set<Date> {
-        Set(sessions
-            .filter { $0.wasEndedByAPerson && !$0.endedByEmergency }
-            .map { calendar.startOfDay(for: $0.startedAt) })
-    }
+    /// The same set of days the ladder spends on rungs, by construction
+    /// rather than by both files agreeing to say the same thing. The `&&
+    /// !endedByEmergency` that used to be here could not change the answer —
+    /// an override already reads as nobody having ended it — and a redundant
+    /// clause in a copied rule is the one that survives when the original
+    /// changes.
+    private var earningDays: Set<Date> { sessions.daysEndedByAPerson(calendar: calendar) }
 
     /// Every day ever earned. It does not decay.
     ///
@@ -457,40 +459,10 @@ struct RewardLedger {
         return redemptions.filter { $0.id != id }
     }
 }
+// `DadSession.wasEndedByAPerson` used to be defined here, as an inference
+// from `endedByEmergency` and `startedBySchedule`, because this file was
+// written before `DadSession` recorded how a session ended. It does now, so
+// the inference is gone and the field is read instead — which the compiler
+// insisted on, by name collision, exactly as intended.
 
-/// Was anybody there.
-///
-/// `AutonomyLadder` learned this the expensive way: it counted a clean day as
-/// any day with a session that did not end on the emergency button, and
-/// `DadSession` stored only that one bit — so a Sleep window that a schedule
-/// opened and closed while the phone sat on a table read as consistency.
-/// Sixty-one untouched nights climbed the whole ladder, and the top rung hands
-/// over the tag. Owning a scheduled phone is not a decision.
-///
-/// It matters at least as much here, where the thing at the end is a reward
-/// somebody has to actually provide. A schedule that runs every night would
-/// otherwise mint a day a night, for ever, with nobody choosing anything.
-///
-/// The inference:
-///
-/// * ended on the emergency button — a person pressed it. Present, though not
-///   earning: `earningDays` requires both this and a finish at the tag.
-/// * started by a schedule and not ended on the button — nothing recorded a
-///   person at either end, so the conservative reading is that nobody was
-///   there. This is the case the ladder was getting wrong.
-/// * started by hand — somebody walked to the tag and tapped it. That is the
-///   decision being rewarded, and it is the only way a day is earned.
-///
-/// It is an inference and not a stored fact, and it is placed here rather than
-/// on the type because `DadSession` is not this file's to change. If
-/// `DadSession` ever records *how* a session ended — which is the better fix,
-/// since the middle case above is a guess and the honest answer for a session
-/// begun by a schedule and ended at the tag is "yes, somebody was there" —
-/// then delete this extension and read the field. The compiler will insist,
-/// because the names collide, which is the loud failure worth having.
-extension DadSession {
-    var wasEndedByAPerson: Bool {
-        if endedByEmergency { return true }
-        return startedBySchedule != true
-    }
-}
+

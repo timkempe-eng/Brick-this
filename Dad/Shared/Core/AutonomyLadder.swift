@@ -284,9 +284,7 @@ struct AutonomyLadder {
     /// Any day you Dadded at all, however it ended. This is what stops the
     /// lapse clock — bailing out with an override is still engagement, and
     /// must never be the thing that costs a rung.
-    private var activeDays: Set<Date> {
-        Set(sessions.map { calendar.startOfDay(for: $0.startedAt) })
-    }
+    private var activeDays: Set<Date> { sessions.daysWithASession(calendar: calendar) }
 
     /// Days with at least one session a *person* ended by walking back to the
     /// tag. One such finish makes the day clean even if another session that
@@ -299,10 +297,7 @@ struct AutonomyLadder {
     /// Sleep schedule climbed all four rungs in sixty-one nights of nobody
     /// touching anything. Rung four hands over the tag. Owning a scheduled
     /// phone is not consistency.
-    private var cleanDays: Set<Date> {
-        Set(sessions.filter { $0.wasEndedByAPerson }
-                    .map { calendar.startOfDay(for: $0.startedAt) })
-    }
+    private var cleanDays: Set<Date> { sessions.daysEndedByAPerson(calendar: calendar) }
 
     /// Total clean days in the whole history.
     var cleanDayCount: Int { cleanDays.count }
