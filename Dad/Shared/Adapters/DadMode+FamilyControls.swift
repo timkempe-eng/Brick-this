@@ -87,6 +87,20 @@ struct ShieldTokens {
     var isEmpty: Bool {
         applications.isEmpty && categoryScope == .none && webDomains.isEmpty
     }
+
+    /// The categories named explicitly, for a caller that cannot express
+    /// "all" — `DeviceActivityEvent` has no such form and its categories
+    /// cannot be enumerated from here.
+    ///
+    /// Empty for `.all`, which is only safe because `DadMode.rations` refuses
+    /// an allowlist Mode outright: were that guard ever removed, this would
+    /// quietly count nothing rather than everything, which is the failure that
+    /// guard exists to prevent. Both live in `DadMode` next to each other for
+    /// that reason.
+    var namedCategories: Set<ActivityCategoryToken> {
+        if case .specific(let categories) = categoryScope { return categories }
+        return []
+    }
 }
 
 extension DadMode {

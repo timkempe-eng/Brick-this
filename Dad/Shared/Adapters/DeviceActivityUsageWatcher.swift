@@ -53,7 +53,7 @@ struct DeviceActivityUsageWatcher: UsageWatching {
         // of a budget already spent before Dad was involved.
         let event = DeviceActivityEvent(
             applications: tokens.applications,
-            categories: tokens.categories,
+            categories: tokens.namedCategories,
             webDomains: tokens.webDomains,
             threshold: DateComponents(minute: minutes)
         )

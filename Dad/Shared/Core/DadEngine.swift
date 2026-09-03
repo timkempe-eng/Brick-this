@@ -245,6 +245,11 @@ struct DadEngine {
         // Not Dadded: nothing to release, and no reason to charge for it.
         guard store.activeSession != nil else { return true }
 
+        // An override is a capability, but it is the *first* rung — a phone
+        // with no way out at all is one nobody will agree to carry, and the
+        // allowance is already bounded at five a month and self-restoring.
+        guard may(.spendEmergencyOverride) else { return false }
+
         guard let spent = EmergencyAllowance.consume(uses: store.emergencyUses, now: clock.now) else {
             return false
         }
@@ -545,19 +550,83 @@ struct DadEngine {
 
     // MARK: - Modes
 
-    func upsert(_ mode: DadMode) {
+    /// What this phone's household arrangement currently permits.
+    var permissions: RolePermissions { store.household.permissions }
+
+    /// Whether the person holding this phone may do something.
+    ///
+    /// Public so the UI can *hide* what it is going to refuse. Both matter and
+    /// they are not the same: hiding alone is a lock on the door of a room with
+    /// no walls, since an App Intent reaches the same engine from Shortcuts.
+    func may(_ capability: HouseholdCapability) -> Bool {
+        store.household.may(capability)
+    }
+
+    /// Why an edit was refused, or `nil` if it went through.
+    ///
+    /// Returned rather than thrown, and named rather than a bare `false`: the
+    /// app has to say *which* part of the arrangement stopped this, or a young
+    /// person meets a control that silently does nothing and concludes the
+    /// whole thing is broken — which is the first step to routing around it.
+    @discardableResult
+    func upsert(_ mode: DadMode) -> HouseholdCapability? {
+        let previous = store.modes.first(where: { $0.id == mode.id })
+
+        // Which permission an edit needs depends on what actually changed, so
+        // that raising a young person's autonomy one rung genuinely widens what
+        // they can do rather than unlocking everything at once.
+        if let refused = refusal(editing: mode, from: previous) { return refused }
+
         var all = store.modes
-        let previous = all.first(where: { $0.id == mode.id })
         if let i = all.firstIndex(where: { $0.id == mode.id }) { all[i] = mode } else { all.append(mode) }
         store.modes = all
         syncSchedules()
         applyEdit(to: mode, from: previous)
+        return nil
     }
 
-    func deleteMode(id: UUID) {
+    /// The narrowest capability that covers this edit.
+    ///
+    /// Checked most-specific-first: changing only a schedule needs
+    /// `changeSchedule`, not the broader `editMode`, because the ladder hands
+    /// those out at different rungs and collapsing them would make one rung do
+    /// the work of three.
+    private func refusal(editing mode: DadMode, from previous: DadMode?) -> HouseholdCapability? {
+        guard let previous else {
+            // A new Mode is an edit in the broadest sense: it is a new rule in
+            // the arrangement, and adding one is not lesser than changing one.
+            return may(.editMode) ? nil : .editMode
+        }
+        if previous.schedule != mode.schedule, !may(.changeSchedule) { return .changeSchedule }
+        if previous.allowance != mode.allowance, !may(.changeAllowance) { return .changeAllowance }
+
+        // Anything else about the Mode — its name, its apps, strict, breaks,
+        // its style. Compared by ignoring the two fields already judged, so a
+        // schedule change alone is never charged twice.
+        var normalised = mode
+        normalised.schedule = previous.schedule
+        normalised.allowance = previous.allowance
+        if normalised != previous, !may(.editMode) { return .editMode }
+        return nil
+    }
+
+    @discardableResult
+    func deleteMode(id: UUID) -> HouseholdCapability? {
+        guard may(.deleteMode) else { return .deleteMode }
         store.modes = store.modes.filter { $0.id != id }
         usage.stopWatching(modeID: id)
         syncSchedules()
+        return nil
+    }
+
+    /// Forgetting the paired tags is how a phone escapes the arrangement
+    /// entirely: with no tag paired, any tag works, and any tag is a sticker
+    /// you can buy. It is a capability like any other.
+    @discardableResult
+    func forgetAllTags() -> HouseholdCapability? {
+        guard may(.unpairTag) else { return .unpairTag }
+        store.pairedTagUIDs = []
+        return nil
     }
 
     /// Editing the Mode a live session is running on has to reach the session,

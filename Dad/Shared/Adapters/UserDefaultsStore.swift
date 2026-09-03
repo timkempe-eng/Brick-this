@@ -30,6 +30,7 @@ final class UserDefaultsStore: DadPersisting {
         static let pairedTagUIDs = "pairedTagUIDs"
         static let neverBlocked = "neverBlocked"
         static let pendingResume = "pendingResume"
+        static let household = "household"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
         static let syncedSchedules = "syncedSchedules"
@@ -71,6 +72,13 @@ final class UserDefaultsStore: DadPersisting {
     var pendingResume: PendingResume? {
         get { decode(PendingResume.self, Key.pendingResume) }
         set { encode(newValue, Key.pendingResume) }
+    }
+
+    /// Absent decodes as `.solo` — one adult Dadding themselves, which is
+    /// exactly how every install before this behaved.
+    var household: Household {
+        get { decode(Household.self, Key.household) ?? .solo }
+        set { encode(newValue, Key.household) }
     }
 
     var emergencyUses: [Date] {

@@ -198,7 +198,10 @@ final class DadModel: ObservableObject {
     // MARK: - Modes
 
     func save(_ mode: DadMode) {
-        engine.upsert(mode)
+        if let refused = engine.upsert(mode) {
+            banner = Vocab.refusal(refused)
+            return reload()
+        }
         // upsert syncs internally; ask again to learn whether it stuck. The
         // sync is a no-op diff when it already succeeded, and a retry when it
         // didn't — a schedule the system refused must not look configured.
@@ -209,7 +212,7 @@ final class DadModel: ObservableObject {
     }
 
     func delete(_ mode: DadMode) {
-        engine.deleteMode(id: mode.id)
+        if let refused = engine.deleteMode(id: mode.id) { banner = Vocab.refusal(refused) }
         reload()
     }
 
@@ -222,9 +225,15 @@ final class DadModel: ObservableObject {
     }
 
     func forgetAllTags() {
-        engine.store.pairedTagUIDs = []
+        if let refused = engine.forgetAllTags() { banner = Vocab.refusal(refused) }
         reload()
     }
+
+    /// What this phone's household arrangement permits, for hiding controls
+    /// the engine would refuse anyway.
+    func may(_ capability: HouseholdCapability) -> Bool { engine.may(capability) }
+
+    var household: Household { engine.store.household }
 
     // MARK: - Incoming links
     //

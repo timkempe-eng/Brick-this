@@ -9,6 +9,7 @@ final class FakeStore: DadPersisting {
     var history: [DadSession] = []
     var pairedTagUIDs: [String] = []
     var neverBlocked = BlockedSelection()
+    var household = Household.solo
     var pendingResume: PendingResume?
     var emergencyUses: [Date] = []
     var hasOnboarded = false

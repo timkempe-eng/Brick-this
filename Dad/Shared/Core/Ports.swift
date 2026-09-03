@@ -118,6 +118,14 @@ protocol DadPersisting: AnyObject {
     /// `nil` whenever nothing is waiting to come back.
     var pendingResume: PendingResume? { get set }
 
+    /// Who is using this phone, and what that lets them do.
+    ///
+    /// Stored rather than derived because it is an agreement between two
+    /// people, not a fact about the device. Defaults to `.solo` — an adult
+    /// Dadding themselves — which is the whole product as shipped and keeps
+    /// every existing install behaving exactly as it did.
+    var household: Household { get set }
+
     /// Apps and sites no Mode may take away, whatever it blocks.
     ///
     /// One list, not one per Mode, and that is the point: the failure it

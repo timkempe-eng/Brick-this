@@ -47,6 +47,30 @@ enum Vocab {
         "\(mode) · tap your \(tagNoun) again to \(unVerb)."
     }
 
+    // MARK: Household copy
+    //
+    // A refusal has to name what was refused and who can undo it. "Not
+    // allowed" with no subject is how a young person concludes the app is
+    // broken, and an app they think is broken is one they route around.
+    static func refusal(_ capability: HouseholdCapability) -> String {
+        switch capability {
+        case .editMode:
+            return "Changing a \(modeNoun.lowercased()) is part of the arrangement — ask whoever you set this up with."
+        case .deleteMode:
+            return "Deleting a \(modeNoun.lowercased()) needs the grown-up who set this up."
+        case .changeSchedule:
+            return "The schedule was agreed together. Changing it needs both of you."
+        case .changeAllowance:
+            return "The allowance was agreed together. Changing it needs both of you."
+        case .unpairTag:
+            return "Un-pairing the \(tagNoun) would end the arrangement, so it isn't yours alone to do."
+        case .spendEmergencyOverride:
+            return "Emergency \(unVerb) isn't available on this phone yet."
+        case .turnDadOff:
+            return "Turning \(appName) off isn't something either of you can do from here."
+        }
+    }
+
     // MARK: Break copy — a session released by hand that comes back on its own
     static let breakNoun = "break"
     static func breakRunning(mode: String, until: Date) -> String {
