@@ -49,7 +49,7 @@ struct HomeView: View {
             VStack(spacing: 28) {
                 Spacer()
 
-                Image(systemName: model.isDadded ? "lock.iphone" : "iphone.gen3")
+                Image(systemName: model.statusSymbol)
                     .font(.system(size: 72, weight: .thin))
                     .foregroundStyle(model.isDadded ? Color.accentColor : .secondary)
 
@@ -58,8 +58,8 @@ struct HomeView: View {
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
 
-                    if let session = model.activeSession {
-                        Text(Vocab.activeSubtitle(mode: session.modeName))
+                    if model.isDadded {
+                        Text(model.statusSubtitle)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                         Text(model.elapsedText)

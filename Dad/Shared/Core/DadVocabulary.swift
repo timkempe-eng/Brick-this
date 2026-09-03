@@ -33,6 +33,12 @@ enum Vocab {
     static let tagNoun       = "Dad tag"
     static let streakNoun    = "Dad streak"
 
+    /// A Mode that rations rather than forbids is *not* a form of the verb, so
+    /// it is an ordinary lowercase word — the same exemption `modeNoun` has.
+    /// "Dadded · rationed" reads as one state with a qualifier, which is what
+    /// it is.
+    static let rationedNoun  = "rationed"
+
     // MARK: Status copy
     static let idleTitle     = "Your phone is free"
     static let idleSubtitle  = "Tap your \(tagNoun) to Dad it."
@@ -41,10 +47,28 @@ enum Vocab {
         "\(mode) · tap your \(tagNoun) again to \(unVerb)."
     }
 
+    // MARK: Allowance copy
+    static func allowanceRunning(mode: String, minutes: Int) -> String {
+        "\(mode) · \(minutes) minutes of those apps today, then they go."
+    }
+    static func allowanceSpent(mode: String, minutes: Int) -> String {
+        "\(mode) · your \(minutes) minutes are gone until tomorrow."
+    }
+    /// The system refused to count usage, so the apps were taken away instead.
+    /// Said plainly, because the user was promised minutes and did not get them.
+    static let allowanceRefused =
+        "The system wouldn't count your app use, so \(appName) hid the apps instead of rationing them."
+
     // MARK: Shield copy — what you see when you open a blocked app
     static let shieldTitle   = "\(verbPast)."
     static func shieldSubtitle(mode: String) -> String {
         "You Dadded your phone for \(mode). Tap your \(tagNoun) when you're ready to come back."
+    }
+    /// The shield you meet after using up a rationed Mode's minutes. Different
+    /// from the one above on purpose: nothing was taken away when you started,
+    /// so "you Dadded your phone" would read as a non-sequitur.
+    static func shieldSubtitleAllowanceSpent(mode: String) -> String {
+        "Your \(mode) allowance is gone for today. Tap your \(tagNoun) to \(unVerb), or come back tomorrow."
     }
     static let shieldPrimaryButton   = "OK"
     static let shieldSecondaryButton = "Emergency \(unVerb)"

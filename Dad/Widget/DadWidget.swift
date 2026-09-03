@@ -22,7 +22,8 @@ struct DadProvider: TimelineProvider {
 
     func placeholder(in context: Context) -> DadEntry {
         DadEntry(date: Date(), snapshot: .dadded(modeName: "Deep Work",
-                                                 since: Date().addingTimeInterval(-3600)))
+                                                 since: Date().addingTimeInterval(-3600),
+                                                 rationing: false))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (DadEntry) -> Void) {
@@ -45,7 +46,13 @@ struct DadProvider: TimelineProvider {
 
     private func current() -> WidgetSnapshot {
         let store = UserDefaultsStore.shared
-        return .make(session: store.activeSession,
+        let session = store.activeSession
+        // The Mode, so the snapshot can tell rationing from blocking — the
+        // difference between "my apps are gone" and "my apps are there, on a
+        // budget", which is the whole question a glance is meant to settle.
+        let mode = session.flatMap { s in store.modes.first(where: { $0.id == s.modeID }) }
+        return .make(session: session,
+                     mode: mode,
                      stats: DadStats(sessions: store.history))
     }
 }
@@ -97,7 +104,7 @@ struct DadWidgetView: View {
                 .font(.caption.weight(.semibold))
                 .widgetAccentable()
 
-            if case .dadded(_, let since) = entry.snapshot {
+            if case .dadded(_, let since, _) = entry.snapshot {
                 // Ticks on its own, without the system rebuilding the timeline.
                 Text(since, style: .timer)
                     .font(.title3.weight(.semibold))
@@ -122,7 +129,7 @@ struct DadWidgetView: View {
             Spacer(minLength: 0)
             Text(entry.snapshot.headline)
                 .font(.headline)
-            if case .dadded(_, let since) = entry.snapshot {
+            if case .dadded(_, let since, _) = entry.snapshot {
                 Text(since, style: .timer)
                     .font(.subheadline.weight(.medium))
                     .monospacedDigit()

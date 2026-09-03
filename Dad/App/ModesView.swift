@@ -111,6 +111,8 @@ struct ModeEditorView: View {
                     Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps.")
                 }
 
+                AllowanceSection(mode: $mode)
+
                 ScheduleSection(mode: $mode)
 
                 Section {
@@ -144,6 +146,44 @@ struct ModeEditorView: View {
     }
 }
 
+
+/// Lets a Mode ration instead of forbid — "fifteen minutes of these a day".
+///
+/// Every control binds directly to a property of the Mode, for the reason
+/// written out at length on `ScheduleSection` below: the one decision the
+/// switch carries lives on `DadMode`, where a test can call it.
+private struct AllowanceSection: View {
+    @Binding var mode: DadMode
+
+    var body: some View {
+        Section {
+            Toggle("Ration instead of hiding", isOn: $mode.isRationed)
+
+            if mode.isRationed {
+                Picker("Allowance", selection: $mode.editableAllowance.minutesPerDay) {
+                    ForEach(ModeAllowance.offered, id: \.self) { minutes in
+                        Text(ModeAllowance(minutesPerDay: minutes).displayText).tag(minutes)
+                    }
+                }
+            }
+        } header: {
+            Text("Allowance")
+        } footer: {
+            if mode.isRationed {
+                if !mode.blocksAnything {
+                    // Same rule as the schedule below: an allowance over an
+                    // empty selection counts nothing and would never run out.
+                    Text("An allowance needs apps to count — pick some above.")
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("These apps stay usable until the allowance runs out, then they go until midnight. Strict still applies the whole time. Changing the allowance while your phone is \(Vocab.verbPast) starts today's count again.")
+                }
+            } else {
+                Text("Off. This \(Vocab.modeNoun.lowercased()) takes its apps away for as long as it runs.")
+            }
+        }
+    }
+}
 
 /// Lets a Mode run on its own — "Sleep, every night, 22:00–07:00".
 ///

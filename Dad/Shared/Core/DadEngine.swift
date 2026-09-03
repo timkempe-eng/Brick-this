@@ -7,7 +7,7 @@ import Foundation
 /// DeviceActivity extension's timed release — so there is exactly one place
 /// where a session can begin or end.
 ///
-/// Depends only on the four ports in `Ports.swift`, which is what lets the
+/// Depends only on the ports in `Ports.swift`, which is what lets the
 /// whole state machine be tested without a device. See
 /// `docs/adr/001-ports-and-adapters.md`.
 struct DadEngine {
@@ -17,17 +17,26 @@ struct DadEngine {
     let scheduler: SessionScheduling
     let clock: Clock
     let widget: WidgetRefreshing
+    let usage: UsageWatching
+
+    /// - Parameter calendar: only the allowance's day boundary depends on it.
+    ///   Injected so a test can pin a time zone, the same way `DadStats` does.
+    let calendar: Calendar
 
     init(store: DadPersisting,
          shield: ShieldControlling,
          scheduler: SessionScheduling,
          clock: Clock,
-         widget: WidgetRefreshing) {
+         widget: WidgetRefreshing,
+         usage: UsageWatching,
+         calendar: Calendar = .current) {
         self.store = store
         self.shield = shield
         self.scheduler = scheduler
         self.clock = clock
         self.widget = widget
+        self.usage = usage
+        self.calendar = calendar
     }
 
     /// How many finished sessions to keep. The shield extension reads this
@@ -38,8 +47,24 @@ struct DadEngine {
     /// so a shorter request is rounded up rather than silently ignored.
     static let minimumScheduledRelease: TimeInterval = 15 * 60
 
+    /// What starting a session actually did.
+    ///
+    /// A Mode that rations can end up blocking anyway — if the system refuses
+    /// to count usage, an allowance nobody counts is no allowance — and the
+    /// user has to be told, because their apps have just vanished when they
+    /// were promised fifteen minutes.
+    enum DadStart: Equatable {
+        /// The apps are gone, which is what this Mode asks for.
+        case blocking
+        /// The apps are still there, on the day's budget.
+        case rationing(minutesPerDay: Int)
+        /// The Mode rations, but the system would not count usage, so the
+        /// apps were taken away instead.
+        case rationRefused
+    }
+
     enum TapResult: Equatable {
-        case dadded(mode: DadMode)
+        case dadded(mode: DadMode, start: DadStart)
         case unDadded(session: DadSession)
         case needsModeChoice
         case unknownTag
@@ -69,13 +94,13 @@ struct DadEngine {
         guard let mode = preferredMode ?? soleUsableMode(), mode.blocksAnything else {
             return .needsModeChoice
         }
-        dad(with: mode)
-        return .dadded(mode: mode)
+        return .dadded(mode: mode, start: dad(with: mode))
     }
 
     // MARK: - Starting and stopping
 
-    func dad(with mode: DadMode, startedBySchedule: Bool = false) {
+    @discardableResult
+    func dad(with mode: DadMode, startedBySchedule: Bool = false) -> DadStart {
         // Starting while a session is running would drop the old one from
         // history without ever ending it. Close it out first so the record
         // stays honest, whoever called us.
@@ -87,11 +112,30 @@ struct DadEngine {
         // `reconcile()` on next launch puts the shield back — whereas a shield
         // with no session recorded would leave the user blocked with nothing
         // in the app able to release it.
-        store.activeSession = DadSession(modeID: mode.id,
-                                         modeName: mode.name,
-                                         startedAt: clock.now,
-                                         startedBySchedule: startedBySchedule ? true : nil)
-        shield.apply(mode)
+        var session = DadSession(modeID: mode.id,
+                                 modeName: mode.name,
+                                 startedAt: clock.now,
+                                 startedBySchedule: startedBySchedule ? true : nil)
+
+        let start: DadStart
+        if mode.rations {
+            if usage.startWatching(mode) {
+                start = .rationing(minutesPerDay: mode.editableAllowance.minutesPerDay)
+            } else {
+                // Recorded as spent, not merely reported: every later reader —
+                // reconcile, the widget, the shield's copy — goes through
+                // `ShieldPolicy`, and this is what tells it the apps are gone.
+                // It also self-heals, because tomorrow is a different day and
+                // the watch is attempted again.
+                session.allowanceSpentAt = clock.now
+                start = .rationRefused
+            }
+        } else {
+            start = .blocking
+        }
+
+        store.activeSession = session
+        applyShield(for: session, mode: mode)
 
         if let duration = mode.autoUnDadAfter {
             let release = clock.now.addingTimeInterval(max(duration, Self.minimumScheduledRelease))
@@ -99,6 +143,7 @@ struct DadEngine {
         }
 
         widget.reload()
+        return start
     }
 
     /// Ends the active session. Returns the finished session, or `nil` if
@@ -109,6 +154,7 @@ struct DadEngine {
 
         shield.clear()
         scheduler.cancelScheduledRelease()
+        usage.stopWatching(modeID: session.modeID)
 
         session.endedAt = clock.now
         session.endedByEmergency = byEmergency
@@ -214,33 +260,123 @@ struct DadEngine {
     func reconcile() {
         syncSchedules()
 
-        if let session = store.activeSession {
-            guard let mode = store.modes.first(where: { $0.id == session.modeID }) else {
-                // The Mode was deleted while a session was running. Nothing
-                // left to re-apply, so end the session rather than leave a
-                // shield we can no longer describe.
+        guard var session = store.activeSession else {
+            shield.clear()
+            return
+        }
+
+        guard let mode = store.modes.first(where: { $0.id == session.modeID }) else {
+            // The Mode was deleted while a session was running. Nothing
+            // left to re-apply, so end the session rather than leave a
+            // shield we can no longer describe.
+            unDad(byEmergency: false)
+            return
+        }
+
+        // A timed session's release can be lost — the process died between
+        // recording the session and registering it, or registration failed
+        // silently. Restoring only the shield would turn "Dad me for 15
+        // minutes" into "until you find the tag". Overdue ends now;
+        // otherwise the release is re-armed (the adapter no-ops when the
+        // window is already registered, so this never disturbs a live one).
+        if let duration = mode.autoUnDadAfter {
+            let release = session.startedAt.addingTimeInterval(
+                max(duration, Self.minimumScheduledRelease))
+            if clock.now >= release {
                 unDad(byEmergency: false)
                 return
             }
+            scheduler.scheduleRelease(at: release)
+        }
 
-            // A timed session's release can be lost — the process died between
-            // recording the session and registering it, or registration failed
-            // silently. Restoring only the shield would turn "Dad me for 15
-            // minutes" into "until you find the tag". Overdue ends now;
-            // otherwise the release is re-armed (the adapter no-ops when the
-            // window is already registered, so this never disturbs a live one).
-            if let duration = mode.autoUnDadAfter {
-                let release = session.startedAt.addingTimeInterval(
-                    max(duration, Self.minimumScheduledRelease))
-                if clock.now >= release {
-                    unDad(byEmergency: false)
-                    return
-                }
-                scheduler.scheduleRelease(at: release)
-            }
+        // A spent allowance from an earlier day is this morning's allowance,
+        // not a permanent block. The monitor is woken at midnight to say so,
+        // but a wake that never arrives would otherwise leave the apps hidden
+        // indefinitely — so the marker is cleared here too, on evidence rather
+        // than on being told. Same backstop as the overdue release above.
+        if mode.rations, let spentAt = session.allowanceSpentAt,
+           !calendar.isDate(spentAt, inSameDayAs: clock.now) {
+            session.allowanceSpentAt = nil
+            store.activeSession = session
+        }
 
+        // Re-arm the usage watch before deciding the shield: if the system has
+        // forgotten the registration, the allowance is not being counted, and
+        // the shield has to go up instead of leaving the apps open forever.
+        if mode.rations, session.allowanceSpentAt == nil, !usage.startWatching(mode) {
+            session.allowanceSpentAt = clock.now
+            store.activeSession = session
+        }
+
+        applyShield(for: session, mode: mode)
+    }
+
+    // MARK: - Allowances
+
+    /// The Mode's apps have been used for as long as today's allowance permits.
+    ///
+    /// Called by the DeviceActivity monitor, in its own process, with the app
+    /// most likely closed.
+    func spendAllowance(modeID: UUID) {
+        guard var session = store.activeSession,
+              session.modeID == modeID,
+              let mode = store.modes.first(where: { $0.id == modeID }),
+              mode.rations else { return }
+
+        // Already spent today: the system can deliver a threshold more than
+        // once, and re-stamping would move the moment the allowance ran out to
+        // whenever the last duplicate arrived.
+        guard !ShieldPolicy.isAllowanceSpent(session: session,
+                                             now: clock.now,
+                                             calendar: calendar) else { return }
+
+        session.allowanceSpentAt = clock.now
+        store.activeSession = session
+        applyShield(for: session, mode: mode)
+        widget.reload()
+    }
+
+    /// A new day began while a rationing session was running, so the allowance
+    /// is back. Called at the start of the monitored day.
+    func renewAllowance(modeID: UUID) {
+        guard var session = store.activeSession,
+              session.modeID == modeID,
+              session.allowanceSpentAt != nil,
+              let mode = store.modes.first(where: { $0.id == modeID }),
+              mode.rations else { return }
+
+        // Only if the day really has turned. The system delivers the start of
+        // the window we registered, and re-registering an already-open one
+        // would otherwise hand back an allowance that was spent minutes ago.
+        guard !ShieldPolicy.isAllowanceSpent(session: session,
+                                             now: clock.now,
+                                             calendar: calendar) else { return }
+
+        session.allowanceSpentAt = nil
+        store.activeSession = session
+        applyShield(for: session, mode: mode)
+        widget.reload()
+    }
+
+    /// What the shield should currently be doing, for whoever is asking.
+    var shieldState: ShieldState {
+        let session = store.activeSession
+        let mode = session.flatMap { s in store.modes.first(where: { $0.id == s.modeID }) }
+        return ShieldPolicy.state(session: session, mode: mode,
+                                  now: clock.now, calendar: calendar)
+    }
+
+    /// The single place the shield is told anything while a session runs.
+    /// Everything routes through `ShieldPolicy` so the app, the monitor and
+    /// the widget can never disagree about whether the apps are taken away.
+    private func applyShield(for session: DadSession, mode: DadMode) {
+        switch ShieldPolicy.state(session: session, mode: mode,
+                                  now: clock.now, calendar: calendar) {
+        case .blocking:
             shield.apply(mode)
-        } else {
+        case .rationing:
+            shield.applyRestrictionsOnly(mode)
+        case .off:
             shield.clear()
         }
     }
@@ -262,14 +398,43 @@ struct DadEngine {
 
     func upsert(_ mode: DadMode) {
         var all = store.modes
+        let previous = all.first(where: { $0.id == mode.id })
         if let i = all.firstIndex(where: { $0.id == mode.id }) { all[i] = mode } else { all.append(mode) }
         store.modes = all
         syncSchedules()
+        applyEdit(to: mode, from: previous)
     }
 
     func deleteMode(id: UUID) {
         store.modes = store.modes.filter { $0.id != id }
+        usage.stopWatching(modeID: id)
         syncSchedules()
+    }
+
+    /// Editing the Mode a live session is running on has to reach the session,
+    /// or the change is one the app accepted and the phone ignored until next
+    /// time — which looks exactly like the edit not saving.
+    ///
+    /// The allowance is the part that cannot simply be re-applied: the system
+    /// is counting against the old threshold, and the only way to change it is
+    /// to stop and restart the window, which starts today's count again. So
+    /// that is done **only when the allowance itself changed**, never as a side
+    /// effect of renaming a Mode — otherwise opening the editor and pressing
+    /// Save would be a way to buy another fifteen minutes.
+    private func applyEdit(to mode: DadMode, from previous: DadMode?) {
+        guard var session = store.activeSession, session.modeID == mode.id else { return }
+
+        if previous?.allowance != mode.allowance {
+            usage.stopWatching(modeID: mode.id)
+            session.allowanceSpentAt = nil
+            if mode.rations, !usage.startWatching(mode) {
+                session.allowanceSpentAt = clock.now
+            }
+            store.activeSession = session
+        }
+
+        applyShield(for: session, mode: mode)
+        widget.reload()
     }
 
     private func soleUsableMode() -> DadMode? {

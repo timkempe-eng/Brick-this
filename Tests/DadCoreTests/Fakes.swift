@@ -16,19 +16,56 @@ final class FakeStore: DadPersisting {
 
 /// Records what the engine asked of the shield, and in what order.
 final class SpyShield: ShieldControlling {
-    enum Call: Equatable { case apply(UUID), clear }
+    enum Call: Equatable { case apply(UUID), restrictionsOnly(UUID), clear }
     private(set) var calls: [Call] = []
 
-    /// What the shield is showing right now, as far as it's been told.
+    /// Which Mode's apps are currently hidden, as far as the shield has been
+    /// told. Deliberately `nil` for `restrictionsOnly`: while an allowance
+    /// lasts the apps are still there, and a test asserting "the shield is up"
+    /// must not pass for a Mode that is merely rationing.
     var appliedMode: UUID? {
         switch calls.last {
-        case .apply(let id): return id
-        case .clear, .none:  return nil
+        case .apply(let id):        return id
+        case .restrictionsOnly:     return nil
+        case .clear, .none:         return nil
         }
     }
 
+    /// Which Mode is rationing right now — the apps are visible, but strict
+    /// still holds.
+    var rationingMode: UUID? {
+        if case .restrictionsOnly(let id) = calls.last { return id }
+        return nil
+    }
+
     func apply(_ mode: DadMode) { calls.append(.apply(mode.id)) }
+    func applyRestrictionsOnly(_ mode: DadMode) { calls.append(.restrictionsOnly(mode.id)) }
     func clear() { calls.append(.clear) }
+}
+
+/// Records what the engine asked of the usage counter.
+final class SpyUsageWatcher: UsageWatching {
+    enum Call: Equatable { case start(UUID, minutes: Int), stop(UUID) }
+    private(set) var calls: [Call] = []
+
+    /// Mode ids the watcher should refuse to register, standing in for the
+    /// system's activity budget being full.
+    var refusing: Set<UUID> = []
+
+    /// What the system would currently be counting.
+    private(set) var watching: Set<UUID> = []
+
+    func startWatching(_ mode: DadMode) -> Bool {
+        calls.append(.start(mode.id, minutes: mode.editableAllowance.minutesPerDay))
+        guard !refusing.contains(mode.id) else { return false }
+        watching.insert(mode.id)
+        return true
+    }
+
+    func stopWatching(modeID: UUID) {
+        calls.append(.stop(modeID))
+        watching.remove(modeID)
+    }
 }
 
 final class SpyScheduler: SessionScheduling {
@@ -79,14 +116,20 @@ struct Harness {
     let shield = SpyShield()
     let scheduler = SpyScheduler()
     let widget = SpyWidget()
+    let usage = SpyUsageWatcher()
     let clock: TestClock
     let engine: DadEngine
 
-    init(now: Date = Date(timeIntervalSince1970: 1_756_000_000)) {
+    /// - Parameter calendar: pinned to UTC by default so the allowance's day
+    ///   boundary is the same wherever this suite runs. A test that cares about
+    ///   a specific zone passes its own.
+    init(now: Date = Date(timeIntervalSince1970: 1_756_000_000),
+         calendar: Calendar = .utc) {
         let clock = TestClock(now)
         self.clock = clock
         self.engine = DadEngine(store: store, shield: shield, scheduler: scheduler,
-                                clock: clock, widget: widget)
+                                clock: clock, widget: widget, usage: usage,
+                                calendar: calendar)
     }
 
     @discardableResult
@@ -94,16 +137,22 @@ struct Harness {
                  apps: Int = 3,
                  strict: Bool = false,
                  autoRelease: TimeInterval? = nil,
-                 schedule: ModeSchedule? = nil) -> DadMode {
+                 schedule: ModeSchedule? = nil,
+                 allowance: ModeAllowance? = nil) -> DadMode {
         let mode = DadMode(name: name,
                            symbol: "circle",
                            blocked: BlockedSelection(payload: Data([1]), appCount: apps),
                            isStrict: strict,
                            autoUnDadAfter: autoRelease,
-                           schedule: schedule)
+                           schedule: schedule,
+                           allowance: allowance)
         store.modes.append(mode)
         return mode
     }
+
+    /// Replaces a Mode in the store the way the editor would, so a test can
+    /// change one mid-session and see what reaches the shield.
+    func save(_ mode: DadMode) { engine.upsert(mode) }
 
     /// A Mode that exists but blocks nothing — the "not set up yet" state.
     @discardableResult
@@ -112,4 +161,15 @@ struct Harness {
         store.modes.append(mode)
         return mode
     }
+}
+
+
+extension Calendar {
+    /// A calendar whose days start at 00:00 UTC, so "the same day" means the
+    /// same thing on every machine that runs this suite.
+    static let utc: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }()
 }

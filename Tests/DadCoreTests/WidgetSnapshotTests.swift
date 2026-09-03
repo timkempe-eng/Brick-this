@@ -27,7 +27,7 @@ final class WidgetSnapshotTests: XCTestCase {
         let started = now.addingTimeInterval(-3600)
         let snapshot = WidgetSnapshot.make(session: session(startedAt: started), stats: stats([]))
 
-        XCTAssertEqual(snapshot, .dadded(modeName: "Deep Work", since: started))
+        XCTAssertEqual(snapshot, .dadded(modeName: "Deep Work", since: started, rationing: false))
         XCTAssertTrue(snapshot.isDadded)
     }
 
@@ -35,7 +35,7 @@ final class WidgetSnapshotTests: XCTestCase {
         // The widget feeds this to a self-updating timer view. A pre-formatted
         // duration would freeze at whatever second the snapshot was built.
         let started = now.addingTimeInterval(-90 * 60)
-        guard case .dadded(_, let since) = WidgetSnapshot.make(
+        guard case .dadded(_, let since, _) = WidgetSnapshot.make(
             session: session(startedAt: started), stats: stats([])) else {
             return XCTFail("expected .dadded")
         }
@@ -55,7 +55,7 @@ final class WidgetSnapshotTests: XCTestCase {
     // MARK: - Copy
 
     func testDaddedCopy() {
-        let snapshot = WidgetSnapshot.dadded(modeName: "Sleep", since: now)
+        let snapshot = WidgetSnapshot.dadded(modeName: "Sleep", since: now, rationing: false)
         XCTAssertEqual(snapshot.headline, "Dadded")
         XCTAssertEqual(snapshot.detail, "Sleep")
         XCTAssertEqual(snapshot.inlineText, "Dadded · Sleep")
@@ -77,7 +77,7 @@ final class WidgetSnapshotTests: XCTestCase {
 
     func testTheVerbIsNeverLowercasedOnTheLockScreen() {
         let all: [WidgetSnapshot] = [
-            .dadded(modeName: "Deep Work", since: now),
+            .dadded(modeName: "Deep Work", since: now, rationing: false),
             .free(streakDays: 0),
             .free(streakDays: 3),
         ]
@@ -94,7 +94,7 @@ final class WidgetSnapshotTests: XCTestCase {
     func testWhileDaddedThereIsNothingToRefreshFor() {
         // The elapsed time draws itself, and the session ending is announced
         // through WidgetRefreshing. A timeline reload would be pure battery.
-        let snapshot = WidgetSnapshot.dadded(modeName: "Deep Work", since: now)
+        let snapshot = WidgetSnapshot.dadded(modeName: "Deep Work", since: now, rationing: false)
         XCTAssertNil(snapshot.nextRefresh(after: now, calendar: calendar))
     }
 

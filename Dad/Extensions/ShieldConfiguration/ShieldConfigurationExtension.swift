@@ -12,15 +12,28 @@ import UIKit
 class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     private func shield() -> ShieldConfiguration {
-        let modeName = UserDefaultsStore.shared.activeSession?.modeName ?? "focus"
+        let store = UserDefaultsStore.shared
+        let session = store.activeSession
+        let modeName = session?.modeName ?? "focus"
+
+        // Two shields, because they answer different questions. Meeting this
+        // screen after a rationed Mode ran out is not the same as meeting it
+        // because you Dadded your phone: nothing was taken away when the
+        // session started, so "you Dadded your phone for Deep Work" would read
+        // as a non-sequitur to someone who has been using that app all morning.
+        let ranOutOfAllowance = session.map {
+            ShieldPolicy.isAllowanceSpent(session: $0, now: Date())
+        } ?? false
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: UIColor.black.withAlphaComponent(0.55),
-            icon: UIImage(systemName: "lock.iphone"),
+            icon: UIImage(systemName: ranOutOfAllowance ? "hourglass" : "lock.iphone"),
             title: ShieldConfiguration.Label(text: Vocab.shieldTitle, color: .white),
             subtitle: ShieldConfiguration.Label(
-                text: Vocab.shieldSubtitle(mode: modeName),
+                text: ranOutOfAllowance
+                    ? Vocab.shieldSubtitleAllowanceSpent(mode: modeName)
+                    : Vocab.shieldSubtitle(mode: modeName),
                 color: .white.withAlphaComponent(0.75)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(text: Vocab.shieldPrimaryButton, color: .black),

@@ -13,7 +13,7 @@ final class DadEngineTests: XCTestCase {
 
         let result = h.engine.handleTap()
 
-        XCTAssertEqual(result, .dadded(mode: mode))
+        XCTAssertEqual(result, .dadded(mode: mode, start: .blocking))
         XCTAssertEqual(h.store.activeSession?.modeID, mode.id)
         XCTAssertEqual(h.store.activeSession?.startedAt, h.clock.now)
         XCTAssertEqual(h.shield.appliedMode, mode.id)
@@ -59,7 +59,7 @@ final class DadEngineTests: XCTestCase {
         let usable = h.addMode(name: "Deep Work")
         h.addEmptyMode()   // present but blocks nothing, so not a candidate
 
-        XCTAssertEqual(h.engine.handleTap(), .dadded(mode: usable))
+        XCTAssertEqual(h.engine.handleTap(), .dadded(mode: usable, start: .blocking))
     }
 
     func testAmbiguousModesAskTheUser() {

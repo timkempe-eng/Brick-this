@@ -12,12 +12,29 @@ import Foundation
 /// system reloading the timeline. A pre-formatted string would freeze at
 /// whatever second the snapshot was built.
 enum WidgetSnapshot: Equatable {
-    case dadded(modeName: String, since: Date)
+    /// - Parameter rationing: the session is running on a Mode that rations
+    ///   rather than forbids, and today's allowance is not spent — so the apps
+    ///   are still *there*. That is a different answer to "can I use my phone"
+    ///   than a plain Dadded session, and it is the whole question the widget
+    ///   exists to settle from the Lock Screen.
+    case dadded(modeName: String, since: Date, rationing: Bool)
     case free(streakDays: Int)
 
-    static func make(session: DadSession?, stats: DadStats) -> WidgetSnapshot {
+    /// - Parameter mode: the Mode the session names, so the snapshot can tell
+    ///   rationing from blocking. Defaulted because most callers — and every
+    ///   test that predates allowances — are asking about a Mode that blocks
+    ///   outright, where the answer does not depend on it.
+    static func make(session: DadSession?,
+                     mode: DadMode? = nil,
+                     stats: DadStats,
+                     now: Date = Date(),
+                     calendar: Calendar = .current) -> WidgetSnapshot {
         if let session {
-            return .dadded(modeName: session.modeName, since: session.startedAt)
+            let state = ShieldPolicy.state(session: session, mode: mode,
+                                           now: now, calendar: calendar)
+            return .dadded(modeName: session.modeName,
+                           since: session.startedAt,
+                           rationing: state == .rationing)
         }
         return .free(streakDays: stats.currentStreak)
     }
@@ -33,18 +50,20 @@ enum WidgetSnapshot: Equatable {
     /// The line under it.
     var detail: String {
         switch self {
-        case .dadded(let modeName, _):
-            return modeName
+        case .dadded(let modeName, _, let rationing):
+            return rationing ? "\(modeName) · \(Vocab.rationedNoun)" : modeName
         case .free(let streak):
             guard streak > 0 else { return Vocab.dadAction }
             return "\(streak) day\(streak == 1 ? "" : "s") in a row"
         }
     }
 
+    /// Rationing gets its own glyph, because it is a third state and the
+    /// point of the widget is that one look answers the question.
     var symbolName: String {
         switch self {
-        case .dadded: return "lock.iphone"
-        case .free:   return "iphone.gen3"
+        case .dadded(_, _, let rationing): return rationing ? "hourglass" : "lock.iphone"
+        case .free:                        return "iphone.gen3"
         }
     }
 
@@ -52,7 +71,10 @@ enum WidgetSnapshot: Equatable {
     /// no room for a second one.
     var inlineText: String {
         switch self {
-        case .dadded(let modeName, _): return "\(Vocab.verbPast) · \(modeName)"
+        case .dadded(let modeName, _, let rationing):
+            return rationing
+                ? "\(modeName) · \(Vocab.rationedNoun)"
+                : "\(Vocab.verbPast) · \(modeName)"
         case .free(let streak):
             guard streak > 0 else { return Vocab.appName }
             return "\(streak) day \(Vocab.streakNoun)"

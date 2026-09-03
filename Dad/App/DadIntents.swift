@@ -35,14 +35,28 @@ struct ToggleDadIntent: AppIntent {
         }
 
         switch engine.handleTap(preferredMode: requested) {
-        case .dadded(let mode):
-            return .result(dialog: "\(Vocab.verbPast). \(mode.name).")
+        case .dadded(let mode, let start):
+            return .result(dialog: Self.dialog(mode: mode, start: start))
         case .unDadded(let session):
             return .result(dialog: "\(Vocab.sessionSummary(duration: session.duration.dadDurationText))")
         case .needsModeChoice:
             throw $modeName.needsValueError("Which \(Vocab.modeNoun.lowercased())?")
         case .unknownTag:
             return .result(dialog: "That isn't one of your \(Vocab.tagNoun)s.")
+        }
+    }
+
+    /// Siri reads this aloud, so it has to be true. A rationing Mode has taken
+    /// nothing away yet, and "Dadded. Deep Work." would tell someone their
+    /// apps are gone while they are not.
+    static func dialog(mode: DadMode, start: DadEngine.DadStart) -> String {
+        switch start {
+        case .blocking:
+            return "\(Vocab.verbPast). \(mode.name)."
+        case .rationing(let minutes):
+            return "\(Vocab.verbPast). \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
+        case .rationRefused:
+            return "\(Vocab.verbPast). \(mode.name). \(Vocab.allowanceRefused)"
         }
     }
 }
@@ -66,8 +80,8 @@ struct StartDadIntent: AppIntent {
               mode.blocksAnything else {
             throw $modeName.needsValueError("Which \(Vocab.modeNoun.lowercased())?")
         }
-        engine.dad(with: mode)
-        return .result(dialog: "\(Vocab.verbPast). \(mode.name).")
+        let start = engine.dad(with: mode)
+        return .result(dialog: ToggleDadIntent.dialog(mode: mode, start: start))
     }
 }
 

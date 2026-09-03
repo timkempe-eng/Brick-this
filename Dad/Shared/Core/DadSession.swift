@@ -19,6 +19,17 @@ struct DadSession: Codable, Identifiable, Hashable {
     /// field existed would be dropped by the lenient decoder.
     var startedBySchedule: Bool?
 
+    /// When a rationing Mode's daily allowance last ran out, or `nil` while it
+    /// still has one. `ShieldPolicy` reads it against the current day, so a
+    /// session that outlives midnight gets the next day's allowance without
+    /// anything having to remember to reset it.
+    ///
+    /// Kept on the session rather than the Mode because it is a fact about
+    /// this stretch of being Dadded, and because a finished session in the
+    /// history then records whether the allowance was reached — the one number
+    /// worth knowing about a rationed Mode.
+    var allowanceSpentAt: Date?
+
     var isActive: Bool { endedAt == nil }
     var duration: TimeInterval { (endedAt ?? Date()).timeIntervalSince(startedAt) }
 }

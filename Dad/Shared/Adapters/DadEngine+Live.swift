@@ -8,6 +8,7 @@ extension DadEngine {
         shield: ManagedSettingsShield(),
         scheduler: DeviceActivityScheduler(),
         clock: SystemClock(),
-        widget: WidgetKitRefresher()
+        widget: WidgetKitRefresher(),
+        usage: DeviceActivityUsageWatcher()
     )
 }

@@ -15,6 +15,23 @@ struct ManagedSettingsShield: ShieldControlling {
     private let store = ManagedSettingsStore(named: .dad)
 
     func apply(_ mode: DadMode) {
+        applyShield(mode)
+        applyRestrictions(mode)
+    }
+
+    /// A rationing Mode while its allowance lasts: the apps are still there,
+    /// but strict still refuses to let Dad be deleted. The shield fields are
+    /// cleared explicitly rather than left alone, because this is also the
+    /// path back down when a new day hands the allowance back.
+    func applyRestrictionsOnly(_ mode: DadMode) {
+        store.shield.applications = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomains = nil
+        store.shield.webDomainCategories = nil
+        applyRestrictions(mode)
+    }
+
+    private func applyShield(_ mode: DadMode) {
         let selection = mode.selection
 
         store.shield.applications = selection.applicationTokens.isEmpty
@@ -28,9 +45,13 @@ struct ManagedSettingsShield: ShieldControlling {
 
         store.shield.webDomainCategories = selection.categoryTokens.isEmpty
             ? nil : .specific(selection.categoryTokens, except: Set())
+    }
 
-        // Strict closes the obvious escape hatch: deleting Dad would otherwise
-        // tear the shield down with it.
+    /// Strict closes the obvious escape hatch: deleting Dad would otherwise
+    /// tear the shield down with it. Applied whether the Mode is blocking or
+    /// merely rationing — the free period is precisely when someone would
+    /// reach for that hatch.
+    private func applyRestrictions(_ mode: DadMode) {
         store.application.denyAppRemoval = mode.isStrict ? true : nil
     }
 

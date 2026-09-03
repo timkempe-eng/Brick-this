@@ -10,6 +10,12 @@ final class DadModel: ObservableObject {
     @Published private(set) var activeSession: DadSession?
     @Published private(set) var modes: [DadMode] = []
 
+    /// Whether the apps are actually taken away right now, which a rationing
+    /// Mode makes a different question from "is there a session". Republished
+    /// rather than computed on demand so the home screen and the engine can
+    /// never be drawing from different answers mid-render.
+    @Published private(set) var shieldState: ShieldState = .off
+
     /// Snapshotted rather than computed on demand: reading it walks the whole
     /// session history out of `UserDefaults` and back through JSON, and the
     /// stats screen touches it a dozen times per render.
@@ -43,6 +49,7 @@ final class DadModel: ObservableObject {
     func reload() {
         modes = engine.store.modes
         activeSession = engine.store.activeSession
+        shieldState = engine.shieldState
         stats = engine.stats
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
@@ -57,6 +64,38 @@ final class DadModel: ObservableObject {
     }
 
     var isDadded: Bool { activeSession != nil }
+
+    /// The Mode the running session names, if it still exists.
+    var activeMode: DadMode? {
+        guard let activeSession else { return nil }
+        return modes.first { $0.id == activeSession.modeID }
+    }
+
+    /// What the home screen says under the title.
+    ///
+    /// Three states, not two: a rationing Mode has taken nothing away yet, and
+    /// telling someone their phone is Dadded while their apps still open is
+    /// how a product stops being believed.
+    var statusSubtitle: String {
+        guard let session = activeSession else { return Vocab.idleSubtitle }
+        guard let mode = activeMode, mode.rations else {
+            return Vocab.activeSubtitle(mode: session.modeName)
+        }
+        let minutes = mode.editableAllowance.minutesPerDay
+        return shieldState == .rationing
+            ? Vocab.allowanceRunning(mode: session.modeName, minutes: minutes)
+            : Vocab.allowanceSpent(mode: session.modeName, minutes: minutes)
+    }
+
+    /// The glyph at the top. Rationing gets its own, the same way the widget
+    /// and the shield do — one look, one answer.
+    var statusSymbol: String {
+        switch shieldState {
+        case .off:       return "iphone.gen3"
+        case .rationing: return "hourglass"
+        case .blocking:  return "lock.iphone"
+        }
+    }
 
     var elapsedText: String {
         guard let session = activeSession else { return "" }
@@ -86,8 +125,14 @@ final class DadModel: ObservableObject {
 
     func tap(tagUID: String? = nil, mode: DadMode? = nil) {
         switch engine.handleTap(tagUID: tagUID, preferredMode: mode) {
-        case .dadded(let mode):
+        case .dadded(let mode, .blocking):
             banner = "\(Vocab.verbPast) — \(mode.name)."
+        case .dadded(let mode, .rationing(let minutes)):
+            banner = "\(Vocab.verbPast) — \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
+        case .dadded(let mode, .rationRefused):
+            // Said out loud rather than swallowed: they were promised minutes
+            // and their apps vanished instead.
+            banner = "\(Vocab.verbPast) — \(mode.name). \(Vocab.allowanceRefused)"
         case .unDadded(let session):
             banner = Vocab.sessionSummary(duration: session.duration.dadDurationText)
         case .needsModeChoice:

@@ -21,6 +21,12 @@ struct DadMode: Codable, Identifiable, Hashable {
     /// Optional so that Modes stored before schedules existed still decode.
     var schedule: ModeSchedule?
 
+    /// Optional daily budget. When set, the Mode rations its apps rather than
+    /// taking them away: they stay usable until the allowance runs out, and
+    /// only then does the shield go up. Optional for the same reason as
+    /// `schedule` — Modes stored before allowances existed must still decode.
+    var allowance: ModeAllowance?
+
     /// Whether this Mode runs on a schedule. The editor's switch binds
     /// straight to this.
     ///
@@ -46,11 +52,34 @@ struct DadMode: Codable, Identifiable, Hashable {
         set { schedule = newValue }
     }
 
+    /// Whether this Mode rations rather than forbids. Same shape as
+    /// `isScheduled`, and here for the same reason: the one decision the
+    /// switch carries — switched on with no allowance yet, so make a usable
+    /// one — belongs somewhere a test can call it.
+    var isRationed: Bool {
+        get { allowance?.isEnabled ?? false }
+        set {
+            var updated = allowance ?? .starter
+            updated.isEnabled = newValue
+            allowance = updated
+        }
+    }
+
+    /// The allowance the editor edits, yielding the starter budget when none
+    /// is stored so the controls below the switch bind directly.
+    var editableAllowance: ModeAllowance {
+        get { allowance ?? .starter }
+        set { allowance = newValue }
+    }
+
     var blocksAnything: Bool { !blocked.isEmpty }
 
     /// Shown under the name in the Modes list.
     var summary: String {
         var parts = [blocked.summary]
+        if let allowance, allowance.isEnabled, allowance.isValid {
+            parts.append(allowance.displayText)
+        }
         if isStrict { parts.append("strict") }
         if let schedule, schedule.isEnabled, schedule.isValid {
             parts.append(schedule.displayText())
@@ -62,6 +91,17 @@ struct DadMode: Codable, Identifiable, Hashable {
     var hasLiveSchedule: Bool {
         guard let schedule else { return false }
         return schedule.isEnabled && schedule.isValid && blocksAnything
+    }
+
+    /// Whether this Mode rations its apps instead of taking them away.
+    ///
+    /// Requires the Mode to block something, for the same reason
+    /// `hasLiveSchedule` does: an allowance over an empty selection counts
+    /// nothing, would never reach its threshold, and would leave a Mode that
+    /// says "15 min a day" and means "no limit at all".
+    var rations: Bool {
+        guard let allowance else { return false }
+        return allowance.isEnabled && allowance.isValid && blocksAnything
     }
 
     static let starterModes: [DadMode] = [

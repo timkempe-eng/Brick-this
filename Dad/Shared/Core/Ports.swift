@@ -1,6 +1,6 @@
 import Foundation
 
-/// The five things `DadEngine` needs from the outside world.
+/// The six things `DadEngine` needs from the outside world.
 ///
 /// Each one hides a framework or a global that would otherwise make the engine
 /// untestable and Mac-only. The iOS adapters live in `Dad/Shared/Adapters`;
@@ -15,6 +15,16 @@ protocol Clock {
 /// Taking apps away and giving them back. Implemented by ManagedSettings.
 protocol ShieldControlling {
     func apply(_ mode: DadMode)
+
+    /// Everything `apply` does except hiding the apps — which today means
+    /// strict mode's refusal to let Dad be deleted.
+    ///
+    /// This is the state a rationing Mode is in while its allowance lasts: the
+    /// apps are still there, but the escape hatch is still shut. Without it,
+    /// "strict" would silently mean nothing for the whole of the free period,
+    /// which is exactly the window someone would use to delete the app.
+    func applyRestrictionsOnly(_ mode: DadMode)
+
     func clear()
 }
 
@@ -41,6 +51,31 @@ protocol SessionScheduling {
 struct RecurringSchedule: Codable, Equatable, Hashable {
     let modeID: UUID
     let schedule: ModeSchedule
+}
+
+/// Counting how long a Mode's apps are used, so a Mode can ration rather than
+/// forbid. Implemented by DeviceActivity's usage thresholds — a different
+/// mechanism from `SessionScheduling`'s wall-clock windows, which is why it is
+/// a port of its own rather than another method on that one.
+protocol UsageWatching {
+
+    /// Starts counting `mode`'s apps against its allowance, for today and each
+    /// following day, until `stopWatching`.
+    ///
+    /// Returns false when the system refused — the activity budget, or an
+    /// authorization that has gone away. The engine blocks outright in that
+    /// case: an allowance nobody is counting is an unlimited allowance, and a
+    /// Mode that says "15 min a day" while enforcing nothing is the
+    /// looks-configured-does-nothing failure this codebase keeps paying to
+    /// avoid.
+    ///
+    /// Registering a Mode that is already being watched is a no-op, so
+    /// `reconcile()` may call this on every foreground.
+    @discardableResult
+    func startWatching(_ mode: DadMode) -> Bool
+
+    /// Stops counting for this Mode. Safe when nothing is registered.
+    func stopWatching(modeID: UUID)
 }
 
 /// Telling the Lock Screen widget its timeline is stale. Implemented by
