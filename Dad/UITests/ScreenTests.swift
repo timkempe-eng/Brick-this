@@ -68,10 +68,10 @@ final class ScreenTests: XCTestCase {
         app.buttons["Modes"].firstMatch.tap()
         app.staticTexts["Deep Work"].firstMatch.tap()
         let toggle = app.switches["Run on a schedule"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 15))
+        XCTAssertTrue(reveal(toggle), "The schedule switch never came into view.")
 
         // Off, the Mode only runs when you tap.
-        XCTAssertTrue(footer(containing: "only runs when you tap").waitForExistence(timeout: 10),
+        XCTAssertTrue(reveal(footer(containing: "only runs when you tap")),
                       "A starter Mode should begin with no schedule.")
 
         flip(toggle)
@@ -87,13 +87,19 @@ final class ScreenTests: XCTestCase {
         // The failure message carries the screen with it. Asserting a string
         // and reporting only "it wasn't there" is what turned one bug into
         // five CI runs of guessing which branch had rendered.
-        XCTAssertTrue(footer(containing: "blocks something").waitForExistence(timeout: 15),
+        XCTAssertTrue(reveal(footer(containing: "blocks something")),
                       """
                       Enabling the schedule did not change what the Mode promises.
                       Switch value: \(String(describing: toggle.value))
                       On screen: \(visibleText())
                       """)
-        XCTAssertFalse(footer(containing: "itself").exists,
+
+        // "Dads itself", not "itself": the breaks footer says a Mode "starts
+        // itself again", so the looser match would fail on a sentence that is
+        // not the promise this test is about. It is off for a starter Mode
+        // today, and a test that only passes because a nearby feature happens
+        // to be off is one that breaks for the wrong reason later.
+        XCTAssertFalse(footer(containing: "Dads itself").exists,
                        "A Mode that blocks nothing must not promise to Dad your phone.")
     }
 
@@ -121,7 +127,7 @@ final class ScreenTests: XCTestCase {
         app.staticTexts["Deep Work"].firstMatch.tap()
 
         let strict = app.switches["Strict"]
-        XCTAssertTrue(strict.waitForExistence(timeout: 15))
+        XCTAssertTrue(reveal(strict), "Strict never came into view.")
         let before = String(describing: strict.value)
 
         flip(strict)
@@ -134,6 +140,33 @@ final class ScreenTests: XCTestCase {
                        Hittable: \(strict.isHittable)
                        On screen: \(visibleText())
                        """)
+    }
+
+    /// Brings a row into the accessibility tree by scrolling to it.
+    ///
+    /// SwiftUI's `List` is lazy, so a row below the fold does not merely fail
+    /// to be hittable — it does not exist, and `waitForExistence` correctly
+    /// times out on it. That is what broke two tests the day the Mode editor
+    /// gained a style picker and an allowance section: nothing about Strict or
+    /// the schedule footer changed, they moved down the screen. A test that
+    /// reaches for a control by its position on a screen that grows is a test
+    /// that fails every time a feature lands above it.
+    ///
+    /// Swiping rather than a scroll-to API, because there is no scroll-to for
+    /// an element that does not exist yet. Checks before each swipe so an
+    /// element already on screen costs nothing.
+    /// Stops on `isHittable` rather than on `exists`, because a row scrolled
+    /// half off the bottom edge exists and cannot be tapped — and `flip` taps a
+    /// normalised coordinate inside the element, which lands outside the window
+    /// for a row whose centre is off screen. Falls back to mere existence after
+    /// the last swipe so a footer pinned at the very bottom, which may never
+    /// report hittable, is still found rather than reported missing.
+    private func reveal(_ element: XCUIElement, swipes: Int = 8) -> Bool {
+        for _ in 0..<swipes {
+            if element.exists && element.isHittable { return true }
+            app.swipeUp()
+        }
+        return element.exists
     }
 
     /// Taps the switch itself rather than the middle of its row.
