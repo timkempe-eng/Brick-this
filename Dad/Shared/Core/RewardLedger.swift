@@ -239,6 +239,48 @@ struct RewardLedger {
         var settledAt: Date?
 
         var isSettled: Bool { settledAt != nil }
+
+        // MARK: Decoding
+
+        /// Hand-written and **total**, like `ModeAgreement`'s, and for a
+        /// sharper reason than either.
+        ///
+        /// The synthesised decoder throws on a missing key.
+        /// `LenientDecoding.array` answers a throw by dropping the element. And
+        /// `spent` is a *sum over this list* — so the first time a field is
+        /// added to this type, every row written by the older build is
+        /// silently discarded, days are refunded that nobody gave back, and
+        /// lifts that were actually given disappear from the record.
+        ///
+        /// That is exactly the harm `DadEngine.claim` stopped doing when the
+        /// truncation was removed, reachable by a second route with no
+        /// truncation anywhere in it. Removing the bound and leaving this
+        /// synthesised would have been half a fix.
+        ///
+        /// Nothing here can throw. A row missing everything decodes as a claim
+        /// of nought days against an unnamed reward, which is visible and
+        /// wrong-looking; a row that vanishes is invisible and changes a
+        /// balance.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+            rewardID = try c.decodeIfPresent(UUID.self, forKey: .rewardID) ?? UUID()
+            rewardName = try c.decodeIfPresent(String.self, forKey: .rewardName) ?? ""
+            price = try c.decodeIfPresent(Days.self, forKey: .price) ?? Days(0)
+            claimedAt = try c.decodeIfPresent(Date.self, forKey: .claimedAt)
+                ?? Date(timeIntervalSince1970: 0)
+            settledAt = try c.decodeIfPresent(Date.self, forKey: .settledAt)
+        }
+
+        init(id: UUID = UUID(), rewardID: UUID, rewardName: String,
+             price: Days, claimedAt: Date, settledAt: Date? = nil) {
+            self.id = id
+            self.rewardID = rewardID
+            self.rewardName = rewardName
+            self.price = price
+            self.claimedAt = claimedAt
+            self.settledAt = settledAt
+        }
     }
 
     // MARK: - Construction
@@ -410,6 +452,11 @@ struct RewardLedger {
     /// Refused in two cases, and the caller cannot tell them apart on purpose —
     /// both are simply "not now", and a screen that explains at length why a
     /// thing is unavailable is a screen that argues with somebody.
+    ///
+    /// A caller tempted to work out which fired should not: the refusals are
+    /// ordered, retired before unaffordable, so re-deriving the reason from
+    /// the shortfall reports the wrong one whenever both apply. `DadModel`
+    /// made that mistake and says one neutral sentence now.
     ///
     /// * The balance does not cover the price. Under-covering is refused
     ///   outright rather than part-paid: a claim that leaves a debt behind is

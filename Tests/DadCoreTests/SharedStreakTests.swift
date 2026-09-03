@@ -153,6 +153,29 @@ final class SharedStreakTests: XCTestCase {
                        "the newest member's run is the shortest, so it is the household's")
     }
 
+    func testTwoPhonesInAgreementProduceTheSameBytes() {
+        // The only thing standing between this feature and a tag write on
+        // every single tap is `TagScanner` asking "is what I would write
+        // different from what I just read?". `setting` puts the writer at the
+        // front of its own ledger — which it must, or the cap drops the phone
+        // from its own tag — so without a canonical order on the wire, two
+        // phones holding identical facts encode differently, the check never
+        // says no, and the tag is rewritten on every alternating tap forever.
+        let parent = Harness(), child = Harness()
+        dadDaily(parent, days: 5)
+        dadDaily(child, days: 5)
+
+        var tag = parent.engine.tagPayload()!
+        child.engine.absorb(tagPayload: tag)
+        tag = child.engine.tagPayload()!
+        parent.engine.absorb(tagPayload: tag)
+
+        XCTAssertEqual(parent.engine.tagPayload(), tag,
+                       "the parent has nothing new to say, and must be able to tell")
+        XCTAssertEqual(child.engine.tagPayload(), parent.engine.tagPayload(),
+                       "two phones that agree must write the same bytes")
+    }
+
     // MARK: - What the tag must never do
 
     func testAPayloadThisBuildCannotReadChangesNothing() {

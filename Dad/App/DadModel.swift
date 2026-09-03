@@ -29,6 +29,15 @@ final class DadModel: ObservableObject {
     /// standing from the whole session history.
     @Published private(set) var householdStreak: HouseholdStreak?
 
+    /// True once a tap has found a tag that can be read but not written.
+    ///
+    /// Not an error and not cleared: a write-protected tag stays
+    /// write-protected, and the shared streak on this phone can never move
+    /// again until a different tag is used. Without it the household screen
+    /// tells somebody to tap a tag to bring the number up to date, which that
+    /// tag cannot do — a loop with no exit and no explanation.
+    @Published var tagIsWriteProtected = false
+
     /// What the records can honestly say about the shield having been missing.
     /// Silent in the overwhelmingly common case, and always silent about
     /// *anybody* — see `ShieldGap`.
@@ -238,14 +247,21 @@ final class DadModel: ObservableObject {
 
     func claim(_ reward: RewardLedger.Reward) {
         guard engine.claim(reward) else {
-            // The only two refusals are "not enough days" and "that offer was
-            // taken back" — both of which can become true between a render and
-            // a tap. Silence would read as the tap not registering, which is
-            // the one thing worse than either answer.
-            let short = rewardLedger.shortfall(for: reward)
-            banner = short > RewardLedger.Days(0)
-                ? "\(short.description) to go before you can claim that."
-                : "That isn't on offer any more."
+            // One sentence, and deliberately not which of the two refusals
+            // fired. `RewardLedger.claiming` refuses retired *before*
+            // unaffordable, so a screen that decided by re-computing the
+            // shortfall told somebody "ten days to go" about a reward that had
+            // been withdrawn — the more discouraging of the two answers,
+            // chosen precisely when both applied.
+            //
+            // Deriving it from the refusal instead would mean widening the
+            // Core API, and `claiming`'s own doc argues against that: both
+            // cases are simply "not now", and a screen that explains at length
+            // why a thing is unavailable is a screen that argues with
+            // somebody. The row already carries the shortfall under the name,
+            // so nothing is lost — this only has to acknowledge the tap, which
+            // silence would not.
+            banner = "That isn't available right now."
             return
         }
         reload()

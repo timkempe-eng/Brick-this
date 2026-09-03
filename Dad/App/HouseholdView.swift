@@ -158,6 +158,17 @@ struct HouseholdView: View {
                 \(Vocab.verbThirdPerson) too is the single strongest thing this app has.
                 """
         }
+        if model.tagIsWriteProtected {
+            // Never tell somebody to tap a tag that cannot answer. This phone
+            // read the household off it and could not write back, so the
+            // number is frozen wherever it is until a different tag is used.
+            return """
+                That \(Vocab.tagNoun) is write-protected, so this phone can read the \
+                household from it but never add itself. Counted to \
+                \(streak.asOf?.description ?? "an earlier day"). Pair a \(Vocab.tagNoun) \
+                that isn't locked and the number starts moving again.
+                """
+        }
         if !streak.isCurrent {
             return """
                 Counted to \(streak.asOf?.description ?? "an earlier day"), because that \

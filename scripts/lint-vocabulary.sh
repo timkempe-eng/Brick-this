@@ -11,15 +11,27 @@
 # it did not. Anything on `Vocab` is now suspect unless it is listed here, so
 # adding a symbol makes the check stricter rather than blinder.
 #
-# `modeNoun` is exempt: "mode" is an ordinary common noun. So are the two
-# capability nouns, which are read out mid-sentence.
+# `modeNoun` is the ONLY exemption: "mode" is an ordinary common noun.
+#
+# There were three. The other two — `dadAction` and `emergencyUnDad` — were
+# added on the theory that they were common nouns, and they are not: they
+# expand to "Dad my phone" and "Emergency Un-Dad", so lowercasing them produces
+# "dad my phone", the literal example in hard rule 4. A review confirmed the
+# lint passed with both spelled out in a shipping file. Neither had a call
+# site; they were exempted for nothing and would have permitted the one thing
+# this script exists to stop. **Add an exemption only for a symbol that
+# contains no form of the verb, and check by expanding it.**
+#
+# The match also covers a function call and the two other ways Swift lowercases
+# a string, because the interpolating helpers — `warning`, `asking` — are where
+# the verb most often ends up mid-sentence, and they were entirely unwatched.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-EXEMPT="modeNoun\|emergencyUnDad\|dadAction"
+EXEMPT="modeNoun"
 
-hits=$(grep -rno "Vocab\.[A-Za-z]*\.lowercased()" Dad/ \
-       | grep -v "Vocab\.\($EXEMPT\)\.lowercased()" || true)
+hits=$(grep -rnoE "Vocab\.[A-Za-z]+(\([^)]*\))?\.(lowercased\(|localizedLowercase)" Dad/ \
+       | grep -vE "Vocab\.($EXEMPT)\.lowercased\(" || true)
 
 if [ -n "$hits" ]; then
   echo "Vocabulary lint failed — these lowercase a proper form of the verb:"

@@ -207,6 +207,70 @@ final class HouseholdLedgerTests: XCTestCase {
             HouseholdLedgerFormat.maximumPayload)
     }
 
+    func testAStreakTooWideForTheWireIsClampedRatherThanDroppingAMember() {
+        // The last door on the cap arithmetic. A five-digit streak makes a
+        // member's line 24 bytes, five of them 122, and `encoded()`'s
+        // drop-until-it-fits loop then removes somebody — the writer counting
+        // a member every reader cannot see, returning twenty-seven years in.
+        //
+        // Clamping is the lesser lie, and it only ever affects what the tag
+        // carries about somebody else: a phone reads its own streak from its
+        // own history.
+        let ancient = HouseholdLedger(standings: (0..<HouseholdLedgerFormat.maximumMembers).map {
+            standing(MemberID(String(format: "%08x", $0))!, "20260903", 100_000)
+        })
+
+        XCTAssertLessThanOrEqual(ancient.encoded().utf8.count,
+                                 HouseholdLedgerFormat.maximumPayload)
+        XCTAssertEqual(HouseholdLedger.decoded(ancient.encoded())?.standings.count,
+                       HouseholdLedgerFormat.maximumMembers,
+                       "nobody is dropped, however long they have been at it")
+        XCTAssertEqual(HouseholdLedger.decoded(ancient.encoded())?.standings.first?.streak,
+                       HouseholdLedgerFormat.widestStreakOnTheWire)
+    }
+
+    func testTheDerivationBitesAtABudgetWhereItMatters() {
+        // The whole point of deriving the cap rather than writing it down is
+        // that the two stay in step when the budget changes. At today's 120
+        // bytes the header term makes no difference — both answers are five —
+        // so a mutation deleting it survived. At 115 it decides the answer,
+        // and getting it wrong puts five members into a payload that holds
+        // four, which is exactly the defect the derivation replaced.
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 115), 4)
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 120), 5)
+        XCTAssertEqual(HouseholdLedgerFormat.membersThatFit(inPayload: 1), 0,
+                       "a budget too small for anybody holds nobody, rather than crashing")
+    }
+
+    func testTheHeaderIsChargedAgainstTheBudget() {
+        // The `- 2` in the derivation is the header, and a mutation removing it
+        // survived: at a 120-byte budget both answers are five, so nothing
+        // downstream moved. It bites exactly when the derivation is supposed
+        // to earn its place — when the budget changes. At 115 the correct cap
+        // is four and the mutated one is five, and five members do not fit,
+        // which is the original defect walking back in.
+        //
+        // Asserted as the relationship rather than as a number, because a
+        // number here would be the thing the derivation exists to stop.
+        let header = HouseholdLedger(standings: []).encoded()
+        XCTAssertEqual(header.utf8.count, 2, "the header is two bytes, and they are spent")
+        XCTAssertLessThanOrEqual(
+            header.utf8.count
+                + HouseholdLedgerFormat.maximumMembers * HouseholdLedgerFormat.maximumMemberBytes,
+            HouseholdLedgerFormat.maximumPayload)
+    }
+
+    func testTheRecordPrefixIncludesItsSeparator() {
+        // "the third character, and what matters" — but nothing tested it. A
+        // mutation dropping the semicolon survived, because every case in the
+        // suite ("d", "desk", "dinner", "d2;…") passes either way. Without it,
+        // "d1nner" is read as a ledger and destroyed: the same defect, one
+        // character narrower.
+        XCTAssertTrue(HouseholdLedgerFormat.recordPrefix.hasSuffix(";"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d1nner"))
+        XCTAssertFalse(HouseholdLedgerFormat.isOurRecord("d1 kitchen"))
+    }
+
     func testAHouseholdIsCappedAndKeepsTheFreshest() {
         let many = HouseholdLedger(standings: (0..<10).map {
             standing(MemberID(String(format: "%08x", $0))!, "202609\(String(format: "%02d", $0 + 1))", 1)

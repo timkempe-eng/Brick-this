@@ -131,8 +131,11 @@ Two records, at most, and they coexist:
 1. **A URI record** — only if you wrote one, for background reading. Optional
    and unrelated to everything else.
 2. **A text record holding the household ledger** — the shared streak, written
-   on every tap made *inside the app*. Six people at most, about 20 bytes each,
-   so it fits alongside a URL even on a 144-byte NTAG213.
+   on every tap made *inside the app*. Five people at most, 23 bytes each, so
+   it fits alongside a URL even on a 144-byte NTAG213. The five is arithmetic
+   on the byte budget rather than a number chosen separately — when the two
+   were chosen separately they disagreed, and the phone writing the tag counted
+   a member that every phone reading it could not see.
 
 Each writer keeps the other's record. `TagScanner` preserves the URI when it
 writes the ledger; `TagWriter` preserves the ledger when it writes the URI.

@@ -146,6 +146,26 @@ final class RewardWiringTests: XCTestCase {
         XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Days(250))
     }
 
+    func testAClaimRowNeverDisappearsBecauseABuildAddedAField() {
+        // The second route to the refund the unbounded list was meant to end,
+        // and it needs no truncation at all. The synthesised decoder throws on
+        // a missing key, `LenientDecoding` answers a throw by dropping the
+        // element, and `spent` is a sum over the list — so the first build to
+        // add a field to `Redemption` would hand back every day the older
+        // build had spent and erase every lift it recorded as given.
+        //
+        // Simulated the only way it can be: a payload written without the keys
+        // this build expects. A total decoder keeps the row.
+        let older = """
+            [{"id":"\(UUID().uuidString)","claimedAt":0}]
+            """.data(using: .utf8)!
+        let rows = try? JSONDecoder().decode([RewardLedger.Redemption].self, from: older)
+
+        XCTAssertEqual(rows?.count, 1, "a row from an older build must survive")
+        XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+        XCTAssertEqual(rows?.first?.rewardName, "")
+    }
+
     func testAClaimYouCannotAffordIsRefused() {
         let h = youngPerson(earning: 1)
         let expensive = RewardLedger.Reward(name: "A weekend away", price: RewardLedger.Days(30))

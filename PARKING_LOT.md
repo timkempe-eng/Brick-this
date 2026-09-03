@@ -579,7 +579,7 @@ anyone's time.
       - The warning had been decided and tested for days and delivered never,
         which is the shape of a feature that reads as built.
 
-- [x] **An adversarial review found nine defects in work that had passed every
+- [x] **An adversarial review found eight defects in work that had passed every
       check.** 817 tests, 106 preflight checks, the vocabulary lint and a
       green macOS job all said the night's work was sound. It was not, and two
       of the nine were the kind that quietly change what a person is owed:
@@ -600,8 +600,6 @@ anyone's time.
       - **Any text record starting with `d` was treated as a ledger**, so
         "desk" written with NFC Tools was destroyed, and a ledger sitting
         behind one was read as garbage and then overwritten.
-      - **On a full household the phone dropped itself from its own tag**, then
-        read the tag back and concluded it was not a member of its household.
       - **A hole in the vocabulary lint**, opened the same night: the lint
         named the forbidden symbols, so a new alias was unwatched the moment it
         was added — and its own comment claimed the lint covered it. The lint
@@ -616,10 +614,26 @@ anyone's time.
       have found none of them.
 
       Around forty mutations were run in total, over the new code and the old.
-      Eight survived and all eight are now covered or explained in place. The
+      Eight survived; each is now covered by a test or explained in place. The
       one that mattered most was on a fix: it survived, and the first
       explanation for why was wrong — checking the arithmetic instead of
       believing it is what turned a false comment into a true one.
+
+      **Two corrections to this entry, from a second review of the fixes.** It
+      said nine defects and listed one — "the phone dropped itself from its own
+      tag" — that never shipped: `setting` had always inserted at the front,
+      and what the mutation found was a missing test, not a bug. A summary that
+      promotes a coverage gap to a defect inflates its own count, which is the
+      failure this section exists to avoid.
+
+      And "all eight covered" was too strong at the time it was written: some
+      of the forty verdicts were unsound, because `mutate.sh` replaces the
+      *first* occurrence of its search text and these commits added long
+      comments quoting the code they discuss. A mutation aimed at a guard can
+      land in the paragraph above it and report a confident, false "not
+      covered". Fixed, and the lesson is the general one: **a tool that decides
+      by matching text will eventually match the wrong text, and the answer it
+      gives then looks exactly like a real one.**
 
 - [x] **A mutation reached a pushed commit, and the suite would not have caught
       it.** An adversarial review was running `scripts/mutate.sh` in the same

@@ -163,6 +163,9 @@ struct HomeView: View {
                         .accessibilityLabel("Settings")
                 }
             }
+            .onChange(of: scanner.tagIsReadOnly) { _, isReadOnly in
+                if isReadOnly { model.tagIsWriteProtected = true }
+            }
             .nfcErrorAlert($scanner.lastError)
             .sheet(isPresented: $showingModes) { ModesView() }
             .sheet(isPresented: $showingSettings) { SettingsView() }

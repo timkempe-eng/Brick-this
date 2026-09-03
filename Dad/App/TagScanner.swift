@@ -14,6 +14,14 @@ final class TagScanner: NSObject, ObservableObject {
     @Published var isScanning = false
     @Published var lastError: String?
 
+    /// Set when the last scan found a tag it could read and not write.
+    ///
+    /// Published rather than folded into `lastError`, because it is not an
+    /// error: the tap worked and the household's standings were taken in. What
+    /// it changes is what the shared streak can honestly promise — see
+    /// `HouseholdView`.
+    @Published var tagIsReadOnly = false
+
     private var session: NFCTagReaderSession?
     private var onRead: ((String) -> Void)?
     private var onLedger: ((String) -> Void)?
@@ -65,6 +73,7 @@ final class TagScanner: NSObject, ObservableObject {
         exchange.mine = ledger
         exchange.own = own
         exchange.found = nil
+        exchange.wasReadOnly = false
         // .iso14443 covers the NTAG21x stickers almost everyone buys;
         // .iso15693 covers NFC Forum Type 5 (ICODE and friends). FeliCa is
         // left out deliberately — polling for it needs a separate entitlement
@@ -115,6 +124,7 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                     // The ledger first: the tap can start a session, and a
                     // household number that arrived a moment after it would
                     // render one frame late.
+                    if self.exchange.wasReadOnly { self.tagIsReadOnly = true }
                     if let text = self.exchange.found { self.onLedger?(text) }
                     self.onLedger = nil
                     self.onRead?(uid.hexString)
@@ -149,7 +159,15 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                 let found = Self.ledgerText(in: existing)
                 self.exchange.found = found
 
-                guard status == .readWrite else { return finish() }
+                guard status == .readWrite else {
+                    // Read but not written. Recorded, because the household
+                    // screen otherwise tells somebody to tap a tag that can
+                    // never bring the number up to date — a loop with no exit
+                    // and no explanation. Saying "this tag is write-protected"
+                    // is the missing half of reading a locked tag at all.
+                    self.exchange.wasReadOnly = true
+                    return finish()
+                }
 
                 let reply = mine.afterExchange(with: found, own: self.exchange.own).encoded()
                 guard reply != found else { return finish() }
@@ -227,6 +245,7 @@ private final class LedgerExchange: @unchecked Sendable {
     private var storedMine: HouseholdLedger?
     private var storedOwn: MemberStanding?
     private var storedFound: String?
+    private var storedReadOnly = false
 
     var mine: HouseholdLedger? {
         get { lock.withLock { storedMine } }
@@ -243,5 +262,11 @@ private final class LedgerExchange: @unchecked Sendable {
     var found: String? {
         get { lock.withLock { storedFound } }
         set { lock.withLock { storedFound = newValue } }
+    }
+
+    /// True when the tag could be read but not written.
+    var wasReadOnly: Bool {
+        get { lock.withLock { storedReadOnly } }
+        set { lock.withLock { storedReadOnly = newValue } }
     }
 }

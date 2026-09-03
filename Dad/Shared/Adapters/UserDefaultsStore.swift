@@ -86,11 +86,6 @@ final class UserDefaultsStore: DadPersisting {
         set { encode(newValue, Key.pendingResume) }
     }
 
-    /// Absent decodes as `.solo` — one adult Dadding themselves, which is
-    /// exactly how every install before this behaved.
-    /// Absent means this phone has not been in a household exchange yet.
-    /// Minted lazily by the engine rather than here, so reading the store
-    /// never writes to it.
     /// Lenient: one unreadable agreement must not cost the household the rest
     /// of what they wrote down.
     var agreements: [ModeAgreement] {
@@ -105,16 +100,26 @@ final class UserDefaultsStore: DadPersisting {
         set { encode(newValue, Key.rewards) }
     }
 
+    /// Lenient like the rest, and additionally *total* on the element: a
+    /// `Redemption` that failed to decode would be dropped by the lenient
+    /// array, and `spent` is a sum over this list — so a dropped row hands
+    /// back a day nobody gave back. See `RewardLedger.Redemption.init(from:)`.
     var redemptions: [RewardLedger.Redemption] {
         get { decodeArray(RewardLedger.Redemption.self, Key.redemptions) ?? [] }
         set { encode(newValue, Key.redemptions) }
     }
 
+    /// The last moment a session was seen running with authorization
+    /// approved. Absent means nothing has been confirmed during this session,
+    /// and `ShieldGap` falls back to the session's own start.
     var lastShieldConfirmedAt: Date? {
         get { decode(Date.self, Key.lastShieldConfirmedAt) }
         set { encode(newValue, Key.lastShieldConfirmedAt) }
     }
 
+    /// Absent means this phone has not been in a household exchange yet.
+    /// Minted lazily by the engine rather than here, so reading the store
+    /// never writes to it.
     var memberID: MemberID? {
         get { decode(MemberID.self, Key.memberID) }
         set { encode(newValue, Key.memberID) }
@@ -127,6 +132,8 @@ final class UserDefaultsStore: DadPersisting {
         set { encode(newValue, Key.ledger) }
     }
 
+    /// Absent decodes as `.solo` — one adult Dadding themselves, which is
+    /// exactly how every install before this behaved.
     var household: Household {
         get { decode(Household.self, Key.household) ?? .solo }
         set { encode(newValue, Key.household) }

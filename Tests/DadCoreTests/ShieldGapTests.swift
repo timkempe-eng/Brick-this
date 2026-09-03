@@ -101,6 +101,23 @@ final class ShieldGapTests: XCTestCase {
                        "an 08:00 window on the horizon day began before it, so the run starts a day later")
     }
 
+    func testAWindowStartingOnTheHorizonInstantIsInside() {
+        // The exact boundary, which the two cases above straddle without
+        // landing on: the horizon is 2025-08-13 09:00 and this window starts
+        // at 09:00 that day. `>=` includes it; `>` does not.
+        //
+        // Missing until a mutation on `start >= horizon` survived — and it
+        // only survived *visibly* after `mutate.sh` stopped applying mutations
+        // to the comment above the guard. The same mutation had already been
+        // run and reported as a false "not covered" one commit earlier, which
+        // is the failure that tool change exists to prevent.
+        let onTheEdge = ShieldGap.occurrences(
+            of: [mode(startHour: 9, endHour: 10)], now: now, calendar: utc)
+
+        XCTAssertEqual(onTheEdge.map(\.interval.start).min(), at(2025, 8, 13, 9),
+                       "a window starting exactly on the horizon is within the week")
+    }
+
     func testAConfirmationFromTheFutureDoesNotCrashTheReport() {
         // The guard on the left edge is a crash guard, not tidiness, and a
         // mutation removing it survived the whole suite — so it had no test

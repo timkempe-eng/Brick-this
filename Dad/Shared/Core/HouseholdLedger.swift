@@ -85,8 +85,37 @@ enum HouseholdLedgerFormat {
     /// Two numbers that have to agree cannot both be written down. This one is
     /// arithmetic on the other, and a test pins that a full household survives
     /// a round trip.
-    static let maximumMembers =
-        (maximumPayload - 2) / maximumMemberBytes
+    static let maximumMembers = membersThatFit(inPayload: maximumPayload)
+
+    /// How many members fit in a payload of `budget` bytes.
+    ///
+    /// A function rather than an expression so the rule can be exercised at a
+    /// budget where it *matters*. As a bare `(maximumPayload - 2) / …` a
+    /// mutation deleting the header term survived: at 120 bytes both answers
+    /// are five, so nothing downstream moved. It bites at 115, where the
+    /// correct cap is four and the mutated one is five — and five do not fit,
+    /// which is the original writer-disagrees-with-reader defect walking back
+    /// in the moment somebody changes the budget. Which is the one moment this
+    /// derivation exists for.
+    ///
+    /// The header is charged by measuring it rather than by writing 2 down
+    /// again: `recordPrefix` is "d1;", and the ";" belongs to the first member.
+    static func membersThatFit(inPayload budget: Int) -> Int {
+        max(0, (budget - (recordPrefix.count - 1)) / maximumMemberBytes)
+    }
+
+    /// The widest streak the wire format budgets for. Past this the line grows
+    /// and the cap arithmetic stops holding, so the number is clamped on the
+    /// wire rather than allowed to push a member off the tag.
+    ///
+    /// 9,999 days is twenty-seven years. Clamping is the lesser lie: the
+    /// alternative is that a household at the cap silently loses a member on
+    /// the day somebody's streak reaches five digits, which is the
+    /// writer-disagrees-with-reader defect returning on a date nobody would
+    /// connect to it. The phone's *own* streak is always read from its own
+    /// history and is never clamped; this is only what the tag can carry about
+    /// somebody else.
+    static let widestStreakOnTheWire = 9_999
 
     /// The exact bytes a ledger record written by *this* build starts with.
     ///
@@ -361,10 +390,32 @@ struct HouseholdLedger: Codable, Hashable {
         }
     }
 
+    /// Sorted by member id before encoding, so two phones holding the same
+    /// facts produce the same bytes.
+    ///
+    /// `setting` puts the writer at the front — which it must, or `trimmed`
+    /// drops the phone from its own tag — and that makes the *stored* order
+    /// differ between phones. Without a canonical order here, two phones in
+    /// agreement encode differently, so `TagScanner`'s "has anything changed?"
+    /// check is never satisfied and every alternating in-app tap writes to the
+    /// tag for nothing. That check is the only thing standing between the
+    /// feature and a write on every single tap, so it has to be able to say
+    /// yes.
+    ///
+    /// Sorting on the wire rather than in storage keeps both properties: the
+    /// writer is still protected from the cap, and the bytes are still stable.
     private static func line(_ standings: [MemberStanding]) -> String {
+        canonical(standings)
+    }
+
+    private static func canonical(_ standings: [MemberStanding]) -> String {
+        rawLine(standings.sorted { $0.member.value < $1.member.value })
+    }
+
+    private static func rawLine(_ standings: [MemberStanding]) -> String {
         ([HouseholdLedgerFormat.prefix + String(HouseholdLedgerFormat.version)]
          + standings.map {
-            "\($0.member.value),\($0.lastActive.year)\(String(format: "%02d%02d", $0.lastActive.month, $0.lastActive.day)),\($0.streak)"
+            "\($0.member.value),\($0.lastActive.year)\(String(format: "%02d%02d", $0.lastActive.month, $0.lastActive.day)),\(min($0.streak, HouseholdLedgerFormat.widestStreakOnTheWire))"
          }).joined(separator: ";")
     }
 

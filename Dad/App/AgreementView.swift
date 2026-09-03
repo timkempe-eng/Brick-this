@@ -159,10 +159,13 @@ struct AgreementView: View {
     /// Rounding *up* to the nearest offered length is the right direction:
     /// talking about a rule buys it at least as long as was left, never less.
     private var nextReviewLength: Int {
-        guard let remaining = existing?.daysUntilRenegotiation(), remaining > 0 else {
-            return offered.contains(30) ? 30 : offered[0]
-        }
-        return offered.first { $0 >= remaining } ?? offered[offered.count - 1]
+        // `offered` is a literal, so a default of 30 and a fallback to its last
+        // value are both reachable only if that literal changes. Written as
+        // plain lookups rather than as guarded ones: this diff spent two of its
+        // findings deleting branches no test could reach, and adding a pair
+        // while doing it would be a poor joke.
+        guard let remaining = existing?.daysUntilRenegotiation(), remaining > 0 else { return 30 }
+        return offered.first { $0 >= remaining } ?? 180
     }
 
     private func label(days: Int) -> String {

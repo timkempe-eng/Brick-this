@@ -9,57 +9,57 @@
 # most precisely-targeted ones — gets reported as surviving. That misdiagnosis
 # cost three separate re-verifications in this repo before it was spotted.
 #
-# It also distinguishes a build failure from a passing suite. A mutation that
-# doesn't compile is not a surviving mutant, and must not be reported as one.
+# Three outcomes, not two. A mutation can compile and then CRASH the test
+# binary before any test runs — a trap in a stored property's initialiser takes
+# the whole class down during static setup — and that prints no "Executed N
+# tests" line either. The old check called that invalid Swift, so a mutation
+# the suite had caught in the loudest way available was reported as not a
+# mutant at all. A review discarded three verdicts because of it, and a
+# discarded verdict looks exactly like a covered one. Compile first, and let
+# the compiler alone decide "did not build".
+#
+# Mutations are applied to CODE, never to a comment, and the line is printed.
+# This codebase argues with itself in prose: a guard is usually preceded by a
+# paragraph quoting that guard. Replacing the first occurrence in the file puts
+# the change in the paragraph, where it does nothing, and the pass is then
+# reported as "SURVIVED. The suite does not cover this." A review followed
+# exactly that false trail. Skipping comment lines closes it; printing the line
+# makes a wrong target visible rather than something to be inferred.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
 FILE="$1"; OLD="$2"; NEW="$3"; LABEL="${4:-mutation}"
 BACKUP="$(mktemp)"
-cp "$FILE" "$BACKUP"
+cp "$FILE" "$BACKUP" || { echo "  ?  NOT APPLIED — $LABEL (cannot read $FILE)"; exit 1; }
 trap 'cp "$BACKUP" "$FILE"; rm -f "$BACKUP"' EXIT
 
-if ! python3 - "$FILE" "$OLD" "$NEW" <<'PY'
-import sys
-path, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
-s = open(path).read()
-if old not in s:
-    sys.exit(1)
-open(path, "w").write(s.replace(old, new, 1))
-PY
-then
-  echo "  ?  NOT APPLIED — $LABEL (text not found in $FILE)"
+APPLIED=$(python3 scripts/_mutate_apply.py "$FILE" "$OLD" "$NEW")
+if [ -z "$APPLIED" ]; then
+  echo "  ?  NOT APPLIED — $LABEL (no code line in $FILE contains that text)"
   exit 1
 fi
 
-# Compile FIRST, and decide "did not build" on the compiler alone.
-#
-# The obvious version runs `swift test` and calls it a build failure when the
-# output has no "Executed N tests" line. That is wrong for a third outcome
-# nobody thought about: a mutation that compiles and then **crashes** the test
-# binary before any test runs — a trap in a stored property's initialiser, say,
-# which takes the whole class down during static setup. No "Executed" line is
-# printed, so a perfectly valid mutation that the suite caught in the loudest
-# way possible was reported as invalid Swift.
-#
-# That misreport is not free: an adversarial review discarded three verdicts
-# because of it, and a discarded verdict looks exactly like a covered one.
 if ! swift build --build-tests >/dev/null 2>&1; then
-  echo "  ?  DID NOT BUILD — $LABEL (not a surviving mutant; the mutation is invalid Swift)"
+  echo "  ?  DID NOT BUILD — $LABEL [line $APPLIED] (not a surviving mutant; the mutation is invalid Swift)"
   exit 1
 fi
 
 OUTPUT="$(swift test 2>&1)"
 STATUS=$?
 
+if [ "$STATUS" -ge 128 ] && ! grep -q "Executed .* tests" <<<"$OUTPUT"; then
+  # Killed by a signal with no tests reported: OOM, a kill, a runner dying.
+  # Infrastructure, not a verdict — and it must not read as one.
+  echo "  ?  NO VERDICT — $LABEL [line $APPLIED] (the run died on signal $((STATUS - 128)); re-run it)"
+  exit 1
+fi
+
 if [ "$STATUS" -ne 0 ]; then
-  # Includes a crash. A mutation that makes the suite trap is caught by it —
-  # noisily, but caught.
   if grep -q "Executed .* tests" <<<"$OUTPUT"; then
-    echo "  ✔  caught    — $LABEL"
+    echo "  ✔  caught    — $LABEL [line $APPLIED]"
   else
-    echo "  ✔  caught    — $LABEL (the suite crashed before finishing; still caught)"
+    echo "  ✔  caught    — $LABEL [line $APPLIED] (the suite trapped before finishing; still caught)"
   fi
 else
-  echo "  ✘  SURVIVED  — $LABEL. The suite does not cover this."
+  echo "  ✘  SURVIVED  — $LABEL [line $APPLIED]. The suite does not cover this."
 fi
