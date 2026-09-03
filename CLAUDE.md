@@ -110,6 +110,19 @@ possible as invalid Swift. An adversarial review discarded three verdicts
 because of it, and a discarded verdict looks exactly like a covered one. The
 script now compiles first and decides "did not build" on the compiler alone.
 
+**The defect this codebase actually produces is a claim the code does not
+support.** Three adversarial reviews of one night's work found twenty-odd
+things between them, and the worst in every round was a sentence rather than a
+statement: a comment asserting a guarantee that was not there, a summary
+counting a bug that had never shipped, a tool reporting a verdict it had not
+earned. Twice the false claim was written *in the commit fixing false claims*.
+
+The code was mostly fine. What needed checking was what was said about it. So:
+**verify every "because" you write, at the moment you write it** — run the
+mutation, do the arithmetic, read the call site. A comment is the one part of a
+diff that no test, no linter and no compiler will ever contradict, which is
+exactly why it is where the untrue things end up.
+
 **A constant every test spells symbolically is a constant no test covers.**
 Referring to `EmergencyAllowance.perWindow` rather than `5` is correct style
 and means the suite moves with the value — which is exactly why changing 5 to
