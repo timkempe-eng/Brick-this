@@ -23,7 +23,7 @@ re-run the check, it isn't ✅.**
 | Five provisioning profiles | ✅ | Created and installed; `All required keys, certificates and provisioning profiles are installed` | run Release |
 | App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
-| App Store Connect record | ❓ | — | Connect → Apps shows `app.dad.Dad` |
+| App Store Connect record | ❌ | Checked 2026-09-03: does not exist. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible | run Apple account maintenance; the capabilities lane says outright whether it exists |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
