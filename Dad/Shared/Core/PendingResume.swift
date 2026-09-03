@@ -17,5 +17,14 @@ struct PendingResume: Codable, Equatable, Hashable {
     /// When the Mode starts itself again.
     let at: Date
 
+    /// Whether the session this break came from was started by a schedule.
+    ///
+    /// Carried through, and it matters: tap out of Sleep at 2am on a Mode that
+    /// takes breaks and the resumed session would otherwise be a hand-started
+    /// one, which the 07:00 boundary deliberately refuses to end — leaving the
+    /// phone Dadded all day. A break interrupts a scheduled session; it does
+    /// not convert it into a different kind.
+    var startedBySchedule: Bool?
+
     func isDue(now: Date) -> Bool { now >= at }
 }

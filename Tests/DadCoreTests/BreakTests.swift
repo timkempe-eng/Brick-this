@@ -322,3 +322,61 @@ final class BreakWidgetTests: XCTestCase {
         }
     }
 }
+
+/// A break inside a scheduled window.
+///
+/// The interaction that is easy to get wrong and impossible to notice: tap out
+/// of Sleep at 2am on a Mode that takes breaks, and the resumed session must
+/// still be the schedule's, or the 07:00 boundary — which deliberately refuses
+/// to end a session you started by hand — leaves the phone Dadded all day.
+final class BreakInsideAScheduleTests: XCTestCase {
+
+    private func sleepMode(_ h: Harness) -> DadMode {
+        h.addMode(name: "Sleep",
+                  schedule: ModeSchedule(startHour: 22, startMinute: 0,
+                                         endHour: 7, endMinute: 0,
+                                         weekdays: ModeSchedule.everyDay),
+                  breakLength: 15 * 60)
+    }
+
+    func testTheBreakRemembersItInterruptedAScheduledSession() {
+        let h = Harness()
+        let sleep = sleepMode(h)
+        h.engine.beginScheduledSession(modeID: sleep.id)
+
+        h.engine.handleTap()
+
+        XCTAssertEqual(h.store.pendingResume?.startedBySchedule, true)
+    }
+
+    func testTheScheduleStillEndsASessionItsOwnBreakBroughtBack() {
+        let h = Harness()
+        let sleep = sleepMode(h)
+        h.engine.beginScheduledSession(modeID: sleep.id)
+        h.engine.handleTap()                 // up at 2am, tapped out
+
+        h.clock.advance(15 * 60)
+        h.engine.resumeFromBreak()
+        XCTAssertEqual(h.store.activeSession?.startedBySchedule, true)
+
+        h.engine.endScheduledSession(modeID: sleep.id)
+
+        XCTAssertNil(h.store.activeSession, "07:00 must still release it")
+    }
+
+    func testAHandStartedSessionStaysHandStartedThroughABreak() {
+        // The other direction, and the reason the flag is carried rather than
+        // assumed: a schedule boundary must still not end a session you began
+        // yourself with the same Mode.
+        let h = Harness()
+        let sleep = sleepMode(h)
+        h.engine.dad(with: sleep)            // by hand, at 20:00
+        h.engine.handleTap()
+        h.clock.advance(15 * 60)
+        h.engine.resumeFromBreak()
+
+        XCTAssertNotEqual(h.store.activeSession?.startedBySchedule, true)
+        h.engine.endScheduledSession(modeID: sleep.id)
+        XCTAssertNotNil(h.store.activeSession, "yours means until you tap again")
+    }
+}

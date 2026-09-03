@@ -206,7 +206,8 @@ struct DadEngine {
            let mode = store.modes.first(where: { $0.id == session.modeID }),
            mode.takesBreaks,
            let length = mode.resumeAfter {
-            startBreak(mode: mode, length: length)
+            startBreak(mode: mode, length: length,
+                       startedBySchedule: session.startedBySchedule)
         }
 
         // Whichever process ended this — the app, the shield's emergency
@@ -378,13 +379,15 @@ struct DadEngine {
     // MARK: - Breaks
 
     /// Arms the Mode to start itself again once the break is over.
-    private func startBreak(mode: DadMode, length: TimeInterval) {
+    private func startBreak(mode: DadMode, length: TimeInterval,
+                            startedBySchedule: Bool?) {
         // The same 15-minute floor the timed release has, and for the same
         // reason: DeviceActivity will not monitor a shorter interval, so a
         // ten-minute break would simply never fire. Rounding up is visible;
         // silently not coming back is not.
         let at = clock.now.addingTimeInterval(max(length, Self.minimumScheduledRelease))
-        store.pendingResume = PendingResume(modeID: mode.id, modeName: mode.name, at: at)
+        store.pendingResume = PendingResume(modeID: mode.id, modeName: mode.name, at: at,
+                                            startedBySchedule: startedBySchedule)
         scheduler.scheduleResume(at: at)
     }
 
@@ -413,7 +416,9 @@ struct DadEngine {
         }
 
         cancelBreak()
-        dad(with: mode)
+        // Resumed as the same kind of session it interrupted, so a scheduled
+        // Mode's own boundary still ends it.
+        dad(with: mode, startedBySchedule: pending.startedBySchedule == true)
     }
 
     /// The break in progress, if any — for the home screen and the widget.
