@@ -24,8 +24,16 @@ Two things need deciding, and only you can decide them:
 2. **Does that backlog replace this section, or sit beside it?** If it lands,
    most of "Next up" below becomes a subset of it.
 
-Rebase it onto `main` and the red goes away. Until it is merged or closed,
-treat this file as incomplete.
+**Rebasing it is nearly free, and I checked rather than guessed.** Onto
+`main` as it stands: three commits replay with **one conflict hunk** — a single
+table row in `docs/PROVISIONING.md` arguing about a preflight check count, where
+the right answer is just the current number. Onto *this* branch once it lands:
+the first commit conflicts in `PARKING_LOT.md` alone, one hunk, and the two
+files are additive rather than competing — the ranked list drops into a section
+of its own. Either way the red goes away, because the failure is the stale base
+and not the content.
+
+Until it is merged or closed, treat this file as incomplete.
 
 ## Blocked on Apple (calendar time, not work)
 
