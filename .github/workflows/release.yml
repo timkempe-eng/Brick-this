@@ -53,6 +53,16 @@ on:
   # no token, so its one job was the one thing it could not do. A schedule on
   # a runner that already holds the secrets cannot fail that way.
   #
+  # A scheduled firing is quiet unless something changed. Failing every three
+  # days to say "no news" trains you to stop opening the email, and then the
+  # one run that matters arrives looking exactly like the eight before it —
+  # while a run that *succeeds* sends nothing at all, so the best possible
+  # outcome would be the silent one. So: scripts/classify_signing_failure.py
+  # reads the log, and the job stays green only when the failure is exactly
+  # the known pending state. An unrelated failure, one bundle id approved
+  # ahead of the others, or a build that ships all reach you. A manual
+  # dispatch always reports, because somebody is waiting on it.
+  #
   # Delete this trigger once a build reaches TestFlight — past that point it
   # would ship an unattended build every three days forever. GitHub also
   # disables schedules after 60 days without repository activity.
@@ -61,6 +71,7 @@ on:
 
 permissions:
   contents: write   # match stores certificates on a branch of a repo
+  issues: write     # the approval, when it lands, opens one
 
 concurrency:
   group: release
@@ -96,6 +107,7 @@ jobs:
           python-version: "3.12"
 
       - name: Build and upload
+        id: build
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -121,15 +133,67 @@ jobs:
           # environment rather than interpolated into the script, so an input
           # is never shell.
           FORCE_PROFILES: ${{ inputs.force_profiles || 'true' }}
+        # This step records fastlane's exit status instead of failing on it,
+        # so the step after it can decide what the status *means*. Without
+        # `pipefail` the pipeline would report tee's status and every run
+        # would look green.
         run: |
           python3 -m pip install --quiet pyyaml
-          bundle exec fastlane ios beta force_profiles:"$FORCE_PROFILES" \
-            || fastlane ios beta force_profiles:"$FORCE_PROFILES"
+          set -o pipefail
+          status=0
+          { bundle exec fastlane ios beta force_profiles:"$FORCE_PROFILES" \
+              || fastlane ios beta force_profiles:"$FORCE_PROFILES" ; } \
+            2>&1 | tee release.log || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      # The step that passes or fails the job. `pipefail` again, and for the
+      # same reason: tee exits 0, so without it the verdict would be thrown
+      # away and every run would pass.
+      - name: What this run means
+        env:
+          BUILD_STATUS: ${{ steps.build.outputs.status }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -o pipefail
+          python3 scripts/classify_signing_failure.py \
+            --build-status "$BUILD_STATUS" --event "$EVENT" release.log \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # A scheduled run that gets this far has shipped, and nothing else in
+      # this pipeline would say so out loud. The issue is both the news and
+      # the two things that become due the moment it arrives.
+      - name: Say so, if the approval landed
+        if: steps.build.outputs.status == '0' && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Family Controls approved — a build is on TestFlight" \
+            --body "$(cat <<'BODY'
+          The scheduled approval watch built, signed and uploaded successfully,
+          which it could not have done without Apple's Family Controls
+          (Distribution) approval.
+
+          Two things are now due:
+
+          - **Install it.** TestFlight on the iPhone.
+          - **Delete the `schedule:` trigger in `.github/workflows/release.yml`.**
+            Past this point it ships an unattended build every three days.
+
+          Then close the Family Controls item in `PARKING_LOT.md` and turn the
+          row in `docs/PROVISIONING.md` from ⏳ to ✅, citing this run.
+          BODY
+          )"
 
       - name: Keep the build
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Dad-ipa
-          path: build/*.ipa
+          # release.log too: on a quiet run it is the only evidence of what
+          # was actually measured, and the run stays green so nothing else
+          # preserves it.
+          path: |
+            build/*.ipa
+            release.log
           if-no-files-found: warn

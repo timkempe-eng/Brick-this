@@ -51,6 +51,15 @@ left is calendar time and a browser.
       is the run that ships. Delete the trigger once a build reaches
       TestFlight.
 
+      **A firing is silent unless something changed.** It used to report
+      "still waiting" by failing, which is a red run every three days that
+      means nothing — and the run that ships would have been the quiet one.
+      `scripts/classify_signing_failure.py` now passes the job only on the
+      exact pending state; an unrelated failure, one identifier approved
+      ahead of the others, or a build that ships all reach you, the last by
+      opening an issue. Not yet observed on a real scheduled firing — the
+      first is 2026-09-10 15:00 UTC.
+
 - [ ] **First TestFlight build on the iPhone.** Runbook in
       [docs/PROVISIONING.md](docs/PROVISIONING.md) — browser steps from an iPad,
       none needing a Mac. Everything that can be done from a session is done:

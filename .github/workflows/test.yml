@@ -45,6 +45,12 @@ jobs:
       - name: preflight (Xcode wiring)
         run: python3 scripts/preflight.py
 
+      # The approval watch decides when a red Release run is allowed to pass
+      # silently. Nothing else would notice it going wrong, because going
+      # wrong looks exactly like good news.
+      - name: the approval watch's own tests
+        run: python3 scripts/classify_signing_failure.py --self-test
+
   # The part that needs a Mac — and this is the only Mac involved.
   #
   # Compiles the app and all three extensions against the real iOS SDK, which

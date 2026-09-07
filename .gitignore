@@ -21,3 +21,6 @@ __pycache__/
 
 # Agent worktrees
 .claude/worktrees/
+
+# The Release run captures fastlane output here; it is an artifact, not source.
+release.log

@@ -15,6 +15,7 @@ re-run the check, it isn't ✅.**
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ❓ | `release.yml` now carries `schedule: 0 15 */3 * *`, so the runner that already holds the secrets does it. **No scheduled firing has been observed yet** — the workflow path itself is proven (run 34137630116, dispatched, 46s), the cron is not. This replaced Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, which fired 09-04 and 09-07, reported success both times, and dispatched nothing: its sessions had no repository and no token. It was ✅ here for four days on a mechanism that never ran once | Actions tab → Release to TestFlight → a run whose trigger reads `schedule` rather than `workflow_dispatch` |
+| A scheduled firing only speaks up with news | ❓ | `scripts/classify_signing_failure.py` reads the run's log and passes the job only when the failure is exactly the known pending state — every error a Family Controls rejection, all four entitled bundle ids still rejected. An unrelated failure, a partial approval, or a build that ships is loud. **Proven on fixtures, not yet on a real scheduled run**: 12 self-tests, and the four shell paths rehearsed against a stubbed fastlane (pending+schedule green, pending+dispatch red, unrelated failure red, success green). What it cannot prove without Apple is the shape it has never seen — a rejection worded a third way would read as unrelated and be loud, which is the safe direction | `python3 scripts/classify_signing_failure.py --self-test`; it also runs in the Test workflow |
 | Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-07 15:19.** Release run 34137630116 minted all five profiles fresh (`force_profiles: true`, 15:18:59–15:19:03) and the build rejected four of them sixteen seconds later: `Provisioning profile "match AppStore app.dad.Dad 1788794339" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration`, `.ShieldAction` and `.ActivityMonitor`. Unchanged from the same measurement on 09-03 (run 33771919392). Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
@@ -62,6 +63,28 @@ waiting" were four days of nobody asking. A schedule on the runner that already
 holds the secrets cannot fail that way — and note which way this failed, since
 it is the one this repo keeps producing: not a broken check, a check that
 reported a verdict it had never earned.
+
+**A firing is silent unless something changed.** The first version of the
+schedule reported "still waiting" by failing, which is a red run every three
+days that means nothing — and a red run that means nothing is one you stop
+opening, so the firing that finally matters would arrive looking exactly like
+the eight before it. Worse, the good outcome was the quiet one: a run that
+built and uploaded would have sent no mail at all.
+
+So the job now passes only when the log is *exactly* the pending state, and
+`scripts/classify_signing_failure.py` decides. Anything else reaches you: an
+unrelated failure, a bundle id approved ahead of the others — Apple grants this
+per identifier and can land them days apart — or a build that ships, which
+opens an issue rather than merely going green. A manual dispatch always
+reports, because somebody is waiting on it.
+
+Swallowing a failure is the expensive mistake here, so every uncertain case is
+loud: a missing log, an empty log, an error naming a bundle id the project does
+not entitle, a rejection worded some third way. The four identifiers are read
+out of `project.yml` and the entitlement plists rather than listed in the
+script — and the plists are parsed rather than grepped, because the widget's
+entitlements *mention* `family-controls` in a comment saying it deliberately
+carries none, and a text search reads that as the opposite of what it says.
 
 **What is ready.** Certificate, private `match` store, all seven secrets, five
 profiles regenerating cleanly, App Group assigned, the widget signing and
