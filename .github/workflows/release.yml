@@ -42,6 +42,23 @@ on:
         required: false
         default: "Latest from the trunk."
 
+  # The Family Controls approval watch. Apple acknowledges nothing and issues
+  # no case id, so a signed build is the only reliable signal — and while the
+  # request is pending the run fails at signing in 46 seconds, before anything
+  # expensive compiles. The run that first sees the approval is therefore also
+  # the run that ships, with nobody watching at the moment it happens.
+  #
+  # This replaced a Claude Routine that fired every three days and reported
+  # success without dispatching anything: its sessions got no repository and
+  # no token, so its one job was the one thing it could not do. A schedule on
+  # a runner that already holds the secrets cannot fail that way.
+  #
+  # Delete this trigger once a build reaches TestFlight — past that point it
+  # would ship an unattended build every three days forever. GitHub also
+  # disables schedules after 60 days without repository activity.
+  schedule:
+    - cron: "0 15 */3 * *"
+
 permissions:
   contents: write   # match stores certificates on a branch of a repo
 
@@ -89,12 +106,21 @@ jobs:
           MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
           MATCH_GIT_BRANCH: ${{ vars.MATCH_GIT_BRANCH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_NOTES: ${{ inputs.notes }}
+          RELEASE_NOTES: ${{ inputs.notes || 'Latest from the trunk.' }}
           FASTLANE_SKIP_UPDATE_CHECK: "1"
+          # A scheduled run has no inputs at all, so this falls back to true —
+          # and it must stay true. match matches profiles on expiry and
+          # certificate rather than on capability set, so a run that reused one
+          # minted before the approval would report the old answer forever.
+          # A dispatch passing "false" keeps it: only an absent input is falsy
+          # here, and "false" is a non-empty string. Read through the
+          # environment rather than interpolated into the script, so an input
+          # is never shell.
+          FORCE_PROFILES: ${{ inputs.force_profiles || 'true' }}
         run: |
           python3 -m pip install --quiet pyyaml
-          bundle exec fastlane ios beta force_profiles:${{ inputs.force_profiles }} \
-            || fastlane ios beta force_profiles:${{ inputs.force_profiles }}
+          bundle exec fastlane ios beta force_profiles:"$FORCE_PROFILES" \
+            || fastlane ios beta force_profiles:"$FORCE_PROFILES"
 
       - name: Keep the build
         if: always()

@@ -14,8 +14,8 @@ re-run the check, it isn't ✅.**
 | Xcode wiring consistent | ✅ | 106 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
-| Approval check runs itself | ✅ | Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, every 3 days at 15:00 UTC: runs Release with `force_profiles: true` and reports whether the family-controls errors are gone. Push and email on. Delete it once approved | claude.ai → Routines |
-| Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-03 15:20.** Release run 33771919392 regenerated all five profiles (`force_profiles: true`, minted 15:20) and the fresh ones still lack `com.apple.developer.family-controls`: `Provisioning profile "match AppStore app.dad.Dad 1788448784" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration` and `.ShieldAction`. Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
+| Approval check runs itself | ❓ | `release.yml` now carries `schedule: 0 15 */3 * *`, so the runner that already holds the secrets does it. **No scheduled firing has been observed yet** — the workflow path itself is proven (run 34137630116, dispatched, 46s), the cron is not. This replaced Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, which fired 09-04 and 09-07, reported success both times, and dispatched nothing: its sessions had no repository and no token. It was ✅ here for four days on a mechanism that never ran once | Actions tab → Release to TestFlight → a run whose trigger reads `schedule` rather than `workflow_dispatch` |
+| Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-07 15:19.** Release run 34137630116 minted all five profiles fresh (`force_profiles: true`, 15:18:59–15:19:03) and the build rejected four of them sixteen seconds later: `Provisioning profile "match AppStore app.dad.Dad 1788794339" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration`, `.ShieldAction` and `.ActivityMonitor`. Unchanged from the same measurement on 09-03 (run 33771919392). Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
@@ -32,16 +32,17 @@ re-run the check, it isn't ✅.**
 
 ## The one thing between here and TestFlight
 
-Asked and settled on 2026-09-03. Everything in the table above is green except
-one row, and that row is not ours.
+Asked on 2026-09-03 and re-asked on 2026-09-07. Everything in the table above
+is green except one row, and that row is not ours.
 
-**Apple has not approved Family Controls (Distribution).** This is now measured
-rather than assumed. Release run 33771919392 at 15:20 regenerated every profile
-from scratch with `force_profiles: true` and the fresh ones still came back
-without `com.apple.developer.family-controls`, so the export failed on the app
-and two of the extensions. That is the signature of a pending request: `match`
+**Apple has not approved Family Controls (Distribution).** This is measured
+rather than assumed, twice. Release run 34137630116 minted every profile from
+scratch with `force_profiles: true` at 15:18:59–15:19:03 and the build rejected
+them at 15:19:19, still without `com.apple.developer.family-controls`, on the
+app and three extensions. That is the signature of a pending request: `match`
 asks Apple for a profile, Apple mints one carrying only the capabilities the
-App ID is authorized for, and the entitlement is simply absent.
+App ID is authorized for, and the entitlement is simply absent. Run
+33771919392 said the same on 09-03, so four days changed nothing.
 
 It also retires the doubt in the row above it. The App IDs list
 `FAMILY_CONTROLS` and have since 2026-09-03 — and the profiles minted twenty
@@ -49,9 +50,18 @@ minutes later still lacked the entitlement. So the capability listing and the
 approval are demonstrably different things, not just theoretically.
 
 Nothing in this repo can move it. The request went in 2026-09-02, Apple sends
-no acknowledgement, and the estimate remains a month rather than a week. The
-standing Routine re-runs this check every three days; the day it gets past
-export is the day the build ships, because everything else is ready.
+no acknowledgement, and the estimate remains a month rather than a week.
+`release.yml` re-runs this check on its own schedule every three days; the day
+it gets past export is the day the build ships, because everything else is
+ready.
+
+The watch used to be a Claude Routine and it did not work: it fired on 09-04
+and 09-07, reported success both times, and dispatched no run at all, because
+its sessions were given no repository and no token. Four days of "still
+waiting" were four days of nobody asking. A schedule on the runner that already
+holds the secrets cannot fail that way — and note which way this failed, since
+it is the one this repo keeps producing: not a broken check, a check that
+reported a verdict it had never earned.
 
 **What is ready.** Certificate, private `match` store, all seven secrets, five
 profiles regenerating cleanly, App Group assigned, the widget signing and

@@ -96,8 +96,14 @@ this project's actual state:
 That last row is not a line item, it is the schedule. `docs/PROVISIONING.md`
 records the request as submitted 2026-09-02 with **no case id, no
 acknowledgement and no status page** — the only way to learn it landed is to
-look at the App IDs, and a Routine polls that every three days. Budgeted at a
-month. It gates the app reaching a phone *at all*, because the profile that
+mint a fresh profile and see whether it carries the entitlement, which
+`release.yml` does on its own schedule every three days. Budgeted at a month.
+
+*(Corrected 2026-09-07. This said the App IDs were the place to look, polled by
+a Routine. Both halves were wrong: Apple's API reports one `FAMILY_CONTROLS`
+type and cannot distinguish the development variant from the approved
+distribution one, so the App ID listing reads the same either way — and the
+Routine never ran. Neither error changes the decision below.)* It gates the app reaching a phone *at all*, because the profile that
 carries the entitlement (Development) cannot be installed without a Mac and the
 one that can be installed over the air (Ad-hoc) comes back without it.
 

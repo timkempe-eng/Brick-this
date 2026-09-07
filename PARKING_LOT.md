@@ -32,14 +32,24 @@ left is calendar time and a browser.
 - [ ] **Family Controls (Distribution) approved.** Requested 2026-09-02. A
       manual Apple review, and the one real long pole — nothing in the existing
       account helps, since the other two apps have no Screen Time surface.
-      Apple sends no acknowledgement, so a Release run is the only signal; a
-      Routine runs one every three days and reports.
+      Apple sends no acknowledgement, so a Release run is the only signal.
 
-      **Measured, not assumed, as of 2026-09-03 15:20.** Release run
-      33771919392 regenerated all five profiles with `force_profiles: true`,
-      and the fresh ones still came back without
-      `com.apple.developer.family-controls`. This is now the only thing
-      between the repo and TestFlight.
+      **Measured, not assumed, as of 2026-09-07 15:19.** Release run
+      34137630116 minted all five profiles fresh at 15:18:59–15:19:03 with
+      `force_profiles: true`, and the build rejected four of them sixteen
+      seconds later: still no `com.apple.developer.family-controls`. This is
+      the only thing between the repo and TestFlight.
+
+      **The watch is `release.yml`'s own `schedule:`, every three days.** It
+      used to be a Claude Routine, which fired on 09-04 and 09-07, reported
+      success both times, and dispatched nothing — its sessions got no
+      repository and no token, so its one job was the one thing it could not
+      do, and the four days it covered were four days nobody was watching.
+      Reporting success for work it could not perform is why it is gone
+      rather than fixed. A pending run costs 46 seconds, because it fails at
+      signing before anything compiles; the run that first sees the approval
+      is the run that ships. Delete the trigger once a build reaches
+      TestFlight.
 
 - [ ] **First TestFlight build on the iPhone.** Runbook in
       [docs/PROVISIONING.md](docs/PROVISIONING.md) — browser steps from an iPad,
