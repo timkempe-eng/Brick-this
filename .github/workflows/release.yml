@@ -113,7 +113,11 @@ jobs:
           # certificate rather than on capability set, so a run that reused one
           # minted before the approval would report the old answer forever.
           # A dispatch passing "false" keeps it: only an absent input is falsy
-          # here, and "false" is a non-empty string. Read through the
+          # here, and "false" is a non-empty string. Measured rather than
+          # reasoned — run 34138328138 dispatched force_profiles:"false" and
+          # created zero profiles, reusing the five ids the run before it had
+          # minted. The expression can only return the input or 'true', and
+          # 'true' would have regenerated all five. Read through the
           # environment rather than interpolated into the script, so an input
           # is never shell.
           FORCE_PROFILES: ${{ inputs.force_profiles || 'true' }}
