@@ -102,15 +102,29 @@ def is_family_controls_rejection(text):
 
 
 def classify(log, build_status, event, expected):
-    """Returns (exit code, headline, detail lines)."""
+    """Returns (exit code, headline, detail lines).
+
+    The event decides the exit code, never the reading: a dispatch is always
+    loud, but it says what it found first. The first version returned
+    "reported whatever the cause" and stopped there, which meant the one
+    thing a hand-run check is *for* — asking whether anything has changed —
+    was the one thing it would not answer.
+    """
     if build_status == 0:
         return QUIET, "The build succeeded.", []
 
-    if event != "schedule":
-        return NEWS, f"Release failed (status {build_status}).", [
-            "Dispatched by hand, so this is reported whatever the cause."
+    code, headline, detail = diagnose(log, build_status, expected)
+    if code == QUIET and event != "schedule":
+        return NEWS, headline, detail + [
+            "",
+            "Dispatched by hand, so this is reported even though nothing "
+            "has changed.",
         ]
+    return code, headline, detail
 
+
+def diagnose(log, build_status, expected):
+    """What the log says, with no view about who asked."""
     errors = error_lines(log)
     if not errors:
         return NEWS, f"Release failed (status {build_status}) with no error line.", [
@@ -235,43 +249,63 @@ def self_test():
         keep = [l for l in PENDING.splitlines() if bundle_id + " " not in l]
         return "\n".join(keep)
 
+    # fastlane exits 1 when a lane fails; xcodebuild's 65 appears only inside
+    # fastlane's message, so 1 is what the workflow actually captures — run
+    # 34355063276 reported "status 1". Any non-zero is a failure to this
+    # script, and one case keeps 65 so that stays true.
     cases = [
-        # (name, log, status, event, expected code, a phrase the output must carry)
+        # (name, log, status, event, expected code, phrase(s) the output carries)
         ("pending, scheduled, is quiet",
+         PENDING, 1, "schedule", QUIET, "Nothing has changed"),
+        ("pending, dispatched by hand, is loud but still diagnoses",
+         PENDING, 1, "workflow_dispatch", NEWS,
+         ("Nothing has changed", "Dispatched by hand")),
+        ("a non-zero status other than fastlane's is still a failure",
          PENDING, 65, "schedule", QUIET, "Nothing has changed"),
-        ("pending, dispatched by hand, is loud",
-         PENDING, 65, "workflow_dispatch", NEWS, "Dispatched by hand"),
         ("a green build is quiet",
          "", 0, "schedule", QUIET, "succeeded"),
         ("a green build dispatched by hand is quiet",
          "", 0, "workflow_dispatch", QUIET, "succeeded"),
         ("one identifier approved is news",
-         without("app.dad.Dad.ActivityMonitor"), 65, "schedule", NEWS,
+         without("app.dad.Dad.ActivityMonitor"), 1, "schedule", NEWS,
          "app.dad.Dad.ActivityMonitor"),
+        # The "!" phrase must be absent. Appending "nothing has changed" to a
+        # partial approval would be a false sentence in the one report that
+        # matters most, so the note is owed only to a reading that was quiet.
+        ("a partial approval reaches a hand dispatch too",
+         without("app.dad.Dad.ActivityMonitor"), 1, "workflow_dispatch", NEWS,
+         ("approved — partly", "!even though nothing")),
         ("an unrelated error alongside the rejections is news",
-         PENDING + COMPILE_ERROR, 65, "schedule", NEWS, "cannot find 'Clock'"),
+         PENDING + COMPILE_ERROR, 1, "schedule", NEWS, "cannot find 'Clock'"),
         ("an unrelated error alone is news",
-         COMPILE_ERROR, 65, "schedule", NEWS, "cannot find 'Clock'"),
+         COMPILE_ERROR, 1, "schedule", NEWS, "cannot find 'Clock'"),
         ("a failure with no log is news",
-         "", 65, "schedule", NEWS, "no error line"),
+         "", 1, "schedule", NEWS, "no error line"),
         ("a rejection naming an unentitled bundle id is news",
          PENDING.replace("app.dad.Dad.ActivityMonitor", "app.dad.Dad.Widget"),
-         65, "schedule", NEWS, "does not entitle"),
+         1, "schedule", NEWS, "does not entitle"),
         ("an entitlement error that is not a rejection is news",
-         OTHER_FAMILY_CONTROLS_ERROR, 65, "schedule", NEWS, "disallowed"),
+         OTHER_FAMILY_CONTROLS_ERROR, 1, "schedule", NEWS, "disallowed"),
         ("a colour escape inside a bundle id does not fake an approval",
-         PENDING_COLOURED_MIDLINE, 65, "schedule", QUIET, "Nothing has changed"),
+         PENDING_COLOURED_MIDLINE, 1, "schedule", QUIET, "Nothing has changed"),
     ]
 
     failures = 0
     for name, log, status, event, want_code, want_text in cases:
+        wanted = (want_text,) if isinstance(want_text, str) else want_text
         code, headline, detail = classify(log, status, event, FOUR)
         printed = "\n".join([headline] + detail)
+        missing = [
+            w for w in wanted
+            if (w[1:] in printed) if w.startswith("!")
+        ] + [
+            w for w in wanted if not w.startswith("!") and w not in printed
+        ]
         if code != want_code:
             print(f"FAIL {name}: exit {code}, wanted {want_code}")
             failures += 1
-        elif want_text not in printed:
-            print(f"FAIL {name}: {want_text!r} missing from {printed!r}")
+        elif missing:
+            print(f"FAIL {name}: {missing!r} missing from {printed!r}")
             failures += 1
         else:
             print(f"ok   {name}")

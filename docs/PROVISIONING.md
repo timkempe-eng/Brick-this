@@ -15,8 +15,8 @@ re-run the check, it isn't ✅.**
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ❓ | `release.yml` now carries `schedule: 0 15 */3 * *`, so the runner that already holds the secrets does it. **No scheduled firing has been observed yet** — the workflow path itself is proven (run 34137630116, dispatched, 46s), the cron is not. This replaced Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, which fired 09-04 and 09-07, reported success both times, and dispatched nothing: its sessions had no repository and no token. It was ✅ here for four days on a mechanism that never ran once | Actions tab → Release to TestFlight → a run whose trigger reads `schedule` rather than `workflow_dispatch` |
-| A scheduled firing only speaks up with news | ❓ | `scripts/classify_signing_failure.py` reads the run's log and passes the job only when the failure is exactly the known pending state — every error a Family Controls rejection, all four entitled bundle ids still rejected. An unrelated failure, a partial approval, or a build that ships is loud. **Proven on fixtures, not yet on a real scheduled run**: 12 self-tests, and the four shell paths rehearsed against a stubbed fastlane (pending+schedule green, pending+dispatch red, unrelated failure red, success green). What it cannot prove without Apple is the shape it has never seen — a rejection worded a third way would read as unrelated and be loud, which is the safe direction | `python3 scripts/classify_signing_failure.py --self-test`; it also runs in the Test workflow |
-| Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-07 15:19.** Release run 34137630116 minted all five profiles fresh (`force_profiles: true`, 15:18:59–15:19:03) and the build rejected four of them sixteen seconds later: `Provisioning profile "match AppStore app.dad.Dad 1788794339" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration`, `.ShieldAction` and `.ActivityMonitor`. Unchanged from the same measurement on 09-03 (run 33771919392). Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
+| A scheduled firing only speaks up with news | ❓ | `scripts/classify_signing_failure.py` reads the run's log and passes the job only when the failure is exactly the known pending state — every error a Family Controls rejection, all four entitled bundle ids still rejected. An unrelated failure, a partial approval, or a build that ships is loud. **Proven on fixtures and on two real logs, not yet on a real scheduled run**: 14 self-tests, and the four shell paths rehearsed against a stubbed fastlane (pending+schedule green, pending+dispatch red, unrelated failure red, success green). What it cannot prove without Apple is the shape it has never seen — a rejection worded a third way would read as unrelated and be loud, which is the safe direction | `python3 scripts/classify_signing_failure.py --self-test`; it also runs in the Test workflow. Read run 34355063276's real log correctly as both a schedule (quiet) and a dispatch (loud) |
+| Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-09 13:08.** Release run 34355063276 minted four fresh profiles (`1788959256`, `257`, `259`, `260` — new ids, so `force_profiles: true` did regenerate) and the build rejected all four seconds later, on both wordings. Seven days after the request, unchanged. Previously: **not approved as of 2026-09-07 15:19.** Release run 34137630116 minted all five profiles fresh (`force_profiles: true`, 15:18:59–15:19:03) and the build rejected four of them sixteen seconds later: `Provisioning profile "match AppStore app.dad.Dad 1788794339" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration`, `.ShieldAction` and `.ActivityMonitor`. Unchanged from the same measurement on 09-03 (run 33771919392). Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
@@ -33,17 +33,19 @@ re-run the check, it isn't ✅.**
 
 ## The one thing between here and TestFlight
 
-Asked on 2026-09-03 and re-asked on 2026-09-07. Everything in the table above
+Asked on 2026-09-03 and re-asked on 09-07 and 09-09. Everything in the table above
 is green except one row, and that row is not ours.
 
 **Apple has not approved Family Controls (Distribution).** This is measured
-rather than assumed, twice. Release run 34137630116 minted every profile from
+rather than assumed, three times. Run 34355063276 on 09-09 minted four fresh
+profiles and had all four rejected seconds later, seven days after the request.
+Before it, release run 34137630116 minted every profile from
 scratch with `force_profiles: true` at 15:18:59–15:19:03 and the build rejected
 them at 15:19:19, still without `com.apple.developer.family-controls`, on the
 app and three extensions. That is the signature of a pending request: `match`
 asks Apple for a profile, Apple mints one carrying only the capabilities the
 App ID is authorized for, and the entitlement is simply absent. Run
-33771919392 said the same on 09-03, so four days changed nothing.
+33771919392 said the same on 09-03, so a week has changed nothing.
 
 It also retires the doubt in the row above it. The App IDs list
 `FAMILY_CONTROLS` and have since 2026-09-03 — and the profiles minted twenty

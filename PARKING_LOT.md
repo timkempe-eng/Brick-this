@@ -34,10 +34,11 @@ left is calendar time and a browser.
       account helps, since the other two apps have no Screen Time surface.
       Apple sends no acknowledgement, so a Release run is the only signal.
 
-      **Measured, not assumed, as of 2026-09-07 15:19.** Release run
-      34137630116 minted all five profiles fresh at 15:18:59–15:19:03 with
-      `force_profiles: true`, and the build rejected four of them sixteen
-      seconds later: still no `com.apple.developer.family-controls`. This is
+      **Measured, not assumed, as of 2026-09-09 13:08.** Release run
+      34355063276 minted four fresh profiles with `force_profiles: true` and
+      the build rejected all four seconds later: still no
+      `com.apple.developer.family-controls`. Run 34137630116 said the same on
+      09-07 and 33771919392 on 09-03, so a week has changed nothing. This is
       the only thing between the repo and TestFlight.
 
       **The watch is `release.yml`'s own `schedule:`, every three days.** It
