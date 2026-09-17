@@ -159,6 +159,20 @@ final class DadModel: ObservableObject {
         return now.timeIntervalSince(session.startedAt).dadDurationText
     }
 
+    /// What a phone running in Assistive Access shows.
+    ///
+    /// The decision lives in Core; this is the one place the running session,
+    /// the permission and what is left of the allowance are read together, so
+    /// the scene above cannot assemble a different answer from the same state.
+    var assistiveAccessScreen: AssistiveAccessScreen {
+        AssistiveAccessScreen.make(session: activeSession,
+                                   mode: activeMode,
+                                   pendingResume: pendingResume,
+                                   mayOverride: may(.spendEmergencyOverride),
+                                   emergencyOverridesRemaining: emergencyUnDadsRemaining,
+                                   now: now)
+    }
+
     var emergencyUnDadsRemaining: Int { engine.emergencyUnDadsRemaining }
 
     /// How many this phone gets — the ladder widens it at the top two rungs,

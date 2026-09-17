@@ -80,9 +80,9 @@ missing is a session whose hook did not run, not a reason to push untested.
 ## Before you push
 
 ```bash
-swift test                      # 834 tests, seconds
+swift test                      # 849 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 106 checks on the Xcode wiring
+python3 scripts/preflight.py    # 107 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group

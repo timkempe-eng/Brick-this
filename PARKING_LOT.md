@@ -12,10 +12,11 @@ Where the rest went:
 
 - **What is built and what isn't** — [docs/roadmap.md](docs/roadmap.md),
   including the honest limitations.
-- **What was decided and why** — the ADRs in [docs/adr/](docs/adr/). Six
-  declines with the triggers that would reopen them, plus
+- **What was decided and why** — the ADRs in [docs/adr/](docs/adr/), each with
+  the trigger that would reopen it, plus
   [ADR 007](docs/adr/007-what-the-research-says-not-to-build.md) for the things
-  the market ships that this product will not.
+  the market ships that this product will not. Counted here once and went stale
+  the next time one was written, so it no longer carries a number.
 - **What the work taught** — `CLAUDE.md`, under Testing posture. Every lesson
   that has cost this repo more than once is written down there.
 - **Apple's state** — [docs/PROVISIONING.md](docs/PROVISIONING.md), where every
@@ -27,7 +28,7 @@ Where the rest went:
 ## Blocked on Apple, or on a phone
 
 Nothing here is code. The whole ranked feature backlog is finished; what is
-left is calendar time and a browser.
+left is calendar time, a browser and a phone.
 
 - [ ] **Family Controls (Distribution) approved.** Requested 2026-09-02. A
       manual Apple review, and the one real long pole — nothing in the existing
@@ -91,6 +92,28 @@ left is calendar time and a browser.
       people who both want it to hold, rather than one that holds when a
       teenager would rather it didn't. That distinction is the difference
       between the product and a co-operative version of it.
+
+- [ ] **See Dad on a phone in Assistive Access.** The scene and its copy are
+      built and covered by `swift test`; two things about them can only be
+      settled on a device that is actually running the mode, with Dad among the
+      apps a trusted supporter chose.
+
+      **That the streamlined scene is what appears** — that iOS picks the
+      `AssistiveAccess` scene over `WindowGroup`, and that the app is listed as
+      *Optimized for Assistive Access* in Settings. Needs iOS 26; below that the
+      scene type does not exist and the standard UI renders in the reduced
+      frame instead, which is the behaviour to expect on an older phone.
+
+      **That the shields still hold inside the mode.** Apple's settings guide
+      says Screen Time schedules and limits can be set while Assistive Access is
+      active, which is good evidence and is not the same as watching a shielded
+      app refuse to open. If it turns out they do not, the screen is still
+      honest — it reports the stored session, which is what the shield is
+      reconciled against — but the product would have a hole in it worth
+      saying out loud.
+
+      [ADR 008](docs/adr/008-assistive-access.md) has the API surface and why
+      the tap cannot switch the mode itself.
 
 ## Deliberately deferred
 

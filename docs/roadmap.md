@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 834 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 849 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -62,6 +62,12 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   An adult Dadding their own phone is told nothing about the past.
 - **A puck to put the tag in** — [hardware/](../hardware/), two printed parts,
   about a dollar, rendered by CI rather than committed.
+- **Assistive Access** — a phone run in Apple's simplified mode gets a
+  purpose-built screen instead of the full app squeezed into a smaller frame:
+  one sentence, the Mode, and at most one button. The decision of what it says
+  is `AssistiveAccessScreen` in Core, so `swift test` covers the copy and the
+  permission check on its one button; the scene above it is layout. iOS 26 and
+  later, where the scene type exists.
 
 ## Not built
 
@@ -77,6 +83,13 @@ Apple's blessed route and needs the device signed into a child iCloud account
 inside an iCloud Family. Everything above works today as an agreement between
 two people who both want it to; this is what makes it hold when one of them
 doesn't.
+
+**Switching an Assistive Access profile on a tap — not declined, impossible.**
+The whole third-party API surface for that mode is five symbols and every one
+of them reads or draws; nothing enters, leaves or configures it, and entering
+needs its own passcode by design. Dad runs inside the mode instead.
+[ADR 008](adr/008-assistive-access.md) has the surface, the evidence and the
+re-runnable check.
 
 **Remote granting.** `GrantRequest` defines a `PINHashing` port and nothing
 implements it: the first shape of granting is in-person, because the parent

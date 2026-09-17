@@ -47,6 +47,15 @@ enum Vocab {
         "\(mode) · tap your \(tagNoun) again to \(unVerb)."
     }
 
+    // MARK: Assistive Access copy
+    //
+    // A phone in Assistive Access is a phone reduced to large buttons and
+    // plain sentences, so the release hint is said without the "·" and without
+    // the verb's release form: "Un-Dad" is the product's word, and the whole
+    // point of the mode is that it does not make you learn one.
+
+    static let assistiveAccessTagHint = "Tap your \(tagNoun) to get your apps back."
+
     // MARK: Household copy
     //
     // A refusal has to name what was refused and who can undo it. "Not

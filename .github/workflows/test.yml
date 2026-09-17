@@ -64,6 +64,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned, not inherited — and pinned to the same thing release.yml pins.
+      # The macos-15 image defaults to Xcode 16.4, whose newest iOS SDK is
+      # 18.5, while release.yml has always selected latest-stable. So the build
+      # that ships and the build that checks it were compiling against
+      # different SDKs, which is only harmless until the app uses something the
+      # older one has never heard of. The Assistive Access scene is iOS 26 and
+      # is exactly that: under the image default this job would fail on a
+      # symbol the shipping build compiles fine.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Show Xcode version
         run: xcodebuild -version
 

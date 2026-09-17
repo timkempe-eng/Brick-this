@@ -31,6 +31,17 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 
+	<!-- Dad ships a streamlined scene for Assistive Access, so it declares
+	     itself Optimized for Assistive Access — that label is what a trusted
+	     supporter sees when they choose which apps a phone in that mode gets.
+	     The key is iOS 26, which is also where the scene type starts, so the
+	     claim and the thing it claims arrive together. This is not
+	     UISupportsFullScreenInAssistiveAccess: that one expands the *standard*
+	     UI into the same space, and this app has a purpose-built screen
+	     instead. -->
+	<key>UISupportsAssistiveAccess</key>
+	<true/>
+
 	<!-- Shown in the system NFC scan sheet. -->
 	<key>NFCReaderUsageDescription</key>
 	<string>Dad reads your tag to hide and unhide your apps.</string>
