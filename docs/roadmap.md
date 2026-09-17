@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 857 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 862 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -65,7 +65,9 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 - **The triple-click prompt** — a Mode can ask for Assistive Access, and one
   notice after the tap says to triple-click for it. Dad cannot switch the mode
   on and says so in the copy; what it can do is ask at the moment the phone is
-  in your hand. Off by default, per Mode. The way back out is the same two
+  in your hand. Entry is passcode-gated — measured, not assumed — so the prompt
+  names the passcode, and a young person's phone is told to ask a grown-up
+  rather than told to press a button it cannot finish. Off by default, per Mode. The way back out is the same two
   steps in reverse and is spelled out wherever somebody might be stuck.
 - **Assistive Access** — a phone run in Apple's simplified mode gets a
   purpose-built screen instead of the full app squeezed into a smaller frame:

@@ -232,7 +232,7 @@ struct DadEngine {
         // support. Silent on a Mode that does not ask, and silent from the
         // DeviceActivity extension whatever the Mode asks, because that
         // process holds a `SilentNotifier` by construction.
-        if let notice = AssistiveAccessPairing.noticeOnDad(mode: mode) {
+        if let notice = AssistiveAccessPairing.noticeOnDad(mode: mode, role: store.household.role) {
             notifier.post(notice)
         }
 

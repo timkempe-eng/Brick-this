@@ -160,6 +160,36 @@ must have it. A friction that can strand somebody is not a friction, and the
 tag being in another room is exactly the case this feature makes worse if the
 order is left to be guessed.
 
+### Measured 2026-09-17: entry is gated, so the prompt names the passcode
+
+The open question was whether the triple-click asks for the passcode on the way
+*in* or only on the way *out*. It asks on the way in. Apple's setup page says
+the Assistive Access passcode "is used to enter or exit Assistive Access and
+change Assistive Access settings", and on a phone that already had a Screen
+Time passcode, that is the code the triple-click asked for.
+
+That settles what this feature is, and it is the less exciting of the two
+possible answers. It is **not** a boundary a young person can put themselves
+behind and be unable to leave. It is a commitment an adult makes on their own
+phone, or a step a household takes together with the grown-up typing the code.
+
+Two things follow, and both are shipped:
+
+- **The prompt names the passcode.** "Triple-click … It asks for your Screen
+  Time passcode." A prompt that sends somebody to a code they were not
+  expecting is one they conclude is broken.
+- **A young person's phone gets a different sentence entirely**: *"Assistive
+  Access needs a grown-up's passcode. Hand them the phone and triple-click
+  together."* This is the same failure `Vocab.refusal(_:)` exists to prevent —
+  an instruction a phone cannot carry out, given with no subject. The role
+  comes from the household, and a seam test covers the engine actually reading
+  it, because hardcoding `.grownUp` there passed the entire suite until one was
+  written.
+
+It also means the Screen Time passcode now gates two independent things on the
+same phone — Dad's own Family Controls authorization and this — which is
+convenient and worth saying out loud rather than discovering.
+
 ## Consequences
 
 The tag cannot change what Assistive Access shows, and no future version of

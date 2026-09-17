@@ -31,11 +31,17 @@ enum AssistiveAccessPairing {
     /// if it wanted to. A scheduled Mode that asks for Assistive Access
     /// therefore starts without saying so; `docs/roadmap.md` records that as a
     /// limitation rather than this pretending otherwise.
-    static func noticeOnDad(mode: DadMode) -> ImmediateNotice? {
+    /// - Parameter role: whose phone this is. Entering Assistive Access asks
+    ///   for its passcode — Apple's setup page says the code "is used to enter
+    ///   or exit", and on a phone with a Screen Time passcode already set it is
+    ///   that one. A young person's phone therefore cannot complete this alone,
+    ///   so it is told what it needs rather than told to press a button that
+    ///   will stop and ask for something it does not have.
+    static func noticeOnDad(mode: DadMode, role: HouseholdRole) -> ImmediateNotice? {
         guard mode.asksForAssistiveAccess else { return nil }
         return ImmediateNotice(id: noticeID,
                                title: Vocab.assistiveAccessPromptTitle(mode: mode.name),
-                               body: Vocab.assistiveAccessPromptBody)
+                               body: Vocab.assistiveAccessPromptBody(role: role))
     }
 
     /// One id for this kind of notice, so a second tap replaces the first

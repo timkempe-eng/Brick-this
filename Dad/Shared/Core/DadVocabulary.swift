@@ -64,8 +64,28 @@ enum Vocab {
     /// "Side button (or Home)" rather than either alone: which one it is
     /// depends on the iPhone, Dad cannot tell from here, and a prompt naming
     /// the button somebody does not have is a prompt they conclude is broken.
-    static let assistiveAccessPromptBody =
-        "Triple-click the side button (or Home) for Assistive Access."
+    ///
+    /// It names the passcode because Apple's own wording is that the Assistive
+    /// Access passcode "is used to enter or exit" — measured on a phone on
+    /// 2026-09-17, where the triple-click asked for the Screen Time passcode
+    /// that was already set. So this is a prompt to do something that will ask
+    /// for a code, and a prompt that omits that is one somebody follows into a
+    /// dead end.
+    static func assistiveAccessPromptBody(role: HouseholdRole) -> String {
+        switch role {
+        case .grownUp:
+            return "Triple-click the side button (or Home) for Assistive Access. "
+                + "It asks for your Screen Time passcode."
+        case .youngPerson:
+            // The same failure `refusal(_:)` exists to prevent: an instruction
+            // this phone cannot carry out alone, given with no subject. A young
+            // person who triple-clicks, meets a passcode they do not have and is
+            // told nothing concludes the app is broken — and an app they think
+            // is broken is one they route around.
+            return "Assistive Access needs a grown-up's passcode. "
+                + "Hand them the phone and triple-click the side button (or Home) together."
+        }
+    }
 
     /// Shown inside Assistive Access, where the tag alone may not be enough.
     /// Names the order, because the half that has to happen first is the one

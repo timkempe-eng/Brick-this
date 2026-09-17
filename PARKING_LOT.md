@@ -115,24 +115,14 @@ left is calendar time, a browser and a phone.
       [ADR 008](docs/adr/008-assistive-access.md) has the API surface and why
       the tap cannot switch the mode itself.
 
-- [ ] **Two facts about Assistive Access that decide how good the pairing is.**
-      Both are minutes of work on a phone and neither can be settled from here.
-      The prompt ships either way; what changes is what it is worth.
-
-      **Does entering by triple-click ask for the passcode?** Apple states the
-      requirement for the Settings route and says nothing about the shortcut
-      route. If entry is free and only exit is gated, this is a genuinely
-      harder boundary than the shield — a young person can put themselves in
-      on one prompt and cannot leave without the grown-up. If entry is gated
-      too, it is a self-imposed commitment like every other friction here,
-      which is still worth having and is a different claim. **Do not describe
-      the feature as the former until this is measured.**
-
-      **Does a Shortcuts NFC automation fire while Assistive Access is on?**
+- [ ] **Does a Shortcuts NFC automation fire while Assistive Access is on?**
       If it does, the tag keeps working inside the mode and the release is one
       tap. If it does not, the release is triple-click-then-tap, which is what
-      every piece of copy currently says — chosen because it is the one order
+      every piece of copy already says — chosen because it is the one order
       that works under both answers.
+
+      The other half of this question is answered and gone: entry is
+      passcode-gated, measured 2026-09-17.
 
 ## Deliberately deferred
 
