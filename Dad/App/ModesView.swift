@@ -178,8 +178,10 @@ struct ModeEditorView: View {
                         }
                     }
                     Toggle("Strict", isOn: $mode.isStrict)
+                    Toggle("Ask for Assistive Access", isOn: $mode.asksForAssistiveAccess)
                 } footer: {
                     Text("Strict stops Dad being deleted while your phone is \(Vocab.verbPast) — the fastest way to cheat.")
+                    Text("Assistive Access strips the phone back to a few large buttons. Dad can't switch it on — nothing can — so this asks you to triple-click when the Mode starts. Set it up in Settings › Accessibility first.")
                 }
             }
             .navigationTitle(mode.name)

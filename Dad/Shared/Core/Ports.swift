@@ -126,6 +126,28 @@ protocol Notifying {
     /// that was skipped, which is the specific lie this feature exists to
     /// avoid making.
     func setPendingWarning(_ warning: PendingWarning?)
+
+    /// Says one thing now, about something that just happened.
+    ///
+    /// Deliberately not `setPendingWarning` with a `fireAt` of now. That one
+    /// owns a single slot and clears the rest of its own kind, because a
+    /// warning about a window that moved must not survive the move — and a
+    /// notice about a tap that already happened has no such lifetime. Sharing
+    /// the slot would mean the tap silently cancelled tonight's warning.
+    func post(_ notice: ImmediateNotice)
+}
+
+/// One notification about something that has just happened, described where it
+/// can be tested. Same reasoning as `PendingWarning`: copy assembled inside a
+/// framework callback is copy `lint-vocabulary.sh` never reads.
+struct ImmediateNotice: Equatable {
+
+    /// Stable per kind, so posting the same thing twice replaces rather than
+    /// stacks — two taps at the same tag should not leave two banners.
+    let id: String
+
+    let title: String
+    let body: String
 }
 
 /// One notification, described where it can be tested.
@@ -292,4 +314,5 @@ protocol DadPersisting: AnyObject {
 /// that never arrives.
 struct SilentNotifier: Notifying {
     func setPendingWarning(_ warning: PendingWarning?) {}
+    func post(_ notice: ImmediateNotice) {}
 }

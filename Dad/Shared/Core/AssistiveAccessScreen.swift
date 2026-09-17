@@ -95,12 +95,19 @@ enum AssistiveAccessScreen: Equatable {
     }
 
     /// The one line under it, and the only place the Mode is named.
+    ///
+    /// The Dadded line names the triple-click as well as the tag, and does so
+    /// unconditionally rather than only for a Mode that asked to be paired
+    /// with Assistive Access. This screen renders only while Assistive Access
+    /// is on — that is what the scene is for — so whoever is reading it is
+    /// already inside, and getting out needs the passcode whether or not the
+    /// Mode had an opinion about getting in.
     var detail: String {
         switch self {
         case .dadded(let modeName, let rationing, _):
             return rationing
                 ? "\(modeName). Your apps are still here for now."
-                : "\(modeName). \(Vocab.assistiveAccessTagHint)"
+                : "\(modeName). \(Vocab.assistiveAccessExitHint)"
         case .onBreak(let modeName, let until):
             return "\(Vocab.breakRunning(mode: modeName, until: until)) \(Vocab.breakTapHint)"
         case .free:

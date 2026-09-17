@@ -87,8 +87,11 @@ does not get re-litigated:
   passcode by design, because it is built so the person using the phone cannot
   simply walk back out. Dad runs *inside* it instead: a phone already in
   Assistive Access gets one sentence, one line and at most one button.
-  [ADR 008](docs/adr/008-assistive-access.md). What people usually mean by a
-  profile is an allowlist Mode, which arrives on a tag tap and leaves on one.
+  [ADR 008](docs/adr/008-assistive-access.md). What Dad does instead is ask: a
+  Mode can prompt you to triple-click when it starts, and Dad renders inside
+  the mode so the tag is still reachable once you are there. What people
+  usually mean by a profile is an allowlist Mode, which arrives on a tag tap
+  and leaves on one.
 
 ## Where this actually is
 
@@ -172,9 +175,9 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test                      # 849 tests, seconds, no Mac
+swift test                      # 857 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
-python3 scripts/preflight.py    # 107 checks on the Xcode wiring
+python3 scripts/preflight.py    # 108 checks on the Xcode wiring
 ```
 
 CI runs all three on Linux, plus a fourth job on a macOS runner that actually
@@ -290,7 +293,7 @@ A Live Activity and Android are both **declined with reasons written down**
 rather than pending — [ADR 002](docs/adr/002-no-live-activity.md) and
 [ADR 004](docs/adr/004-android.md). [What is and isn't built](docs/roadmap.md).
 
-`swift test` passes — 849 tests covering the whole engine state machine,
+`swift test` passes — 857 tests covering the whole engine state machine,
 recurring schedules, allowances across a day boundary, breaks, the override
 allowance, and the session/streak maths. The suite is mutation-checked with
 `scripts/mutate.sh`: deliberately breaking the tag guard, the rationing branch,

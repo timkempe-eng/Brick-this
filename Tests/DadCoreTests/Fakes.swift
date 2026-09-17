@@ -152,9 +152,20 @@ final class SpyNotifier: Notifying {
     private(set) var pending: PendingWarning?
     private(set) var calls = 0
 
+    /// Every notice posted, in order. A log rather than a single value, and
+    /// deliberately unlike `pending` above: the port promises the system holds
+    /// one pending warning, and promises nothing of the kind about notices —
+    /// so a test that wants to know a tap posted exactly one has to be able to
+    /// see two.
+    private(set) var notices: [ImmediateNotice] = []
+
     func setPendingWarning(_ warning: PendingWarning?) {
         pending = warning
         calls += 1
+    }
+
+    func post(_ notice: ImmediateNotice) {
+        notices.append(notice)
     }
 }
 

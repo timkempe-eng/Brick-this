@@ -159,9 +159,23 @@ final class AssistiveAccessScreenTests: XCTestCase {
     }
 
     func testTheReleaseHintKeepsTheVerbCapitalised() {
-        // Hard rule 4, in the one sentence this screen adds to the vocabulary.
-        XCTAssertTrue(Vocab.assistiveAccessTagHint.contains("Dad tag"))
-        XCTAssertFalse(Vocab.assistiveAccessTagHint.lowercased() == Vocab.assistiveAccessTagHint)
+        // Hard rule 4, in the sentences this screen adds to the vocabulary.
+        XCTAssertTrue(Vocab.assistiveAccessExitHint.contains("Dad tag"))
+        XCTAssertFalse(Vocab.assistiveAccessExitHint.lowercased() == Vocab.assistiveAccessExitHint)
+    }
+
+    func testTheDaddedLineNamesTheTripleClickBeforeTheTag() {
+        // The order is the whole content of the sentence: leaving Assistive
+        // Access needs its passcode, and no amount of tapping substitutes.
+        // Somebody who reads it the other way round taps a tag that may not
+        // reach anything and concludes the tag is broken.
+        let detail = AssistiveAccessScreen.make(session: session(), now: now).detail
+
+        let click = try? XCTUnwrap(detail.range(of: "Triple-click"))
+        let tag = try? XCTUnwrap(detail.range(of: Vocab.tagNoun))
+        XCTAssertNotNil(click)
+        XCTAssertNotNil(tag)
+        if let click, let tag { XCTAssertTrue(click.lowerBound < tag.lowerBound, detail) }
     }
 }
 

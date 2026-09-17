@@ -100,6 +100,37 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Text("""
+                         Dad can't switch Assistive Access on. No app can, and going in \
+                         or out needs its own passcode — so Dad asks, and you \
+                         triple-click. Set up once:
+                         """)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                    Label("Settings › Accessibility › Assistive Access. Set it up, and include Dad in the apps you choose.",
+                          systemImage: "1.circle")
+                        .font(.footnote)
+                    Label("Settings › Accessibility › Accessibility Shortcut. Tick Assistive Access, so a triple-click gets you in and out.",
+                          systemImage: "2.circle")
+                        .font(.footnote)
+                    Label("Turn on “Ask for Assistive Access” on the \(Vocab.modeNoun.lowercased())s that want it.",
+                          systemImage: "3.circle")
+                        .font(.footnote)
+                } header: {
+                    Text("Assistive Access")
+                } footer: {
+                    // The one thing that can strand somebody, said where they
+                    // are deciding whether to do this rather than after.
+                    Text("""
+                         Coming back is the same two steps in reverse: triple-click to \
+                         leave Assistive Access, then tap your \(Vocab.tagNoun). Getting \
+                         out needs the Assistive Access passcode and Dad cannot ask for \
+                         it — so make sure whoever will need it has it.
+                         """)
+                }
+
+                Section {
                     TextField("https://dad.example.com/tap", text: $linkToWrite)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()

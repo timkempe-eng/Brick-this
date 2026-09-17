@@ -96,6 +96,43 @@ one is the one this app actually ships. Below iOS 26 neither the key nor the
 scene exists, and Dad renders its standard UI in the reduced frame the system
 gives it, exactly as it does today.
 
+## Amendment, 2026-09-17: pair the tap with the triple-click
+
+The first version of this decision stopped at "Dad runs inside it". That leaves
+the thing people actually want — a phone that visibly becomes simpler when you
+tap the tag — entirely to the user's memory. Dad cannot perform the second half
+of the gesture, but it can ask for it at the only moment the person is
+certainly holding the phone: the second after they tapped.
+
+So a Mode may ask. `DadMode.wantsAssistiveAccess` is off by default and per
+Mode, because taking the whole interface down to a few buttons is right for
+Sleep and absurd for Gym. When such a Mode starts, the engine posts one notice
+through the `Notifying` port: *"Sleep is on. Triple-click the side button (or
+Home) for Assistive Access."*
+
+Three things this deliberately does not do:
+
+- **It does not claim to switch anything.** The prompt is an instruction to a
+  person, and the copy says so.
+- **It does not share the warning's slot.** `Notifying` gained `post` beside
+  `setPendingWarning` rather than reusing it, because that slot is
+  single-occupancy and self-clearing by design — a tap would otherwise have
+  silently cancelled tonight's ten minutes' notice.
+- **It does not prompt from the DeviceActivity extension.** That process holds
+  a `SilentNotifier` and cannot ask for notification permission, so a
+  *scheduled* Mode that asks for Assistive Access starts without saying so.
+  Recorded as a limitation in `docs/roadmap.md` rather than papered over.
+
+**The way out is the asymmetry that matters.** Leaving Assistive Access needs
+its passcode, which Dad neither knows nor can ask for; and whether a Shortcuts
+NFC automation even fires inside the mode is unknown from here. So the release
+is the same two steps in reverse — triple-click out, then tap — and that order
+is spelled out in three places: the Assistive Access screen itself, the Settings
+setup notes, and the warning beside them that whoever will need the passcode
+must have it. A friction that can strand somebody is not a friction, and the
+tag being in another room is exactly the case this feature makes worse if the
+order is left to be guessed.
+
 ## Consequences
 
 The tag cannot change what Assistive Access shows, and no future version of

@@ -58,6 +58,25 @@ struct DadMode: Codable, Identifiable, Hashable {
     /// `schedule` — Modes stored before allowances existed must still decode.
     var allowance: ModeAllowance?
 
+    /// Whether starting this Mode also asks for Assistive Access.
+    ///
+    /// Optional for the reason `allowed`, `schedule` and `allowance` are: a
+    /// non-optional field added here fails the synthesised decoder on every
+    /// Mode stored before this build, and `LenientDecoding` then skips those
+    /// records — which is not a migration, it is deleting somebody's Modes.
+    ///
+    /// Off by default, and per Mode rather than per phone. Taking the whole
+    /// interface down to a few buttons is right for Sleep and absurd for Gym,
+    /// and a setting that is wrong half the time is one people turn off
+    /// entirely.
+    var wantsAssistiveAccess: Bool?
+
+    /// Whether to ask for the triple-click when this Mode starts.
+    var asksForAssistiveAccess: Bool {
+        get { wantsAssistiveAccess ?? false }
+        set { wantsAssistiveAccess = newValue }
+    }
+
     /// Whether this Mode runs on a schedule. The editor's switch binds
     /// straight to this.
     ///

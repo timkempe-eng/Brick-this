@@ -60,6 +60,37 @@ struct UserNotificationsNotifier: Notifying {
         }
     }
 
+    /// Delivers one notice immediately.
+    ///
+    /// A `nil` trigger rather than a one-second interval: the prompt's whole
+    /// value is that it lands while the phone is still in the hand that tapped
+    /// the tag, and an interval trigger is a second of wondering whether the
+    /// tap registered.
+    ///
+    /// The identifier is the notice's own, which never carries the `warning.`
+    /// prefix — so `clearOurs` cannot sweep a notice away, and a notice cannot
+    /// displace the pending warning. The two kinds share this adapter and
+    /// nothing else.
+    func post(_ notice: ImmediateNotice) {
+        centre.requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = notice.title
+            content.body = notice.body
+            // `.active` rather than the warning's `.passive`, and this is the
+            // one place that is right: a warning is a glance at something that
+            // has not happened yet, while this is an instruction to do a thing
+            // now, and a prompt that waits quietly for the next unlock has
+            // missed the moment it exists for. Still no sound and no badge —
+            // whoever this is for is looking at the phone already.
+            content.interruptionLevel = .active
+
+            centre.add(UNNotificationRequest(identifier: notice.id,
+                                             content: content,
+                                             trigger: nil))
+        }
+    }
+
     /// Removes every warning this adapter scheduled, optionally sparing one.
     ///
     /// Sparing rather than remove-then-add, because the identifier is stable

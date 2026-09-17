@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 849 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 857 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -62,6 +62,11 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   An adult Dadding their own phone is told nothing about the past.
 - **A puck to put the tag in** — [hardware/](../hardware/), two printed parts,
   about a dollar, rendered by CI rather than committed.
+- **The triple-click prompt** — a Mode can ask for Assistive Access, and one
+  notice after the tap says to triple-click for it. Dad cannot switch the mode
+  on and says so in the copy; what it can do is ask at the moment the phone is
+  in your hand. Off by default, per Mode. The way back out is the same two
+  steps in reverse and is spelled out wherever somebody might be stuck.
 - **Assistive Access** — a phone run in Apple's simplified mode gets a
   purpose-built screen instead of the full app squeezed into a smaller frame:
   one sentence, the Mode, and at most one button. The decision of what it says
@@ -142,6 +147,15 @@ true as of, and the copy says it. Fixing it properly needs a second NFC session
 after the tap — a second "hold your iPhone near the tag" prompt for something
 nobody asked for — which is a worse trade than a number that is honest about
 being a tap old.
+
+**A scheduled Mode that asks for Assistive Access starts without asking.**
+The prompt is posted by whichever process starts the session, and a scheduled
+start happens in the DeviceActivity extension, which holds a `SilentNotifier`
+by construction and could not request notification permission if it wanted to.
+So Sleep at 22:00 takes the apps and says nothing about the triple-click, while
+the same Mode started by a tap prompts. Fixing it properly means scheduling the
+notice in advance beside the ten minutes' notice, which is a second pending
+slot in a port that deliberately has one.
 
 **An allowance has never been counted on a device.** The rationing state
 machine is covered by `swift test` end to end — including the day boundary, the

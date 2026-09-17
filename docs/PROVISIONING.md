@@ -10,8 +10,8 @@ re-run the check, it isn't ✅.**
 | Item | State | Evidence | Re-runnable check |
 |---|---|---|---|
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
-| Core test suite | ✅ | 849 tests, green in CI | `swift test` |
-| Xcode wiring consistent | ✅ | 107 checks green | `python3 scripts/preflight.py` |
+| Core test suite | ✅ | 857 tests, green in CI | `swift test` |
+| Xcode wiring consistent | ✅ | 108 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ❓ | `release.yml` now carries `schedule: 0 15 */3 * *`, so the runner that already holds the secrets does it. **No scheduled firing has been observed yet** — the workflow path itself is proven (run 34137630116, dispatched, 46s), the cron is not. This replaced Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, which fired 09-04 and 09-07, reported success both times, and dispatched nothing: its sessions had no repository and no token. It was ✅ here for four days on a mechanism that never ran once | Actions tab → Release to TestFlight → a run whose trigger reads `schedule` rather than `workflow_dispatch` |
@@ -90,7 +90,7 @@ carries none, and a text search reads that as the opposite of what it says.
 
 **What is ready.** Certificate, private `match` store, all seven secrets, five
 profiles regenerating cleanly, App Group assigned, the widget signing and
-building, the App Store Connect record, 107 preflight checks and the test suite
+building, the App Store Connect record, 108 preflight checks and the test suite
 green. The pipeline runs end to end as far as Apple permits, on a run that
 costs ninety seconds to repeat.
 

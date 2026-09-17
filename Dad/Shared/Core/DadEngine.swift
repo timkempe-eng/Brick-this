@@ -227,6 +227,15 @@ struct DadEngine {
             scheduler.scheduleRelease(at: release)
         }
 
+        // After the shield, not before: the prompt says the Mode is on, and
+        // saying so before it is on would be a claim the state does not yet
+        // support. Silent on a Mode that does not ask, and silent from the
+        // DeviceActivity extension whatever the Mode asks, because that
+        // process holds a `SilentNotifier` by construction.
+        if let notice = AssistiveAccessPairing.noticeOnDad(mode: mode) {
+            notifier.post(notice)
+        }
+
         syncScheduleWarning()
         widget.reload()
         return start

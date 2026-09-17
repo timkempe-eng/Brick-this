@@ -54,7 +54,25 @@ enum Vocab {
     // the verb's release form: "Un-Dad" is the product's word, and the whole
     // point of the mode is that it does not make you learn one.
 
-    static let assistiveAccessTagHint = "Tap your \(tagNoun) to get your apps back."
+    /// The prompt after a tap, on a Mode that asks for the second half of the
+    /// gesture. It names the Mode so a notification that arrives a moment late
+    /// still makes sense on its own.
+    static func assistiveAccessPromptTitle(mode: String) -> String {
+        "\(mode) is on."
+    }
+
+    /// "Side button (or Home)" rather than either alone: which one it is
+    /// depends on the iPhone, Dad cannot tell from here, and a prompt naming
+    /// the button somebody does not have is a prompt they conclude is broken.
+    static let assistiveAccessPromptBody =
+        "Triple-click the side button (or Home) for Assistive Access."
+
+    /// Shown inside Assistive Access, where the tag alone may not be enough.
+    /// Names the order, because the half that has to happen first is the one
+    /// nobody guesses: leaving Assistive Access needs its passcode, and no
+    /// amount of tapping substitutes for it.
+    static let assistiveAccessExitHint =
+        "Triple-click the side button (or Home) to leave Assistive Access, then tap your \(tagNoun)."
 
     // MARK: Household copy
     //
