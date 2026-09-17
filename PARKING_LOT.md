@@ -124,6 +124,31 @@ left is calendar time, a browser and a phone.
       The other half of this question is answered and gone: entry is
       passcode-gated, measured 2026-09-17.
 
+- [ ] **Find out whether `blockedApplications` would let Dad hide rather than
+      shield — and whether shipping that survives review.** Found while writing
+      [docs/apple-feedback.md](docs/apple-feedback.md), and it matters more than
+      Assistive Access does: shielding covers an app when you open it, while the
+      icon, the badge and the folder stay exactly where they were. Hiding is
+      what somebody means when they say they want their phone to stop pulling
+      at them.
+
+      `ManagedSettings.ApplicationSettings.blockedApplications` is documented
+      as "the system hides blocked applications and prevents the user from
+      launching them", and an Apple Frameworks Engineer posted sample code for
+      it under `.individual` authorization in Developer Forums thread 716519.
+      `FamilyActivitySelection.applications` already yields the
+      `Set<Application>` it wants, so on paper the selection Dad already has
+      would drop straight in.
+
+      **The catch is review, not code.** Developer Forums thread 776058 has an
+      app rejected under guideline 2.5.1 — "your app uses ScreenTime API to
+      hide apps" — after its Family Controls entitlement had already been
+      approved, with the appeal quoting this documentation verbatim and getting
+      the same rejection back. One report is not policy, but this repo is
+      waiting on a Family Controls distribution approval it cannot afford to
+      complicate, so the order is: get the first build onto TestFlight, file
+      Report 1 in `docs/apple-feedback.md`, and only then try it.
+
 ## Deliberately deferred
 
 - [ ] **Remote granting.** `GrantRequest` defines a `PINHashing` port and
