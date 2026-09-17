@@ -64,6 +64,33 @@ without their consent. Dad is a boundary the household agrees to, not one it
 can be put behind, so this is a capability the product would decline on its own
 terms even if it were offered.
 
+## Guided Access, which is not this and is worth knowing about
+
+The two names are close enough that the first attempt at the triple-click on a
+real phone landed on the wrong one: the Accessibility Shortcut was bound to
+Guided Access, and produced *"Guided Access is unavailable. Open an app to start
+Guided Access."* on the Home Screen.
+
+They are different features. **Guided Access locks the phone into the one app
+that is already open** — hence needing an app first. **Assistive Access
+simplifies the whole phone.** Only the second is what this product wants.
+
+The interesting part is the API. `UIAccessibility` has shipped
+`requestGuidedAccessSession(enabled:completionHandler:)` since **iOS 7**: an app
+*can* put a device into Single App mode programmatically. Apple's own words on
+the requirement: "Entering Single App mode is supported only for devices that
+are supervised using Mobile Device Management (MDM), and the app itself must be
+enabled for this mode by MDM."
+
+So the capability exists, is a decade old, and is gated behind enterprise
+supervision rather than absent. That is a materially different fact from "Apple
+has never built this", and it is the strongest available argument when asking
+for the consented, user-owned version: the ask is to widen an existing
+mechanism, not to invent one. It does not change what this app can do today —
+Dad is a consumer app on unsupervised phones, so the gate is closed — and a
+supervised phone is only free to set up on the day somebody wipes it, which is
+the same wall [ADR 004](004-android.md) hit on the other platform.
+
 ## What people are asking for that already exists
 
 The part of the idea that is buildable is built, and has been since allowlist
