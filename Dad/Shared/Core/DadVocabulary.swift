@@ -74,8 +74,13 @@ enum Vocab {
     static func assistiveAccessPromptBody(role: HouseholdRole) -> String {
         switch role {
         case .grownUp:
+            // "The", not "your". An adult can be the grown-up of this
+            // household and still not hold the passcode — handing it to a
+            // spouse on purpose is a guardrail people actually choose, and
+            // telling somebody it is theirs is the app being wrong about
+            // their own arrangement.
             return "Triple-click the side button (or Home) for Assistive Access. "
-                + "It asks for your Screen Time passcode."
+                + "It asks for the Screen Time passcode."
         case .youngPerson:
             // The same failure `refusal(_:)` exists to prevent: an instruction
             // this phone cannot carry out alone, given with no subject. A young
