@@ -30,44 +30,18 @@ Where the rest went:
 Nothing here is code. The whole ranked feature backlog is finished; what is
 left is calendar time, a browser and a phone.
 
-- [ ] **Family Controls (Distribution) approved.** Requested 2026-09-02. A
-      manual Apple review, and the one real long pole — nothing in the existing
-      account helps, since the other two apps have no Screen Time surface.
-      Apple sends no acknowledgement, so a Release run is the only signal.
-
-      **Measured, not assumed, as of 2026-09-09 13:08.** Release run
-      34355063276 minted four fresh profiles with `force_profiles: true` and
-      the build rejected all four seconds later: still no
-      `com.apple.developer.family-controls`. Run 34137630116 said the same on
-      09-07 and 33771919392 on 09-03, so a week has changed nothing. This is
-      the only thing between the repo and TestFlight.
-
-      **The watch is `release.yml`'s own `schedule:`, every three days.** It
-      used to be a Claude Routine, which fired on 09-04 and 09-07, reported
-      success both times, and dispatched nothing — its sessions got no
-      repository and no token, so its one job was the one thing it could not
-      do, and the four days it covered were four days nobody was watching.
-      Reporting success for work it could not perform is why it is gone
-      rather than fixed. A pending run costs 46 seconds, because it fails at
-      signing before anything compiles; the run that first sees the approval
-      is the run that ships. Delete the trigger once a build reaches
-      TestFlight.
-
-      **A firing is silent unless something changed.** It used to report
-      "still waiting" by failing, which is a red run every three days that
-      means nothing — and the run that ships would have been the quiet one.
-      `scripts/classify_signing_failure.py` now passes the job only on the
-      exact pending state; an unrelated failure, one identifier approved
-      ahead of the others, or a build that ships all reach you, the last by
-      opening an issue. Not yet observed on a real scheduled firing — the
-      first is 2026-09-10 15:00 UTC.
-
 - [ ] **First TestFlight build on the iPhone.** Runbook in
       [docs/PROVISIONING.md](docs/PROVISIONING.md) — browser steps from an iPad,
       none needing a Mac. Everything that can be done from a session is done:
       the certificate is minted and stored, five profiles exist, the App Group
-      is assigned, and the Family Controls capability is enabled on the four
-      identifiers that need it.
+      is assigned, and Family Controls (Distribution) — approved 2026-09-02,
+      noticed 2026-10-12 — is enabled on the four identifiers that need it.
+
+      **Delete `release.yml`'s `schedule:` once a build reaches TestFlight.**
+      It was the approval watch, and it reported "still waiting" for five
+      weeks after the approval: its classifier cannot tell a pending request
+      from an approved account whose App IDs lack the capability, because the
+      log is identical.
 
       **Run Release once with `force_profiles: true`.** `match` matches
       profiles on expiry and certificate rather than on capability set, so it
@@ -144,9 +118,9 @@ left is calendar time, a browser and a phone.
       app rejected under guideline 2.5.1 — "your app uses ScreenTime API to
       hide apps" — after its Family Controls entitlement had already been
       approved, with the appeal quoting this documentation verbatim and getting
-      the same rejection back. One report is not policy, but this repo is
-      waiting on a Family Controls distribution approval it cannot afford to
-      complicate, so the order is: get the first build onto TestFlight, file
+      the same rejection back. One report is not policy, but this repo has no
+      build through App Review yet and cannot afford to complicate the first
+      one, so the order is: get the first build onto TestFlight, file
       Report 1 in `docs/apple-feedback.md`, and only then try it.
 
 ## Deliberately deferred

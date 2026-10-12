@@ -14,9 +14,10 @@ re-run the check, it isn't ✅.**
 | Xcode wiring consistent | ✅ | 108 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
-| Approval check runs itself | ❓ | `release.yml` now carries `schedule: 0 15 */3 * *`, so the runner that already holds the secrets does it. **No scheduled firing has been observed yet** — the workflow path itself is proven (run 34137630116, dispatched, 46s), the cron is not. This replaced Routine `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, which fired 09-04 and 09-07, reported success both times, and dispatched nothing: its sessions had no repository and no token. It was ✅ here for four days on a mechanism that never ran once | Actions tab → Release to TestFlight → a run whose trigger reads `schedule` rather than `workflow_dispatch` |
-| A scheduled firing only speaks up with news | ❓ | `scripts/classify_signing_failure.py` reads the run's log and passes the job only when the failure is exactly the known pending state — every error a Family Controls rejection, all four entitled bundle ids still rejected. An unrelated failure, a partial approval, or a build that ships is loud. **Proven on fixtures and on two real logs, not yet on a real scheduled run**: 14 self-tests, and the four shell paths rehearsed against a stubbed fastlane (pending+schedule green, pending+dispatch red, unrelated failure red, success green). What it cannot prove without Apple is the shape it has never seen — a rejection worded a third way would read as unrelated and be loud, which is the safe direction | `python3 scripts/classify_signing_failure.py --self-test`; it also runs in the Test workflow. Read run 34355063276's real log correctly as both a schedule (quiet) and a dispatch (loud) |
-| Family Controls (Distribution) | ⏳ | **Not approved as of 2026-09-09 13:08.** Release run 34355063276 minted four fresh profiles (`1788959256`, `257`, `259`, `260` — new ids, so `force_profiles: true` did regenerate) and the build rejected all four seconds later, on both wordings. Seven days after the request, unchanged. Previously: **not approved as of 2026-09-07 15:19.** Release run 34137630116 minted all five profiles fresh (`force_profiles: true`, 15:18:59–15:19:03) and the build rejected four of them sixteen seconds later: `Provisioning profile "match AppStore app.dad.Dad 1788794339" doesn't include the com.apple.developer.family-controls entitlement`, likewise `.ShieldConfiguration`, `.ShieldAction` and `.ActivityMonitor`. Unchanged from the same measurement on 09-03 (run 33771919392). Requested 2026-09-02; Apple issues no case id or acknowledgement. **The row below is not this row** — see it for why a capability listing cannot answer this | run Release with `force_profiles: true`; getting past export is the only check here that settles it |
+| Approval check runs itself | ✅ | Eleven scheduled firings, 09-10 to 10-10 (runs 34511456099 … 38078352037), each with trigger `schedule`. The Routine it replaced, `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, fired twice and dispatched nothing | Actions tab → Release to TestFlight → runs whose trigger reads `schedule` |
+| A scheduled firing only speaks up with news | ⚠️ | It stayed quiet on all eleven firings, as designed — and all eleven were wrong to. The state it matches as "pending" is equally the state of an approved account whose App IDs don't yet have the Distribution capability enabled: the log is the same, so the classifier cannot tell them apart, and it reported "still waiting on Apple" for five weeks after Apple had approved. The quiet mode is safe only while the request is genuinely pending; it is not evidence that it is | `python3 scripts/classify_signing_failure.py --self-test` |
+| Family Controls (Distribution) approved | ✅ | **Approved 2026-09-02 19:29 UTC, the day it was requested.** Apple emailed the Account Holder: *"You can now use Family Controls (Distribution) entitlement … assigned to your account, and you can now configure this capability for eligible apps."* The email sat unread, and this row said ⏳ "not approved" until 2026-10-12 on the strength of build logs that could not distinguish not-approved from not-enabled | the Account Holder's inbox: from `developer@email.apple.com`, subject *You can now use Family Controls (Distribution) entitlement.* |
+| Family Controls (Distribution) enabled on the four App IDs | ❓ | Enabled by the Account Holder 2026-10-12. Release run 38276497659 (`force_profiles: true`, dispatched 16:18) was past the 30-second point where every earlier run failed at signing and still building eleven minutes in — consistent with the profiles now carrying the entitlement, but not proof until the run finishes | run Release with `force_profiles: true`; getting past export is what settles it |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
@@ -33,30 +34,26 @@ re-run the check, it isn't ✅.**
 
 ## The one thing between here and TestFlight
 
-Asked on 2026-09-03 and re-asked on 09-07 and 09-09. Everything in the table above
-is green except one row, and that row is not ours.
+**It was never Apple.** Family Controls (Distribution) was approved on
+2026-09-02, hours after the request, and Apple said so by email. That email
+went unread, and for five weeks this section said the opposite — "measured
+rather than assumed, three times" — on the evidence of Release runs 33771919392
+(09-03), 34137630116 (09-07) and 34355063276 (09-09), each of which minted
+fresh profiles and had them rejected without `com.apple.developer.family-controls`.
 
-**Apple has not approved Family Controls (Distribution).** This is measured
-rather than assumed, three times. Run 34355063276 on 09-09 minted four fresh
-profiles and had all four rejected seconds later, seven days after the request.
-Before it, release run 34137630116 minted every profile from
-scratch with `force_profiles: true` at 15:18:59–15:19:03 and the build rejected
-them at 15:19:19, still without `com.apple.developer.family-controls`, on the
-app and three extensions. That is the signature of a pending request: `match`
-asks Apple for a profile, Apple mints one carrying only the capabilities the
-App ID is authorized for, and the entitlement is simply absent. Run
-33771919392 said the same on 09-03, so a week has changed nothing.
+Those measurements were real; the conclusion drawn from them was not. A profile
+lacking the entitlement is what a pending request produces, and it is *also*
+what an approved account produces while the App IDs still have only the
+self-service Development variant enabled. Approval assigns the capability to
+the account; it does not switch it on for any identifier. The log reads the
+same either way, so "the profile lacks the entitlement" never could have meant
+"Apple has not approved" — that was an inference, and it was written as a
+measurement. The table row that said "Not a checkbox. Apple's approval flips
+it" is where it came from, and it was a guess no one had checked.
 
-It also retires the doubt in the row above it. The App IDs list
-`FAMILY_CONTROLS` and have since 2026-09-03 — and the profiles minted twenty
-minutes later still lacked the entitlement. So the capability listing and the
-approval are demonstrably different things, not just theoretically.
-
-Nothing in this repo can move it. The request went in 2026-09-02, Apple sends
-no acknowledgement, and the estimate remains a month rather than a week.
-`release.yml` re-runs this check on its own schedule every three days; the day
-it gets past export is the day the build ships, because everything else is
-ready.
+On 2026-10-12 the Account Holder enabled Family Controls (Distribution) on the
+four App IDs and Release run 38276497659 was dispatched with
+`force_profiles: true`. Its outcome is the ❓ in the table above.
 
 The watch used to be a Claude Routine and it did not work: it fired on 09-04
 and 09-07, reported success both times, and dispatched no run at all, because
@@ -215,7 +212,7 @@ split the capability, so the Identifiers list shows:
 | Row | Entitlement key | Tick it? |
 |---|---|---|
 | Family Controls (Development) | `com.apple.developer.family-controls` | **Yes** — self-service, works immediately |
-| Family Controls (Distribution) | same key | Not a checkbox. Apple's approval flips it; a greyed row is expected |
+| Family Controls (Distribution) | same key | **Yes, once approved — on each of the four App IDs.** Greyed until Apple approves the account; approval does not enable it anywhere. Missing this step leaves every profile without the entitlement, which reads exactly like a pending request |
 | Family Controls App and Website Usage | `com.apple.developer.family-controls.app-and-website-usage` | **No** |
 
 The third is a different, newer entitlement: reading which apps and sites were
@@ -240,17 +237,21 @@ looking at the current one. Only the Account Holder can submit it.
 
 Two consequences worth holding lightly, because neither is verified:
 
-- **Approval scope is unknown.** Developer reports still describe per-bundle-id
-  approval, with extensions approved separately and sometimes days apart. A
-  profile-only form is hard to square with that. Assume nothing; the check
-  below is what settles it.
-- **There is no case id and no status page.** Apple sends no acknowledgement,
-  so the only honest way to know is to look at the App IDs.
+- **Approval is per account, not per bundle id — for this request at least.**
+  Developer reports describe per-identifier approval landing days apart; the
+  email this account received says the entitlement "has been assigned to your
+  account" and can be configured "for eligible apps". You then enable it on
+  each App ID yourself.
+- **There is no case id and no status page — but there is an email.** Apple
+  sends nothing on submission and emails the Account Holder on approval, from
+  `developer@email.apple.com`, subject *You can now use Family Controls
+  (Distribution) entitlement.* It can land in Gmail's Updates tab. This one
+  arrived 2026-09-02 19:29 UTC and went unread for five weeks.
 
-**How we will find out it landed:** Certificates, Identifiers & Profiles → the
-four App IDs show a Family Controls row that is no longer development-only.
-Failing that, a Release run that gets past export. Nothing in this repo can
-poll it.
+**How we will find out it landed:** that email. Then enable Family Controls
+(Distribution) on each of the four App IDs, which approval does not do, and
+run Release with `force_profiles: true`. A build log cannot tell "not approved"
+from "approved, not enabled", so it is not the way to find out.
 
 If Apple replies asking what the app does — a likely follow-up given how little
 the form collects — this is the answer, and it leads with the thing they are
@@ -280,8 +281,9 @@ actually screening for:
 > `app.dad.Dad.ShieldAction`, `app.dad.Dad.ActivityMonitor`. The widget target
 > reads the session only and carries no Family Controls entitlement.
 
-**Budget a month, not a week.** Apple says days; reports range from one day for
-the main app to several months with no reply at all. Nothing else in this
+**Budget a month, not a week** — though this one took under a day. Apple says
+days; reports range from one day for the main app to several months with no
+reply at all. Nothing else in this
 runbook depends on it, so it is submitted and the rest carries on.
 
 The usual advice for the wait is to use the *development* entitlement, which
