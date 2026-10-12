@@ -63,9 +63,9 @@ reach, found one per run:
   runner. `setup_ci` in the `beta` lane fixed it.
 - **Apple's upload validation rejected the build** (run 38283698097, archive
   and export green): no image in `AppIcon.appiconset`, hence no
-  `CFBundleIconName`; and `NDEF` in the NFC formats. The icon is a placeholder
-  — the accent colour and the word, in Inter Bold — to be replaced with a real
-  one, and preflight now fails on either fault.
+  `CFBundleIconName`; and `NDEF` in the NFC formats. The icon was a placeholder
+  — the accent colour and the word, in Inter Bold — replaced the same day by a
+  real one, and preflight now fails on either fault.
 
 Run 38284229412 uploaded build 1.0 (25), Apple processed it in two minutes, and
 it went to internal testers at 17:31 UTC on 2026-10-12 — forty days after an
