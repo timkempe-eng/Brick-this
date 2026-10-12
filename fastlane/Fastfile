@@ -242,6 +242,17 @@ platform :ios do
       )
     end
 
+    # A keychain whose password match knows, or codesign hangs. Without it match
+    # imports the certificate into the runner's login keychain, cannot set the
+    # key's partition list ("Keychain password … was not specified"), and the
+    # first codesign waits on an "allow access" dialog no one can click. Run
+    # 38276497659 sat on `Signing DadWidget.appex` for 59 minutes until the job
+    # timed out — the first run ever to reach signing, so the first to find it.
+    # setup_ci makes a temporary keychain with an empty password and points
+    # match at it. It also sets MATCH_READONLY, which the explicit `readonly:`
+    # below overrides.
+    setup_ci
+
     # match clones its storage branch OUTSIDE the checkout tree, so it does not
     # inherit the checkout's credentials — hand it the workflow's own token.
     match(
