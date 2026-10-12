@@ -42,36 +42,8 @@ on:
         required: false
         default: "Latest from the trunk."
 
-  # The Family Controls approval watch. Apple acknowledges nothing and issues
-  # no case id, so a signed build is the only reliable signal — and while the
-  # request is pending the run fails at signing in 46 seconds, before anything
-  # expensive compiles. The run that first sees the approval is therefore also
-  # the run that ships, with nobody watching at the moment it happens.
-  #
-  # This replaced a Claude Routine that fired every three days and reported
-  # success without dispatching anything: its sessions got no repository and
-  # no token, so its one job was the one thing it could not do. A schedule on
-  # a runner that already holds the secrets cannot fail that way.
-  #
-  # A scheduled firing is quiet unless something changed. Failing every three
-  # days to say "no news" trains you to stop opening the email, and then the
-  # one run that matters arrives looking exactly like the eight before it —
-  # while a run that *succeeds* sends nothing at all, so the best possible
-  # outcome would be the silent one. So: scripts/classify_signing_failure.py
-  # reads the log, and the job stays green only when the failure is exactly
-  # the known pending state. An unrelated failure, one bundle id approved
-  # ahead of the others, or a build that ships all reach you. A manual
-  # dispatch always reports, because somebody is waiting on it.
-  #
-  # Delete this trigger once a build reaches TestFlight — past that point it
-  # would ship an unattended build every three days forever. GitHub also
-  # disables schedules after 60 days without repository activity.
-  schedule:
-    - cron: "0 15 */3 * *"
-
 permissions:
   contents: write   # match stores certificates on a branch of a repo
-  issues: write     # the approval, when it lands, opens one
 
 concurrency:
   group: release
@@ -120,12 +92,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ${{ inputs.notes || 'Latest from the trunk.' }}
           FASTLANE_SKIP_UPDATE_CHECK: "1"
-          # A scheduled run has no inputs at all, so this falls back to true —
-          # and it must stay true. match matches profiles on expiry and
-          # certificate rather than on capability set, so a run that reused one
-          # minted before the approval would report the old answer forever.
-          # A dispatch passing "false" keeps it: only an absent input is falsy
-          # here, and "false" is a non-empty string. Measured rather than
+          # Only an absent input falls back to true; the schedule that relied
+          # on that is gone. A dispatch passing "false" keeps it, since
+          # "false" is a non-empty string. Measured rather than
           # reasoned — run 34138328138 dispatched force_profiles:"false" and
           # created zero profiles, reusing the five ids the run before it had
           # minted. The expression can only return the input or 'true', and
@@ -158,32 +127,6 @@ jobs:
           python3 scripts/classify_signing_failure.py \
             --build-status "$BUILD_STATUS" --event "$EVENT" release.log \
             | tee -a "$GITHUB_STEP_SUMMARY"
-
-      # A scheduled run that gets this far has shipped, and nothing else in
-      # this pipeline would say so out loud. The issue is both the news and
-      # the two things that become due the moment it arrives.
-      - name: Say so, if the approval landed
-        if: steps.build.outputs.status == '0' && github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue create \
-            --title "Family Controls approved — a build is on TestFlight" \
-            --body "$(cat <<'BODY'
-          The scheduled approval watch built, signed and uploaded successfully,
-          which it could not have done without Apple's Family Controls
-          (Distribution) approval.
-
-          Two things are now due:
-
-          - **Install it.** TestFlight on the iPhone.
-          - **Delete the `schedule:` trigger in `.github/workflows/release.yml`.**
-            Past this point it ships an unattended build every three days.
-
-          Then close the Family Controls item in `PARKING_LOT.md` and turn the
-          row in `docs/PROVISIONING.md` from ⏳ to ✅, citing this run.
-          BODY
-          )"
 
       - name: Keep the build
         if: always()

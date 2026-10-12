@@ -30,12 +30,9 @@ Where the rest went:
 Nothing here is code. The whole ranked feature backlog is finished; what is
 left is calendar time, a browser and a phone.
 
-- [ ] **First TestFlight build on the iPhone.** Runbook in
-      [docs/PROVISIONING.md](docs/PROVISIONING.md) — browser steps from an iPad,
-      none needing a Mac. Everything that can be done from a session is done:
-      the certificate is minted and stored, five profiles exist, the App Group
-      is assigned, and Family Controls (Distribution) — approved 2026-09-02,
-      noticed 2026-10-12 — is enabled on the four identifiers that need it.
+- [ ] **First TestFlight build on the iPhone.** Build 1.0 (25) reached
+      internal testers on 2026-10-12 (run 38284229412). What is left is the
+      phone: install it from TestFlight and tap a tag.
 
       **On the device, write a tag as well as tapping one.** Writing uses
       `NFCNDEFReaderSession`, and the NFC entitlement lost its `NDEF` value on
@@ -44,23 +41,6 @@ left is calendar time, a browser and a phone.
 
       **Replace the placeholder app icon.** It is the accent colour and the
       word "Dad", made only so upload validation would accept the build.
-
-      **Delete `release.yml`'s `schedule:` once a build reaches TestFlight.**
-      It was the approval watch, and it reported "still waiting" for five
-      weeks after the approval: its classifier cannot tell a pending request
-      from an approved account whose App IDs lack the capability, because the
-      log is identical.
-
-      **Run Release once with `force_profiles: true`.** `match` matches
-      profiles on expiry and certificate rather than on capability set, so it
-      will reuse one minted before the capability was enabled — and that fails
-      at export, after the build has already succeeded. Exercised on
-      2026-09-03: it regenerates all five in thirteen seconds, so the run that
-      first sees the approval is also the run that ships.
-
-      The App Store Connect record is done — created 2026-09-03 as *Dad Your
-      Phone*, and the `beta` lane now reads it back before building and
-      refuses at the upload rather than after it.
 
 - [ ] **Prove child authorization on a real device.** The code is built and
       shipped: `requestAuthorization(for: .child)` when the role is a young
