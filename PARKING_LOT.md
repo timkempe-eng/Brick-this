@@ -39,11 +39,6 @@ left is calendar time, a browser and a phone.
       2026-10-12 because upload validation now rejects it. Current guidance
       is that `TAG` covers NDEF sessions too; nothing here has run it.
 
-      **Before App Store review, take the logos off the icon's cap.** The
-      icon (2026-10-12, a cartoon of the Account Holder asleep on a plane) has
-      the Detroit Tigers "D" and the New Era flag on the hat. Fine for
-      TestFlight; App Review rejects icons carrying another company's marks.
-
 - [ ] **Prove child authorization on a real device.** The code is built and
       shipped: `requestAuthorization(for: .child)` when the role is a young
       person, with its own failure message, because a household not on Family
