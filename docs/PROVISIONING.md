@@ -11,13 +11,13 @@ re-run the check, it isn't ✅.**
 |---|---|---|---|
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
 | Core test suite | ✅ | 862 tests, green in CI | `swift test` |
-| Xcode wiring consistent | ✅ | 108 checks green | `python3 scripts/preflight.py` |
+| Xcode wiring consistent | ✅ | 110 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | ✅ | Eleven scheduled firings, 09-10 to 10-10 (runs 34511456099 … 38078352037), each with trigger `schedule`. The Routine it replaced, `trig_016wQg4yXW2Jt6D9h5ULq3fZ`, fired twice and dispatched nothing | Actions tab → Release to TestFlight → runs whose trigger reads `schedule` |
 | A scheduled firing only speaks up with news | ⚠️ | It stayed quiet on all eleven firings, as designed — and all eleven were wrong to. The state it matches as "pending" is equally the state of an approved account whose App IDs don't yet have the Distribution capability enabled: the log is the same, so the classifier cannot tell them apart, and it reported "still waiting on Apple" for five weeks after Apple had approved. The quiet mode is safe only while the request is genuinely pending; it is not evidence that it is | `python3 scripts/classify_signing_failure.py --self-test` |
 | Family Controls (Distribution) approved | ✅ | **Approved 2026-09-02 19:29 UTC, the day it was requested.** Apple emailed the Account Holder: *"You can now use Family Controls (Distribution) entitlement … assigned to your account, and you can now configure this capability for eligible apps."* The email sat unread, and this row said ⏳ "not approved" until 2026-10-12 on the strength of build logs that could not distinguish not-approved from not-enabled | the Account Holder's inbox: from `developer@email.apple.com`, subject *You can now use Family Controls (Distribution) entitlement.* |
-| Family Controls (Distribution) enabled on the four App IDs | ❓ | Enabled by the Account Holder 2026-10-12. Release run 38276497659 (`force_profiles: true`, dispatched 16:18) was past the 30-second point where every earlier run failed at signing and still building eleven minutes in — consistent with the profiles now carrying the entitlement, but not proof until the run finishes | run Release with `force_profiles: true`; getting past export is what settles it |
+| Family Controls (Distribution) enabled on the four App IDs | ✅ | Enabled by the Account Holder 2026-10-12. Release run 38276497659 then compiled and linked all five targets with no entitlement error — the first run ever to — and run 38283698097 archived and exported a signed `Dad.ipa` at 17:23:41 on the profiles it minted (`match AppStore app.dad.Dad 1791821959` and siblings) | run Release; "Successfully exported and signed the ipa file" in the log |
 | App Store Connect API key | ✅ | The key hydive releases with. Keys are team-wide, so the same one signs Dad | Users and Access → Integrations lists the key id |
 | All seven secrets + `MATCH_GIT_URL` | ✅ | Release run 33713075001 got past signing to the Xcode build | run Release; the Fastfile names any missing one |
 | Distribution certs below the cap | ✅ | **The cap is 3.** Now 3/3: `W58S72X6S2` oxfordswimclub, `YQTXHB5NT6` hydive, `53GT6F9GRZ` Dad | run Apple account maintenance; it prints the count |
@@ -27,6 +27,7 @@ re-run the check, it isn't ✅.**
 | App Group assigned to the App IDs | ✅ | Assigned 2026-09-03; profiles regenerated and the App Groups errors are gone | Identifiers → an App ID → App Groups → Edit shows `group.app.dad.shared` selected |
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
 | App Store Connect record | ✅ | Created 2026-09-03 between 12:03 and 15:15, named **Dad Your Phone**. Maintenance run at 15:15: `App Store Connect record: app.dad.Dad exists (Dad Your Phone)`. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible | run Apple account maintenance; the capabilities lane says outright whether it exists |
+| Upload accepted by App Store Connect | ❓ | Run 38283698097's upload was rejected by Apple's validation with three errors: no app icon image, so no `CFBundleIconName`; and `NDEF` in the NFC reader-session formats, which current SDKs disallow. All three fixed in the repo the same day and now guarded by preflight; not yet re-uploaded | run Release; `upload_to_testflight` succeeding |
 | TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
 | A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
 
@@ -52,8 +53,19 @@ measurement. The table row that said "Not a checkbox. Apple's approval flips
 it" is where it came from, and it was a guess no one had checked.
 
 On 2026-10-12 the Account Holder enabled Family Controls (Distribution) on the
-four App IDs and Release run 38276497659 was dispatched with
-`force_profiles: true`. Its outcome is the ❓ in the table above.
+four App IDs, and the next Release run got past the entitlement check for the
+first time. Behind it were three faults no earlier run had lived long enough to
+reach, found one per run:
+
+- **codesign hung on a keychain dialog** (run 38276497659, 59 minutes, timed
+  out). match imported the certificate into a keychain whose password it did
+  not know, so `codesign` waited for an "allow access" click on a headless
+  runner. `setup_ci` in the `beta` lane fixed it.
+- **Apple's upload validation rejected the build** (run 38283698097, archive
+  and export green): no image in `AppIcon.appiconset`, hence no
+  `CFBundleIconName`; and `NDEF` in the NFC formats. The icon is a placeholder
+  — the accent colour and the word, in Inter Bold — to be replaced with a real
+  one, and preflight now fails on either fault.
 
 The watch used to be a Claude Routine and it did not work: it fired on 09-04
 and 09-07, reported success both times, and dispatched no run at all, because
@@ -87,7 +99,7 @@ carries none, and a text search reads that as the opposite of what it says.
 
 **What is ready.** Certificate, private `match` store, all seven secrets, five
 profiles regenerating cleanly, App Group assigned, the widget signing and
-building, the App Store Connect record, 108 preflight checks and the test suite
+building, the App Store Connect record, 110 preflight checks and the test suite
 green. The pipeline runs end to end as far as Apple permits, on a run that
 costs ninety seconds to repeat.
 

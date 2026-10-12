@@ -9,6 +9,7 @@ checkable without a Mac.
 
     python3 scripts/preflight.py
 """
+import json
 import plistlib
 import re
 import sys
@@ -209,6 +210,20 @@ check("com.apple.developer.nfc.readersession.formats" in app_ent,
       "app: missing the NFC reader-session entitlement")
 check("NFCReaderUsageDescription" in app_info,
       "app: missing NFCReaderUsageDescription — the scan sheet would crash")
+# Upload validation, not the build, rejects these — so a green archive still
+# fails at the last step. Both stopped run 38283698097.
+check(app_ent.get("com.apple.developer.nfc.readersession.formats") == ["TAG"],
+      "app: NFC formats must be exactly [TAG] — App Store upload rejects NDEF")
+
+# --- The app icon set must hold an actual image. An empty set builds cleanly
+#     and leaves CFBundleIconName out of the bundle; App Store upload rejects it.
+icon_name = targets["Dad"]["settings"]["base"].get("ASSETCATALOG_COMPILER_APPICON_NAME")
+icon_dir = ROOT / "Dad/Resources/Assets.xcassets" / f"{icon_name}.appiconset"
+icon_files = [img.get("filename") for img in
+              json.loads((icon_dir / "Contents.json").read_text()).get("images", [])] \
+    if (icon_dir / "Contents.json").exists() else []
+check(icon_files and all(f and (icon_dir / f).exists() for f in icon_files),
+      f"app: {icon_name}.appiconset names no image, or one that isn't there")
 
 # --- Entitlements must not name placeholder infrastructure. An entitlement
 #     you don't ship a feature for is a capability the App ID has to carry, a

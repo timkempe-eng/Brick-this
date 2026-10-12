@@ -82,7 +82,7 @@ missing is a session whose hook did not run, not a reason to push untested.
 ```bash
 swift test                      # 862 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 108 checks on the Xcode wiring
+python3 scripts/preflight.py    # 110 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group

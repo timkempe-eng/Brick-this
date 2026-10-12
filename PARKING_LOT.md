@@ -37,6 +37,14 @@ left is calendar time, a browser and a phone.
       is assigned, and Family Controls (Distribution) — approved 2026-09-02,
       noticed 2026-10-12 — is enabled on the four identifiers that need it.
 
+      **On the device, write a tag as well as tapping one.** Writing uses
+      `NFCNDEFReaderSession`, and the NFC entitlement lost its `NDEF` value on
+      2026-10-12 because upload validation now rejects it. Current guidance
+      is that `TAG` covers NDEF sessions too; nothing here has run it.
+
+      **Replace the placeholder app icon.** It is the accent colour and the
+      word "Dad", made only so upload validation would accept the build.
+
       **Delete `release.yml`'s `schedule:` once a build reaches TestFlight.**
       It was the approval watch, and it reported "still waiting" for five
       weeks after the approval: its classifier cannot tell a pending request

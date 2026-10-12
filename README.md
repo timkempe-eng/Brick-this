@@ -177,7 +177,7 @@ forms — builds and tests anywhere, no Mac required:
 ```bash
 swift test                      # 862 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
-python3 scripts/preflight.py    # 108 checks on the Xcode wiring
+python3 scripts/preflight.py    # 110 checks on the Xcode wiring
 ```
 
 CI runs all three on Linux, plus a fourth job on a macOS runner that actually

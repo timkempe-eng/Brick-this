@@ -11,9 +11,10 @@
 		<string>group.app.dad.shared</string>
 	</array>
 
+	<!-- TAG only. App Store upload validation rejects NDEF here on any current
+	     SDK ("NDEF is disallowed"), and it rejected run 38283698097 for it. -->
 	<key>com.apple.developer.nfc.readersession.formats</key>
 	<array>
-		<string>NDEF</string>
 		<string>TAG</string>
 	</array>
 </dict>
