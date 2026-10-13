@@ -10,8 +10,8 @@ re-run the check, it isn't ✅.**
 | Item | State | Evidence | Re-runnable check |
 |---|---|---|---|
 | Repo builds the iOS app | ✅ | Actions run #10 and #11 green on `app` job | push, or re-run the Test workflow |
-| Core test suite | ✅ | 905 tests, green in CI | `swift test` |
-| Xcode wiring consistent | ✅ | 110 checks green | `python3 scripts/preflight.py` |
+| Core test suite | ✅ | 932 tests, green in CI (run 38451004530) | `swift test` |
+| Xcode wiring consistent | ✅ | 112 checks green | `python3 scripts/preflight.py` |
 | Apple Developer Program | ✅ | Active membership already ships `app.hydive.lifeguard` and `app.hydive.member` to TestFlight | developer.apple.com → Membership shows a Team ID |
 | App Group + five App IDs registered | ✅ | Account holder created them 2026-09-02 | Certificates, IDs & Profiles → Identifiers lists all five and `group.app.dad.shared` |
 | Approval check runs itself | — | Retired 2026-10-12 once a build reached TestFlight: past that point it would upload an unattended build every three days. It fired eleven times, 09-10 to 10-10, and see the next row for what it reported | — |
@@ -28,8 +28,9 @@ re-run the check, it isn't ✅.**
 | Widget signs and builds | ✅ | Release run 33713992837: the widget target is no longer among the failures — it carries no family-controls entitlement, so nothing gates it | run Release; `in target 'DadWidget'` appears in no error |
 | App Store Connect record | ✅ | Created 2026-09-03 between 12:03 and 15:15, named **Dad Your Phone**. Maintenance run at 15:15: `App Store Connect record: app.dad.Dad exists (Dad Your Phone)`. Registering the App ID on developer.apple.com is a **different site and a different action** — the two are easy to conflate, and only this one makes TestFlight possible | run Apple account maintenance; the capabilities lane says outright whether it exists |
 | Upload accepted by App Store Connect | ✅ | Run 38284229412: "Successfully uploaded package to App Store Connect" at 17:29:25, build 1.0 (25) processed by 17:31:27 and distributed to internal testers. The run before it, 38283698097, was rejected for a missing icon and `NDEF` in the NFC formats; both fixed and guarded by preflight | run Release; App Store Connect → TestFlight lists the build |
-| TestFlight build installed | ❓ | — | TestFlight app on the iPhone |
-| A tap actually blocks an app | ❓ | — | on-device only; nothing before this proves it |
+| TestFlight build installed | ✅ | Build 1.0 (29) on the Account Holder's iPhone, 2026-10-13; a paired tag tapped and a tag written from Settings, both reported by the user (commits 45dd8ca, 9945085) | TestFlight app on the iPhone |
+| A tap actually blocks an app | ❓ | The tap itself is confirmed (row above). That the chosen apps then disappeared was not written down at the time, so this stays unverified rather than inferred | on-device only: choose an app in a Mode, tap, try to open it |
+| Beta App Review, first external build | ⏳ | Build 1.0 (31) — release run 38442247592, commit b19057a — submitted to an external group by the Account Holder 2026-10-13. Review notes point the reviewer at any NTAG sticker, and at Emergency Exit for a reviewer without one; a bank card cannot stand in for a tag (fc0a341) | App Store Connect → TestFlight → External Testing → the group shows the build's review status |
 
 ❓ means unverified, not false. ⏳ means waiting on someone else.
 
