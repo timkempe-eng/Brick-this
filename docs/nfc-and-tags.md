@@ -82,6 +82,23 @@ with no UI. Requires iPhone XS or later and iOS 13.1+ for the NFC trigger; iOS
 Add a second automation on a second tag with the **Touch Grass with a Mode** action if you
 want a tag that only ever sends you outside — a bedside tag that can't accidentally release.
 
+#### More than one tag — Home, Work
+
+An NFC automation tells its action nothing about which tag fired it, so each
+tag gets its own automation, built around that tag:
+
+1. In Clover, **Settings → Tags**, open the tag (or pair it), give it a name
+   and choose the Mode a tap starts.
+2. Build the automation as above, and at step 4 tap **Tag** on the action and
+   pick it by name.
+
+The action then hands that tag's UID to the same `handleTap` the in-app scan
+uses, so the automation starts whatever the tag is set to start *now* —
+re-point Work at a different Mode and the automation follows without being
+edited. Each paired tag also appears in Shortcuts as its own ready-made
+**Touch Grass** action. Apple gives apps no way to create the automation
+itself; the three steps per tag are as far down as it goes.
+
 ### 3. Background tag reading — what a shipping app does
 
 iOS reads NDEF tags with no app open and shows a banner; tapping it opens your

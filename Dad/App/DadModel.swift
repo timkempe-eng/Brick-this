@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import FamilyControls
+import AppIntents
 
 /// View-facing state. `DadEngine` is the truth; this republishes it so SwiftUI
 /// redraws, and owns the running clock for the active session.
@@ -9,6 +10,9 @@ final class DadModel: ObservableObject {
 
     @Published private(set) var activeSession: DadSession?
     @Published private(set) var modes: [DadMode] = []
+
+    /// The paired tags, in the order Settings lists them.
+    @Published private(set) var tags: [TagPairing.Pair] = []
 
     /// Whether the apps are actually taken away right now, which a rationing
     /// Mode makes a different question from "is there a session". Republished
@@ -85,6 +89,7 @@ final class DadModel: ObservableObject {
 
     func reload() {
         modes = engine.store.modes
+        tags = engine.store.tags.pairs
         activeSession = engine.store.activeSession
         hoursEarnedOnSessionDay = engine.hoursEarnedOnRunningSessionsDay
         shieldState = engine.shieldState
@@ -103,6 +108,10 @@ final class DadModel: ObservableObject {
     func reconcile() {
         engine.reconcile()
         reload()
+        // Here as well as on every tag edit: tags paired before this build
+        // had names have never been offered to Shortcuts, and a renamed Mode
+        // changes what each tag's row says it starts.
+        DadShortcuts.updateAppShortcutParameters()
     }
 
     var isDadded: Bool { activeSession != nil }
@@ -434,12 +443,44 @@ final class DadModel: ObservableObject {
     func pair(tagUID: String, to modeID: UUID? = nil) {
         engine.pair(tagUID: tagUID, to: modeID)
         banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.actionInProse)."
-        reload()
+        tagsChanged()
     }
 
     func forgetAllTags() {
         if let refused = engine.forgetAllTags() { banner = Vocab.refusal(refused) }
+        tagsChanged()
+    }
+
+    /// Which Mode a tag starts, keeping its name.
+    func point(tagUID: String, to modeID: UUID?) {
+        engine.pair(tagUID: tagUID, to: modeID)
+        tagsChanged()
+    }
+
+    func rename(tagUID: String, to name: String) {
+        engine.rename(tagUID: tagUID, to: name)
+        tagsChanged()
+    }
+
+    func unpair(tagUID: String) {
+        if let refused = engine.unpair(tagUID: tagUID) { banner = Vocab.refusal(refused) }
+        tagsChanged()
+    }
+
+    /// The name of the Mode a tag starts, or `nil` when it toggles or names a
+    /// Mode that has since been deleted — the two cases in which a tap falls
+    /// back to the app's choice.
+    func modeName(forTag pair: TagPairing.Pair) -> String? {
+        guard let id = pair.modeID else { return nil }
+        return modes.first { $0.id == id }?.name
+    }
+
+    /// Re-reads the store, and tells Shortcuts the tag list moved: the
+    /// one-per-tag "Touch Grass · Work" shortcuts are built from it, and the
+    /// system only asks again when told to.
+    private func tagsChanged() {
         reload()
+        DadShortcuts.updateAppShortcutParameters()
     }
 
     /// What this phone's household arrangement permits, for hiding controls

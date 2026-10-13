@@ -46,7 +46,9 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   Mode, because it blocks from the moment it exists and a fresh install's
   first tap would start it.
 - **A tag per Mode** — the kitchen tag starts Dinner, the desk tag starts Deep
-  Work. The first migration the schema ladder has actually run.
+  Work. The first migration the schema ladder has actually run. Tags have
+  names, and the Shortcuts action takes one, so a Home automation and a Work
+  automation each run as their own tag.
 - **A never-blocked list** — apps and sites no Mode may take away, whatever it
   names. One list, not one per Mode, because the failure it exists to prevent
   is forgetting.

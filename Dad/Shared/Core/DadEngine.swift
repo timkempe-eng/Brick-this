@@ -864,6 +864,25 @@ struct DadEngine {
         store.tags = tags
     }
 
+    /// Ungated, like re-pointing: a name changes what a tag is called, not
+    /// whether it works or which phone it can reach.
+    func rename(tagUID: String, to name: String?) {
+        var tags = store.tags
+        tags.rename(tagUID, to: name)
+        store.tags = tags
+    }
+
+    /// One sticker, where `forgetAllTags` is every one — and gated the same
+    /// way, because unpairing the tag in the other room is the arrangement
+    /// ending whether it goes alone or with the rest.
+    func unpair(tagUID: String) -> HouseholdCapability? {
+        guard may(.unpairTag) else { return .unpairTag }
+        var tags = store.tags
+        tags.unpair(tagUID)
+        store.tags = tags
+        return nil
+    }
+
     // MARK: - Modes
 
     /// The ladder, computed from this phone's own history.

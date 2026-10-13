@@ -8,6 +8,8 @@ struct SettingsView: View {
     @StateObject private var writer = TagWriter()
     @State private var linkToWrite = ""
 
+    @State private var editingTag: TagPairing.Pair?
+
     @State private var showingSafePicker = false
     @State private var showingHousehold = false
     /// The picker gets its own state and writes back on dismiss, for the
@@ -20,9 +22,22 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
+                    ForEach(model.tags) { pair in
+                        Button { editingTag = pair } label: {
+                            LabeledContent(pair.displayName,
+                                           value: model.modeName(forTag: pair) ?? "Whichever you pick")
+                        }
+                        .foregroundStyle(.primary)
+                    }
+
                     Button {
                         scanner.scan(prompt: "Hold your iPhone near the tag you want to pair.") { uid in
-                            model.pair(tagUID: uid)
+                            // Scanning one already paired opens it rather than
+                            // re-pairing it, which would forget its Mode.
+                            if !model.tags.contains(where: { $0.uid == uid }) {
+                                model.pair(tagUID: uid)
+                            }
+                            editingTag = model.tags.first { $0.uid == uid }
                         }
                     } label: {
                         Label("Pair a \(Vocab.tagNoun)", systemImage: "wave.3.right")
@@ -41,7 +56,7 @@ struct SettingsView: View {
                 } footer: {
                     Text(model.pairedTagCount == 0
                          ? "No tag paired yet, so any NFC tag will work. Pair one to lock Clover to it."
-                         : "Only your paired tags can send this phone outside and bring it back in.")
+                         : "Only your paired tags can send this phone outside and bring it back in. Name one and choose what it starts — Home, Work — and Shortcuts can tap it for you.")
                 }
 
                 Section {
@@ -90,8 +105,9 @@ struct SettingsView: View {
                 Section {
                     Text("""
                          Set up a Shortcuts automation so a tap works with Clover closed: \
-                         Shortcuts › Automation › NFC › scan your tag › add the \
-                         “\(Vocab.action)” action › turn off Ask Before Running.
+                         Shortcuts › Automation › NFC › scan your tag › Run Immediately › \
+                         add the “\(Vocab.action)” action. With more than one tag, open \
+                         each tag above for its own steps.
                          """)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -164,6 +180,9 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingHousehold) { HouseholdView() }
+            .sheet(item: $editingTag) { pair in
+                TagEditorView(pair: pair, modes: model.modes)
+            }
             .familyActivityPicker(isPresented: $showingSafePicker, selection: $safeSelection)
             .onAppear { safeSelection = model.neverBlocked.familyActivitySelection }
             .onChange(of: showingSafePicker) { _, isShowing in

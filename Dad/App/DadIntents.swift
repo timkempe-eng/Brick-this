@@ -19,6 +19,21 @@ struct ToggleDadIntent: AppIntent {
     @Parameter(title: "Mode", optionsProvider: ModeNameOptions())
     var modeName: String?
 
+    /// The tag this run stands in for. An NFC automation tells its action
+    /// nothing about the tag that fired it, so a phone with a Home tag and a
+    /// Work tag needs one automation per tag, each built around one of them.
+    /// Set, the run is that tag's tap: it starts the Mode the tag names in
+    /// Clover, and a tag unpaired since gets the answer that tag would get
+    /// tapped for real.
+    @Parameter(title: "Tag")
+    var tag: TagEntity?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Touch Grass with \(\.$tag)") {
+            \.$modeName
+        }
+    }
+
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let engine = DadEngine.live
         let requested = modeName.flatMap { name in
@@ -34,7 +49,9 @@ struct ToggleDadIntent: AppIntent {
                 "\"\(modeName ?? "")\" isn't one of your \(Vocab.modeNoun)s any more — which one?")
         }
 
-        switch engine.handleTap(preferredMode: requested) {
+        // The tag's UID goes through the same call the in-app scan makes with
+        // the UID it read, so the two cannot come to mean different things.
+        switch engine.handleTap(tagUID: tag?.id, preferredMode: requested) {
         case .dadded(let mode, let start):
             return .result(dialog: Self.dialog(mode: mode, start: start))
         case .unDadded(let session):
@@ -133,6 +150,56 @@ struct ModeNameOptions: DynamicOptionsProvider {
     }
 }
 
+/// A paired tag, as Shortcuts sees it.
+///
+/// Carries the UID as its id because the UID is what the engine resolves; it
+/// is a factory number any NFC reader can see, not a secret. The tag is only
+/// ever handed to `handleTap`, never to the household calls that take a tag
+/// as proof a grown-up is in the room — those stay with a real scan.
+struct TagEntity: AppEntity {
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Tag"
+    static var defaultQuery = TagQuery()
+
+    let id: String
+    let name: String
+    let startsMode: String?
+
+    var displayRepresentation: DisplayRepresentation {
+        let starts = startsMode ?? "Whichever \(Vocab.modeNoun.lowercased()) you pick"
+        return DisplayRepresentation(title: "\(name)", subtitle: "\(starts)")
+    }
+
+    /// Every paired tag, in Settings' order.
+    static func paired() -> [TagEntity] {
+        let store = DadEngine.live.store
+        let modes = store.modes
+        return store.tags.pairs.map { pair in
+            TagEntity(id: pair.uid,
+                      name: pair.displayName,
+                      startsMode: pair.modeID.flatMap { id in modes.first { $0.id == id }?.name })
+        }
+    }
+}
+
+struct TagQuery: EntityQuery {
+    /// Answers for every id asked about, paired or not. A Shortcut built
+    /// around a tag that has since been unpaired must still run *as that
+    /// tag* — refused while other tags are paired, as the sticker itself
+    /// would be — rather than find its tag missing and fall back to a plain
+    /// toggle with some other Mode.
+    func entities(for identifiers: [String]) async throws -> [TagEntity] {
+        let paired = TagEntity.paired()
+        return identifiers.map { id in
+            paired.first { $0.id == id }
+                ?? TagEntity(id: id, name: "A \(Vocab.tagNoun) that isn't paired", startsMode: nil)
+        }
+    }
+
+    func suggestedEntities() async throws -> [TagEntity] {
+        TagEntity.paired()
+    }
+}
+
 struct DadShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -140,6 +207,10 @@ struct DadShortcuts: AppShortcutsProvider {
             phrases: [
                 "Touch grass with \(.applicationName)",
                 "Touch grass in \(.applicationName)",
+                // One per paired tag, from `TagQuery.suggestedEntities`, so
+                // each tag's action is waiting in Shortcuts by name. The
+                // system only re-reads the list when `DadModel` says so.
+                "Touch grass with \(\.$tag) in \(.applicationName)",
             ],
             shortTitle: "Touch Grass",
             systemImageName: "lock.iphone"

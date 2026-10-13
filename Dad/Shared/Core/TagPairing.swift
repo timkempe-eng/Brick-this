@@ -36,9 +36,33 @@ struct TagPairing: Equatable, Codable {
         /// The Mode this tag names, or `nil` for "toggle, app's choice".
         var modeID: UUID?
 
-        init(uid: String, modeID: UUID? = nil) {
+        /// What the person calls it — "Home", "Work". `nil` until they say.
+        ///
+        /// It is how a Shortcut can name one sticker among several: an NFC
+        /// automation hands the action nothing about the tag that fired it,
+        /// so "Touch Grass with Work" has to be chosen by name when the
+        /// automation is built. Absent from every row an older build wrote,
+        /// and an absent key decodes to `nil`, so this needs no ladder step.
+        var name: String?
+
+        init(uid: String, modeID: UUID? = nil, name: String? = nil) {
             self.uid = uid
             self.modeID = modeID
+            self.name = Pair.cleaned(name)
+        }
+
+        /// The name, or the last four characters of the UID when there is
+        /// none. Never empty: a picker row with no text is a row nobody can
+        /// choose on purpose.
+        var displayName: String {
+            name ?? "\(Vocab.tagNoun) ···\(uid.suffix(4))"
+        }
+
+        /// Whitespace-only is no name. Otherwise "  " would be a tag whose
+        /// row in Shortcuts reads as blank.
+        static func cleaned(_ name: String?) -> String? {
+            let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? nil : trimmed
         }
     }
 
@@ -112,6 +136,13 @@ struct TagPairing: Equatable, Codable {
         pairs.first { $0.uid == uid }?.modeID
     }
 
+    /// The paired row for this UID, if there is one. Unlike `isPaired`, an
+    /// empty list answers `nil`: "any tag works" is not the same as "this is
+    /// a tag you named".
+    func pair(for uid: String) -> Pair? {
+        pairs.first { $0.uid == uid }
+    }
+
     /// What a tap on `uid` means, given the Modes that currently exist.
     ///
     /// `knownModeIDs` is passed in rather than reached for: this type never
@@ -167,12 +198,26 @@ struct TagPairing: Equatable, Codable {
     /// second row, and re-pointing keeps the tag's place in the list. Tapping
     /// a tag you already own is the normal way to find out its UID, so it
     /// happens constantly.
+    ///
+    /// Re-pointing keeps the name. Pointing the Work tag at a different Mode
+    /// is not renaming it, and a Shortcut that chose it by name must still
+    /// find it.
     mutating func pair(_ uid: String, to modeID: UUID? = nil) {
         if let i = pairs.firstIndex(where: { $0.uid == uid }) {
             pairs[i].modeID = modeID
         } else {
             pairs.append(Pair(uid: uid, modeID: modeID))
         }
+    }
+
+    /// Names a paired tag, or clears its name with `nil` or blank text.
+    ///
+    /// Does nothing for a UID that isn't paired. Naming is not pairing:
+    /// a rename that quietly added a row would be a way to pair a tag
+    /// without the permission pairing needs.
+    mutating func rename(_ uid: String, to name: String?) {
+        guard let i = pairs.firstIndex(where: { $0.uid == uid }) else { return }
+        pairs[i].name = Pair.cleaned(name)
     }
 
     mutating func unpair(_ uid: String) {
