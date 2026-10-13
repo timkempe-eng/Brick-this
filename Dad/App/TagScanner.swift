@@ -267,7 +267,13 @@ extension TagScanner: NFCTagReaderSessionDelegate {
         switch tag {
         case .miFare(let t):    return t.identifier      // NTAG213/215/216 land here
         case .iso15693(let t):  return t.identifier      // NFC Forum Type 5
-        case .iso7816(let t):   return t.identifier      // payment-style cards; unlikely but harmless
+        // Never reached as shipped: iOS only reports an ISO 7816 tag to an app
+        // whose Info.plist lists the application ids it will select, and this
+        // one lists none. Listing some would not admit bank cards either —
+        // Core NFC refuses payment application ids, and most contactless bank
+        // cards give a fresh random UID on every tap, so a paired card would
+        // be a stranger's tag the next time. Stickers are the supported tag.
+        case .iso7816(let t):   return t.identifier
         @unknown default:       return nil
         }
     }
