@@ -41,6 +41,18 @@ struct ModesView: View {
                 } label: {
                     Label("Add a \(Vocab.modeNoun.lowercased())", systemImage: "plus")
                 }
+
+                if !model.modes.contains(where: \.isFullBrick) {
+                    Section {
+                        Button {
+                            editing = DadMode.fullBrickPreset
+                        } label: {
+                            Label("Add Full Brick", systemImage: "iphone.slash")
+                        }
+                    } footer: {
+                        Text(ModeEditorView.fullBrickExplanation)
+                    }
+                }
             }
             .navigationTitle("\(Vocab.modeNoun)s")
             .navigationBarTitleDisplayMode(.inline)
@@ -56,6 +68,15 @@ struct ModesView: View {
 }
 
 struct ModeEditorView: View {
+    /// Said wherever Full Brick is offered, so the limit is read before it is
+    /// chosen rather than discovered afterwards.
+    static let fullBrickExplanation = """
+        Every app and website goes — including your never-blocked list and \
+        anything installed later — and Dad can't be deleted. As close to off as \
+        iOS allows: no app can power the phone down, and Phone and emergency \
+        calls always work. The emergency override still works too.
+        """
+
     @State var mode: DadMode
     let onSave: (DadMode) -> Void
 
@@ -119,39 +140,49 @@ struct ModeEditorView: View {
                 }
 
                 Section {
-                    Picker("This \(Vocab.modeNoun.lowercased())", selection: Binding(
-                        get: { mode.effectiveStyle },
-                        set: { mode.style = $0 }
-                    )) {
-                        Text("Takes these away").tag(DadMode.ModeStyle.blocklist)
-                        Text("Leaves only these").tag(DadMode.ModeStyle.allowlist)
-                    }
-                    .pickerStyle(.inline)
-                } header: {
-                    Text("Which way round")
+                    Toggle("Full Brick", isOn: $mode.isFullBrick)
                 } footer: {
-                    Text(mode.effectiveStyle == .blocklist
-                         ? "A list of what goes. Simple, and it decays: every app you install after today is a hole in it."
-                         : "A list of what stays. Everything else goes, including apps you haven't installed yet — the only shape here that gets better with time.")
+                    Text(mode.isFullBrick
+                         ? Self.fullBrickExplanation
+                         : "Off. This \(Vocab.modeNoun.lowercased()) takes away what you choose below.")
                 }
 
-                Section {
-                    Button {
-                        showingPicker = true
-                    } label: {
-                        HStack {
-                            Text(mode.effectiveStyle == .blocklist
-                                 ? "Apps and sites to hide" : "Apps and sites to keep")
-                            Spacer()
-                            Text("\(mode.effectiveStyle == .blocklist ? mode.blocked.totalCount : mode.allowedSelection.totalCount)")
-                                .foregroundStyle(.secondary)
+                if !mode.isFullBrick {
+                    Section {
+                        Picker("This \(Vocab.modeNoun.lowercased())", selection: Binding(
+                            get: { mode.effectiveStyle },
+                            set: { mode.style = $0 }
+                        )) {
+                            Text("Takes these away").tag(DadMode.ModeStyle.blocklist)
+                            Text("Leaves only these").tag(DadMode.ModeStyle.allowlist)
                         }
+                        .pickerStyle(.inline)
+                    } header: {
+                        Text("Which way round")
+                    } footer: {
+                        Text(mode.effectiveStyle == .blocklist
+                             ? "A list of what goes. Simple, and it decays: every app you install after today is a hole in it."
+                             : "A list of what stays. Everything else goes, including apps you haven't installed yet — the only shape here that gets better with time.")
                     }
-                } footer: {
-                    Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps. Anything on your never-blocked list in Settings stays reachable even if a \(Vocab.modeNoun.lowercased()) names it.")
-                }
 
-                AllowanceSection(mode: $mode)
+                    Section {
+                        Button {
+                            showingPicker = true
+                        } label: {
+                            HStack {
+                                Text(mode.effectiveStyle == .blocklist
+                                     ? "Apps and sites to hide" : "Apps and sites to keep")
+                                Spacer()
+                                Text("\(mode.effectiveStyle == .blocklist ? mode.blocked.totalCount : mode.allowedSelection.totalCount)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } footer: {
+                        Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps. Anything on your never-blocked list in Settings stays reachable even if a \(Vocab.modeNoun.lowercased()) names it.")
+                    }
+
+                    AllowanceSection(mode: $mode)
+                }
 
                 ScheduleSection(mode: $mode)
 
@@ -177,7 +208,9 @@ struct ModeEditorView: View {
                             Text(option.id).tag(option.seconds)
                         }
                     }
-                    Toggle("Strict", isOn: $mode.isStrict)
+                    Toggle("Strict", isOn: Binding(get: { mode.deniesAppRemoval },
+                                                   set: { mode.isStrict = $0 }))
+                        .disabled(mode.isFullBrick)
                     Toggle("Ask for Assistive Access", isOn: $mode.asksForAssistiveAccess)
                 } footer: {
                     Text("Strict stops Dad being deleted while your phone is \(Vocab.verbPast) — the fastest way to cheat.")

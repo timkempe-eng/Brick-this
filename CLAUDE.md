@@ -80,7 +80,7 @@ missing is a session whose hook did not run, not a reason to push untested.
 ## Before you push
 
 ```bash
-swift test                      # 886 tests, seconds
+swift test                      # 905 tests, seconds
 ./scripts/lint-vocabulary.sh
 python3 scripts/preflight.py    # 110 checks on the Xcode wiring
 ```
@@ -167,7 +167,7 @@ From the family layer, where the decision is the feature: only a session a
 *person* ended counts toward a rung or earns reward hours, and both read one
 definition (`wasEndedByAPerson`, through `daysEndedByAPerson` and
 `wholeHoursEndedByAPerson`) rather than each writing it out; reward hours are
-whole hours per session, capped at four a day, and a granted break or a
+whole hours per session, none from 23:00 to 06:00, capped at four a day, and a granted break or a
 timer the person set ends a session as theirs; hours outlive the history
 trim; the household streak
 counts days *everyone* took part, so a grown-up's phone can end it; a stale

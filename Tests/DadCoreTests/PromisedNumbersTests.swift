@@ -40,6 +40,13 @@ final class PromisedNumbersTests: XCTestCase {
         XCTAssertEqual(RewardLedger.hoursCountedPerDay, RewardLedger.Hours(4))
     }
 
+    /// "None between 23:00 and 06:00" — the Rewards screen, the README and
+    /// ADR 009.
+    func testRewardNightIsElevenUntilSix() {
+        XCTAssertEqual(RewardNight.startHour, 23)
+        XCTAssertEqual(RewardNight.endHour, 6)
+    }
+
     /// Apple's floor, not ours: `DeviceActivitySchedule` will not monitor a
     /// shorter interval. Lowering it would make timed releases, breaks and
     /// short schedules silently never fire — the failure this codebase spends

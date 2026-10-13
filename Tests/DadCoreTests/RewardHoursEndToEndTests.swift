@@ -12,6 +12,11 @@ final class RewardHoursEndToEndTests: XCTestCase {
     private let calendar: Calendar = .utc
     private let hour: TimeInterval = 3600
 
+    /// 2025-08-24 10:00 UTC. Every clock here starts in daylight, because
+    /// `RewardNight` pays nothing between 23:00 and 06:00 and these tests are
+    /// about something else.
+    private let morning = Date(timeIntervalSince1970: 1_756_029_600)
+
     private func ended(_ startedAt: Date, lasting: TimeInterval,
                        _ ending: DadSession.EndReason = .tapped,
                        bySchedule: Bool? = nil) -> DadSession {
@@ -29,7 +34,7 @@ final class RewardHoursEndToEndTests: XCTestCase {
         // Three hours in, an ask, a grown-up's tag. The session used to end
         // `.system`, which earns nothing — three hours gone for following
         // every rule there is.
-        let h = Harness()
+        let h = Harness(now: morning)
         let mode = h.addMode()
         h.engine.pair(tagUID: "PARENT")
         h.engine.dad(with: mode)
@@ -44,7 +49,7 @@ final class RewardHoursEndToEndTests: XCTestCase {
     // MARK: - A timer the person set keeps its hours
 
     func testATimedReleaseKeepsItsHours() {
-        let h = Harness()
+        let h = Harness(now: morning)
         let mode = h.addMode(autoRelease: 2 * hour)
         h.engine.dad(with: mode)
         h.clock.advance(2 * hour + 60)
@@ -85,7 +90,7 @@ final class RewardHoursEndToEndTests: XCTestCase {
     }
 
     func testHoursFromATrimmedSessionStayInTheBalance() throws {
-        let h = Harness()
+        let h = Harness(now: morning)
         let mode = h.addMode()
         let longAgo = h.clock.now.addingTimeInterval(-40 * 86_400)
         h.store.history = fullHistory(after: [ended(longAgo, lasting: 3 * hour)],
@@ -109,7 +114,7 @@ final class RewardHoursEndToEndTests: XCTestCase {
     func testADaySplitByTheTrimEarnsItsCeilingOnce() {
         // Three hours archived and three still in the history, on the same
         // day. Capped separately that is eight; it is four.
-        let h = Harness()
+        let h = Harness(now: morning)
         let mode = h.addMode()
         let day = h.clock.now.addingTimeInterval(-40 * 86_400)
         h.store.history = fullHistory(after: [ended(day, lasting: 3 * hour),
@@ -131,7 +136,7 @@ final class RewardHoursEndToEndTests: XCTestCase {
         // row of nothing per short session would grow without bound.
         let earnedNothing: [(TimeInterval, DadSession.EndReason)] = [(3 * hour, .emergency), (40 * 60, .tapped)]
         for (length, ending) in earnedNothing {
-            let h = Harness()
+            let h = Harness(now: morning)
             let mode = h.addMode()
             let longAgo = h.clock.now.addingTimeInterval(-40 * 86_400)
             h.store.history = fullHistory(after: [ended(longAgo, lasting: length, ending)],
@@ -147,7 +152,7 @@ final class RewardHoursEndToEndTests: XCTestCase {
     func testTwoTrimsFromTheSameDayAddUp() {
         // The day leaves the history one session at a time, and each trim
         // adds to what the last one wrote rather than replacing it.
-        let h = Harness()
+        let h = Harness(now: morning)
         let mode = h.addMode()
         let day = h.clock.now.addingTimeInterval(-40 * 86_400)
         h.store.history = fullHistory(after: [ended(day, lasting: 1 * hour),
@@ -166,17 +171,17 @@ final class RewardHoursEndToEndTests: XCTestCase {
     }
 
     func testArchivedHoursAddToTheSameDayBeforeTheCeiling() {
-        let start = Date(timeIntervalSince1970: 1_756_000_000).addingTimeInterval(-3 * 86_400)
+        let start = morning.addingTimeInterval(-3 * 86_400)
         let day = calendar.startOfDay(for: start)
         let ledger = RewardLedger(sessions: [ended(start, lasting: 2 * hour)],
                                   archived: [.init(day: day, hours: RewardLedger.Hours(1))],
-                                  now: Date(timeIntervalSince1970: 1_756_000_000),
+                                  now: morning,
                                   calendar: calendar)
         XCTAssertEqual(ledger.hoursByDay[day], RewardLedger.Hours(3))
 
         let over = RewardLedger(sessions: [ended(start, lasting: 2 * hour)],
                                 archived: [.init(day: day, hours: RewardLedger.Hours(3))],
-                                now: Date(timeIntervalSince1970: 1_756_000_000),
+                                now: morning,
                                 calendar: calendar)
         XCTAssertEqual(over.hoursByDay[day], RewardLedger.hoursCountedPerDay)
     }
@@ -191,7 +196,8 @@ final class RewardHoursEndToEndTests: XCTestCase {
 
     // MARK: - Progress while it runs
 
-    private let now = Date(timeIntervalSince1970: 1_756_000_000)
+    /// 2025-08-24 20:00 UTC: evening, with the night three hours off.
+    private let now = Date(timeIntervalSince1970: 1_756_065_600)
 
     private func running(for elapsed: TimeInterval) -> DadSession {
         DadSession(modeID: UUID(), modeName: "Evening",
@@ -199,20 +205,20 @@ final class RewardHoursEndToEndTests: XCTestCase {
     }
 
     func testNoProgressWithoutARunningSession() {
-        XCTAssertNil(HourProgress(session: nil, earnedThatDay: .zero, now: now))
+        XCTAssertNil(HourProgress(session: nil, earnedThatDay: .zero, now: now, calendar: calendar))
         XCTAssertNil(HourProgress(session: ended(now, lasting: hour),
-                                  earnedThatDay: .zero, now: now))
+                                  earnedThatDay: .zero, now: now, calendar: calendar))
     }
 
     func testTheFirstHourCountsDown() {
-        let p = HourProgress(session: running(for: 42 * 60), earnedThatDay: .zero, now: now)
+        let p = HourProgress(session: running(for: 42 * 60), earnedThatDay: .zero, now: now, calendar: calendar)
         XCTAssertEqual(p?.hoursSoFar, RewardLedger.Hours(0))
         XCTAssertEqual(p?.text(at: now), "First reward hour in 18 min")
     }
 
     func testLaterHoursSaySoFarAndNext() {
         let p = HourProgress(session: running(for: 2 * hour + 18 * 60),
-                             earnedThatDay: .zero, now: now)
+                             earnedThatDay: .zero, now: now, calendar: calendar)
         XCTAssertEqual(p?.hoursSoFar, RewardLedger.Hours(2))
         XCTAssertEqual(p?.text(at: now), "2 hours so far · next in 42 min")
     }
@@ -221,26 +227,26 @@ final class RewardHoursEndToEndTests: XCTestCase {
         // Three already earned today: one more fits, and then nothing —
         // however long it has run.
         let p = HourProgress(session: running(for: 3 * hour + 10 * 60),
-                             earnedThatDay: RewardLedger.Hours(3), now: now)
+                             earnedThatDay: RewardLedger.Hours(3), now: now, calendar: calendar)
         XCTAssertEqual(p?.hoursSoFar, RewardLedger.Hours(1))
         XCTAssertNil(p?.nextHourAt)
         XCTAssertEqual(p?.text(at: now), "Today's 4 hours are in")
 
         let full = HourProgress(session: running(for: 10 * 60),
-                                earnedThatDay: RewardLedger.hoursCountedPerDay, now: now)
+                                earnedThatDay: RewardLedger.hoursCountedPerDay, now: now, calendar: calendar)
         XCTAssertEqual(full?.hoursSoFar, RewardLedger.Hours(0))
         XCTAssertNil(full?.nextHourAt)
     }
 
     func testTheMinutesRoundUpSoTheyNeverReadZero() {
-        let p = HourProgress(session: running(for: hour - 10), earnedThatDay: .zero, now: now)
+        let p = HourProgress(session: running(for: hour - 10), earnedThatDay: .zero, now: now, calendar: calendar)
         XCTAssertEqual(p?.minutesToNextHour(at: now), 1)
-        let q = HourProgress(session: running(for: 30), earnedThatDay: .zero, now: now)
+        let q = HourProgress(session: running(for: 30), earnedThatDay: .zero, now: now, calendar: calendar)
         XCTAssertEqual(q?.minutesToNextHour(at: now), 60)
     }
 
     func testTheEngineReadsWhatTheSessionsDayHasAlreadyEarned() {
-        let h = Harness()
+        let h = Harness(now: morning)
         let mode = h.addMode()
         h.engine.dad(with: mode)
         h.clock.advance(2 * hour)

@@ -91,13 +91,14 @@ struct DadSession: Codable, Identifiable, Hashable {
     var isActive: Bool { endedAt == nil }
     var duration: TimeInterval { (endedAt ?? Date()).timeIntervalSince(startedAt) }
 
-    /// Full hours between the start and the end, rounded down: fifty-nine
-    /// minutes is none. Zero while the session is running — it has no outcome
-    /// yet — and zero rather than negative for an end recorded before its
+    /// Full reward hours: the session's time outside `RewardNight`, rounded
+    /// down, so fifty-nine minutes is none. Zero while the session is running
+    /// — it has no outcome yet — and zero for an end recorded before its
     /// start, which a clock moved backwards can produce.
-    var wholeHours: Int {
+    func wholeRewardHours(calendar: Calendar) -> Int {
         guard let endedAt else { return 0 }
-        return max(0, Int(endedAt.timeIntervalSince(startedAt) / 3600))
+        let counted = RewardNight.countedSeconds(from: startedAt, to: endedAt, calendar: calendar)
+        return Int(counted / 3600)
     }
 }
 
@@ -140,9 +141,9 @@ extension Collection where Element == DadSession {
                 .map { calendar.startOfDay(for: $0.startedAt) })
     }
 
-    /// Whole hours of sessions a person ended, credited to the day each
-    /// started. Uncapped: the ceiling is the reward ledger's rule, not a fact
-    /// about the history.
+    /// Whole reward hours of sessions a person ended — night excluded, see
+    /// `RewardNight` — credited to the day each started. Uncapped: the ceiling
+    /// is the reward ledger's rule, not a fact about the history.
     ///
     /// Every day in `daysEndedByAPerson` is a key, including one whose
     /// sessions were all under an hour — present at zero rather than absent —
@@ -154,7 +155,8 @@ extension Collection where Element == DadSession {
     func wholeHoursEndedByAPerson(calendar: Calendar) -> [Date: Int] {
         var hours: [Date: Int] = [:]
         for session in self where session.wasEndedByAPerson {
-            hours[calendar.startOfDay(for: session.startedAt), default: 0] += session.wholeHours
+            hours[calendar.startOfDay(for: session.startedAt), default: 0]
+                += session.wholeRewardHours(calendar: calendar)
         }
         return hours
     }

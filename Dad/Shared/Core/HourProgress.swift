@@ -18,21 +18,30 @@ struct HourProgress: Equatable {
     let hoursSoFar: RewardLedger.Hours
 
     /// When the next hour lands, or `nil` when the day's ceiling is reached
-    /// and further time earns nothing.
+    /// and further time earns nothing. Skips the night: started at 22:30, the
+    /// next hour lands at 06:30.
     let nextHourAt: Date?
+
+    /// Whether `now` is in `RewardNight`, when nothing is counting.
+    let isNight: Bool
 
     /// - Parameters:
     ///   - session: the running session; `nil` or a finished one gives `nil`.
     ///   - earnedThatDay: what the ledger already credits to the day the
     ///     session started — the day its hours will land on.
-    init?(session: DadSession?, earnedThatDay: RewardLedger.Hours, now: Date) {
+    init?(session: DadSession?, earnedThatDay: RewardLedger.Hours, now: Date,
+          calendar: Calendar) {
         guard let session, session.isActive else { return nil }
         let room = (RewardLedger.hoursCountedPerDay - earnedThatDay).count
-        let elapsed = max(0, Int(now.timeIntervalSince(session.startedAt) / 3600))
+        let counted = RewardNight.countedSeconds(from: session.startedAt, to: now,
+                                                 calendar: calendar)
+        let elapsed = Int(counted / 3600)
         hoursSoFar = RewardLedger.Hours(min(elapsed, room))
         nextHourAt = elapsed < room
-            ? session.startedAt.addingTimeInterval(TimeInterval(elapsed + 1) * 3600)
+            ? RewardNight.instant(reaching: TimeInterval(elapsed + 1) * 3600,
+                                  from: session.startedAt, calendar: calendar)
             : nil
+        isNight = RewardNight.isNight(now, calendar: calendar)
     }
 
     /// Whole minutes until the next hour, rounded up so the line never reads
@@ -46,6 +55,10 @@ struct HourProgress: Equatable {
     func text(at now: Date) -> String {
         guard let minutes = minutesToNextHour(at: now) else {
             return "Today's \(RewardLedger.hoursCountedPerDay.description) are in"
+        }
+        if isNight {
+            let paused = "Night hours don't count · back at \(RewardNight.endHour):00"
+            return hoursSoFar.isZero ? paused : "\(hoursSoFar.description) so far · \(paused)"
         }
         if hoursSoFar.isZero { return "First reward hour in \(minutes) min" }
         return "\(hoursSoFar.description) so far · next in \(minutes) min"

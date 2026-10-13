@@ -67,8 +67,9 @@ struct RewardsView: View {
                  Every full hour \(Vocab.verbPast) earns one, when you end the session \
                  yourself — at the \(Vocab.tagNoun), in the app, with a timer you set, or \
                  with a break a grown-up grants. Up to \
-                 \(RewardLedger.hoursCountedPerDay.description) a day, so an evening counts \
-                 as much as a night. A \(Vocab.modeNoun.lowercased()) a schedule opened and \
+                 \(RewardLedger.hoursCountedPerDay.description) a day, and none between \
+                 \(RewardNight.startHour):00 and \(RewardNight.endHour):00 — being asleep isn't \
+                 the effort. A \(Vocab.modeNoun.lowercased()) a schedule opened and \
                  closed while the phone sat on a table earns nothing, and neither does one \
                  ended with an override.
                  """)

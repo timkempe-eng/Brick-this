@@ -166,7 +166,8 @@ final class DadModel: ObservableObject {
 
     /// "2 hours so far · next in 18 min", or `nil` when nothing is running.
     var hourProgressText: String? {
-        HourProgress(session: activeSession, earnedThatDay: hoursEarnedOnSessionDay, now: now)?
+        HourProgress(session: activeSession, earnedThatDay: hoursEarnedOnSessionDay,
+                     now: now, calendar: .current)?
             .text(at: now)
     }
 

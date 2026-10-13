@@ -104,9 +104,12 @@ struct ShieldTokens {
 }
 
 extension DadMode {
-    /// - Parameter neverBlocked: apps and sites no Mode may take away.
+    /// - Parameter neverBlocked: apps and sites no Mode may take away — except
+    ///   Full Brick, which is the one Mode that takes them too.
     func shieldTokens(neverBlocked: BlockedSelection) -> ShieldTokens {
-        let safe = neverBlocked.familyActivitySelection
+        let safe = isFullBrick
+            ? FamilyActivitySelection()
+            : neverBlocked.familyActivitySelection
 
         switch effectiveStyle {
         case .blocklist:

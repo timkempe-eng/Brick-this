@@ -71,6 +71,42 @@ struct DadMode: Codable, Identifiable, Hashable {
     /// entirely.
     var wantsAssistiveAccess: Bool?
 
+    /// Full Brick: everything goes, with no exceptions this app can grant.
+    ///
+    /// The closest an app may come to switching the phone off, and it is
+    /// worth being exact about how close. No app can power an iPhone down or
+    /// lock its screen, and iOS never shields Phone or emergency calls — so a
+    /// Full Brick phone still rings, still calls emergency services, and shows the
+    /// time. Everything else is shielded: every app and website, including
+    /// ones installed after the Mode was made, and including the never-blocked
+    /// list, which is the one difference from an allowlist that keeps nothing.
+    /// It is always strict.
+    ///
+    /// The emergency override still works. A phone with no way out but a tag
+    /// in another room is a phone somebody will one day need and not have.
+    ///
+    /// Optional for the reason every added field here is. An older build
+    /// ignores the key and reads the Mode as whatever its style says.
+    var fullBrick: Bool?
+
+    var isFullBrick: Bool {
+        get { fullBrick ?? false }
+        set { fullBrick = newValue ? true : nil }
+    }
+
+    /// Whether iOS should refuse to delete Dad while this Mode runs.
+    var deniesAppRemoval: Bool { isStrict || isFullBrick }
+
+    /// The ready-made one the Modes list offers. Not a starter Mode, and
+    /// deliberately: it blocks something from the moment it exists, so on a
+    /// fresh install it would be the only usable Mode — and a bare tap would
+    /// start it without anyone having chosen it.
+    static var fullBrickPreset: DadMode {
+        var mode = DadMode(name: "Full Brick", symbol: "iphone.slash")
+        mode.isFullBrick = true
+        return mode
+    }
+
     /// Whether to ask for the triple-click when this Mode starts.
     var asksForAssistiveAccess: Bool {
         get { wantsAssistiveAccess ?? false }
@@ -122,10 +158,16 @@ struct DadMode: Codable, Identifiable, Hashable {
         set { allowance = newValue }
     }
 
-    var effectiveStyle: ModeStyle { style ?? .blocklist }
+    /// Full Brick reads as an allowlist that keeps nothing, so everything that
+    /// follows from the style — it always blocks, it never rations — follows
+    /// for it too, without a rule of its own to drift.
+    var effectiveStyle: ModeStyle { isFullBrick ? .allowlist : (style ?? .blocklist) }
 
-    /// The survivors, when this Mode leaves only what you name.
-    var allowedSelection: BlockedSelection { allowed ?? BlockedSelection() }
+    /// The survivors, when this Mode leaves only what you name. None for Full
+    /// Brick, whatever `allowed` still holds from before it was switched on.
+    var allowedSelection: BlockedSelection {
+        isFullBrick ? BlockedSelection() : (allowed ?? BlockedSelection())
+    }
 
     /// Whether starting this Mode would actually take something away.
     ///
@@ -151,7 +193,7 @@ struct DadMode: Codable, Identifiable, Hashable {
         if takesBreaks, let seconds = resumeAfter {
             parts.append("\(seconds.dadDurationText) breaks")
         }
-        if isStrict { parts.append("strict") }
+        if deniesAppRemoval && !isFullBrick { parts.append("strict") }
         if let schedule, schedule.isEnabled, schedule.isValid {
             parts.append(schedule.displayText())
         }
@@ -167,6 +209,7 @@ struct DadMode: Codable, Identifiable, Hashable {
         case .blocklist:
             return blocked.summary
         case .allowlist:
+            if isFullBrick { return "Full Brick — everything but calls" }
             let allowed = allowedSelection
             return allowed.isEmpty ? "Everything goes" : "Only \(allowed.summary)"
         }

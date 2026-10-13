@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 886 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 905 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -38,6 +38,13 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   exists and when it gets renegotiated.
 - **Allowlist Modes** — a Mode can name what stays rather than what goes, which
   is the only shape here that improves with time instead of decaying.
+- **Full Brick** — one switch on a Mode, or one tap to add a ready-made one:
+  every app and website goes, including the never-blocked list and anything
+  installed later, and it is always strict. As close to off as iOS allows,
+  and that is not off: no app can power a phone down, and Phone and emergency
+  calls always work. The emergency override still works too. Not a starter
+  Mode, because it blocks from the moment it exists and a fresh install's
+  first tap would start it.
 - **A tag per Mode** — the kitchen tag starts Dinner, the desk tag starts Deep
   Work. The first migration the schema ladder has actually run.
 - **A never-blocked list** — apps and sites no Mode may take away, whatever it
@@ -50,8 +57,8 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   a date and a count and could not carry a name if somebody tried, and it says
   which day the number is true as of rather than pretending to be live.
 - **Rewards priced in whole hours off the phone** — one for each full hour
-  of a session you ended yourself, up to four a day, spent on things a
-  grown-up offers. A granted break or a timer you set keeps the hours; a
+  of a session you ended yourself, up to four a day and none between 23:00 and
+  06:00, spent on things a grown-up offers. A granted break or a timer you set keeps the hours; a
   schedule's session earns nothing, and neither does one ended with an
   override. Hours outlive the bounded history, and the home screen counts
   down to the next one while Dadded. Never in minutes, and not by convention:

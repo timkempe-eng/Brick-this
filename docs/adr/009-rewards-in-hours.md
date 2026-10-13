@@ -104,3 +104,24 @@ to vanish with nobody doing anything wrong, and two improvements.
 - **A countdown while Dadded.** `HourProgress` shows "2 hours so far · next in
   18 min" on the home screen, under a note that the hours count only when you
   Un-Dad yourself. It is a forecast and never enters the balance.
+
+## Follow-up: the night does not count (2026-10-13)
+
+The household asked that time between 23:00 and 06:00 earn nothing. That
+removes problem 1 at its source rather than capping it: an overnight session
+now earns its evening and its morning, and the night between is unpaid.
+
+- `RewardNight` measures a session's counted time: everything outside
+  23:00–06:00, local wall-clock time through the injected calendar, so the
+  night the clocks change is still 23:00 to 06:00 (pinned by a test on
+  Europe/London's spring-forward night).
+- One session's counted time is summed before rounding down, so 22:00 to
+  07:00 earns two hours: one each side of the night, from one unbroken
+  session.
+- The ceiling stays at four. It now limits long daytime sessions, such as a
+  school day, rather than sleep.
+- The countdown skips the night: started at 22:30, the next hour lands at
+  06:30, and between 23:00 and 06:00 the home screen says the night doesn't
+  count rather than counting down hundreds of minutes.
+- The ladder is unchanged. A session ended overnight still makes its day a
+  clean day, at zero hours.

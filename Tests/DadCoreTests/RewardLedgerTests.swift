@@ -28,7 +28,7 @@ final class RewardLedgerTests: XCTestCase {
         return c
     }()
 
-    private let now = Date(timeIntervalSince1970: 1_756_000_000) // 2025-08-24 01:46 UTC
+    private let now = Date(timeIntervalSince1970: 1_756_065_600) // 2025-08-24 20:00 UTC
 
     private func day(_ daysAgo: Int) -> Date {
         calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: now))!
@@ -36,11 +36,11 @@ final class RewardLedgerTests: XCTestCase {
 
     /// A finished session on the day `daysAgo`.
     ///
-    /// Placed in the small hours, and `minuteOfDay` rather than an hour, so
-    /// that several sessions can share a day and all of them still land before
-    /// `now` — which is itself just before two in the morning. A session dated
-    /// after `now` is excluded by the ledger on purpose, and it would be an
-    /// unwelcome surprise inside a test that is about something else.
+    /// `minuteOfDay` counts from 08:00, so every session is in daylight —
+    /// `RewardNight` pays nothing between 23:00 and 06:00 — and several can
+    /// share a day while all of them still land before `now`, which is 20:00.
+    /// A session dated after `now` is excluded by the ledger on purpose, and
+    /// it would be an unwelcome surprise inside a test about something else.
     ///
     /// `endedBy` is derived rather than passed, because these tests are about
     /// what a session *was* and not about the field: a scheduled one that
@@ -54,7 +54,7 @@ final class RewardLedgerTests: XCTestCase {
                          minutes: Double = 60,
                          emergency: Bool = false,
                          bySchedule: Bool? = nil) -> DadSession {
-        let start = day(daysAgo).addingTimeInterval(minuteOfDay * 60)
+        let start = day(daysAgo).addingTimeInterval(8 * 3600 + minuteOfDay * 60)
         let ending: DadSession.EndReason = emergency ? .emergency
             : (bySchedule == true ? .system : .tapped)
         return DadSession(modeID: UUID(),
@@ -246,7 +246,7 @@ final class RewardLedgerTests: XCTestCase {
         // been claimed with them.
         let running = DadSession(modeID: UUID(), modeName: "Deep Work",
                                  startedAt: now.addingTimeInterval(-3 * 3600), endedAt: nil)
-        XCTAssertEqual(running.wholeHours, 0)
+        XCTAssertEqual(running.wholeRewardHours(calendar: calendar), 0)
         XCTAssertEqual(ledger(sessions: [running]).earned, hours(0))
     }
 
@@ -268,26 +268,36 @@ final class RewardLedgerTests: XCTestCase {
                                    startedAt: start,
                                    endedAt: start.addingTimeInterval(-2 * 3600),
                                    endedBy: .tapped)
-        XCTAssertEqual(backwards.wholeHours, 0)
+        XCTAssertEqual(backwards.wholeRewardHours(calendar: calendar), 0)
         let l = ledger(sessions: [backwards, session(daysAgo: 1, minutes: 120)])
         XCTAssertEqual(l.earned, hours(2))
     }
 
     func testASessionRunningPastMidnightCountsTowardTheDayItStarted() {
-        // All of its hours land on the evening it began, under that evening's
-        // ceiling — so five hours from 10pm plus an hour earlier that day is
-        // four, and the hour this morning is today's own.
+        // 22:00 to 08:00: an hour before the night and two after it, all of
+        // them credited to the evening it began — including the morning's —
+        // and the hour started this morning is today's own.
         let start = day(1).addingTimeInterval(22 * 3600)
         let overnight = DadSession(modeID: UUID(), modeName: "Sleep",
                                    startedAt: start,
-                                   endedAt: start.addingTimeInterval(5 * 3600),
+                                   endedAt: start.addingTimeInterval(10 * 3600),
                                    endedBy: .tapped)
-        let l = ledger(sessions: [overnight,
-                                  session(daysAgo: 1),
-                                  session(daysAgo: 0, minuteOfDay: 10, minutes: 60)])
-        XCTAssertEqual(l.hoursByDay[day(1)], hours(4))
+        let l = ledger(sessions: [overnight, session(daysAgo: 0, minuteOfDay: 120)])
+        XCTAssertEqual(l.hoursByDay[day(1)], hours(3))
         XCTAssertEqual(l.hoursByDay[day(0)], hours(1))
-        XCTAssertEqual(l.earned, hours(5))
+        XCTAssertEqual(l.earned, hours(4))
+    }
+
+    func testNightHoursEarnNothing() {
+        // 23:00 to 06:00 is asleep, and asleep is not the effort.
+        let start = day(1).addingTimeInterval(23 * 3600)
+        let asleep = DadSession(modeID: UUID(), modeName: "Sleep",
+                                startedAt: start,
+                                endedAt: start.addingTimeInterval(7 * 3600),
+                                endedBy: .tapped)
+        XCTAssertEqual(ledger(sessions: [asleep]).earned, hours(0))
+        XCTAssertEqual(Array(ledger(sessions: [asleep]).hoursByDay.keys), [day(1)],
+                       "still a day a person ended a session on, at zero")
     }
 
     func testADayWithOnlyAShortSessionIsPresentAtZero() {

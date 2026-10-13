@@ -63,7 +63,7 @@ struct ManagedSettingsShield: ShieldControlling {
     /// merely rationing — the free period is precisely when someone would
     /// reach for that hatch.
     private func applyRestrictions(_ mode: DadMode) {
-        store.application.denyAppRemoval = mode.isStrict ? true : nil
+        store.application.denyAppRemoval = mode.deniesAppRemoval ? true : nil
     }
 
     func clear() {

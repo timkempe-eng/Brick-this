@@ -24,7 +24,10 @@ final class RewardWiringTests: XCTestCase {
         h.store.household = Household(role: .youngPerson, autonomyLevel: 0)
         h.engine.pair(tagUID: "PARENT")
         let mode = h.addMode()
+        // Back that many days, then into the morning: the harness starts
+        // before two in the morning, and night hours earn nothing.
         h.clock.advance(days: -hours)
+        h.clock.advance(8 * 60 * 60)
         for _ in 0..<hours {
             h.engine.dad(with: mode)
             h.clock.advance(60 * 60)

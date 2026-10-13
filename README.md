@@ -102,13 +102,13 @@ the code describes a fact, and they are not the same thing yet.
 Pick a Mode, tap, the apps disappear, tap, they come back. Three tap paths,
 Modes with app/category/website blocking, strict Mode, timed release, scheduled
 Modes, allowance Modes that ration instead of forbidding, allowlist Modes that
-name what stays, breaks, a never-blocked list, a tag per Mode, emergency
+name what stays, a Full Brick Mode that takes everything iOS lets it, breaks, a never-blocked list, a tag per Mode, emergency
 overrides, stats and streaks, a Lock Screen widget, and crash reconciliation.
 
 Then: two roles with permissions derived rather than stored, an autonomy ladder
 where consistency buys control and never minutes, request-and-grant answered by
 a tag tap, co-authored agreements with a date to talk about them again, rewards
-priced in whole hours off the phone (up to four a day), a weekly review aimed at a conversation, ten minutes' notice
+priced in whole hours off the phone (up to four a day, none from 23:00 to 06:00), a weekly review aimed at a conversation, ten minutes' notice
 before a scheduled Mode lands, a shared streak carried on the tag itself, and an
 honest report of the stretches Dad cannot account for.
 
@@ -175,7 +175,7 @@ The Foundation-only core — session maths, streaks, week boundaries, the verb
 forms — builds and tests anywhere, no Mac required:
 
 ```bash
-swift test                      # 886 tests, seconds, no Mac
+swift test                      # 905 tests, seconds, no Mac
 ./scripts/lint-vocabulary.sh    # the verb never ships lowercased
 python3 scripts/preflight.py    # 110 checks on the Xcode wiring
 ```
@@ -293,7 +293,7 @@ A Live Activity and Android are both **declined with reasons written down**
 rather than pending — [ADR 002](docs/adr/002-no-live-activity.md) and
 [ADR 004](docs/adr/004-android.md). [What is and isn't built](docs/roadmap.md).
 
-`swift test` passes — 886 tests covering the whole engine state machine,
+`swift test` passes — 905 tests covering the whole engine state machine,
 recurring schedules, allowances across a day boundary, breaks, the override
 allowance, and the session/streak maths. The suite is mutation-checked with
 `scripts/mutate.sh`: deliberately breaking the tag guard, the rationing branch,
