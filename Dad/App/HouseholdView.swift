@@ -109,7 +109,7 @@ struct HouseholdView: View {
             }
         } footer: {
             Text("""
-                 Days earned at the \(Vocab.tagNoun), spent on things a grown-up offers — \
+                 Hours earned off the phone, spent on things a grown-up offers — \
                  never on minutes. A blocker that pays you in the thing it took away has \
                  agreed the thing was worth having.
                  """)

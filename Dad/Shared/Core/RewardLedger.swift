@@ -8,10 +8,30 @@ import Foundation
 /// was handed over — a person does that, in a kitchen, and then taps
 /// `settling(claim:at:)`.
 ///
+/// # What is earned: whole hours off the phone
+///
+/// Each full hour of a session a person ended themselves earns one hour, up to
+/// `hoursCountedPerDay` on any one day. This was priced in days until the
+/// household asked for hours — [ADR 009](../../../docs/adr/009-rewards-in-hours.md)
+/// records the change and what it gave up. Three rules came with it, each a
+/// decision rather than a detail:
+///
+/// * **Only a session a person ended earns**, exactly as before and by the
+///   same definition the ladder reads. A Sleep window a schedule opened and
+///   closed while the phone sat on a table earns nothing.
+/// * **Only whole hours.** Fifty-nine minutes earns nothing, and two
+///   half-hour sessions do not add up to one. "Each full hour" is the promise,
+///   and a fraction would be a unit with no floor under it.
+/// * **A ceiling per day.** Without it a night's sleep, ended by a tap in the
+///   morning, would out-earn the evening that took effort, and a phone left in
+///   a drawer during school would out-earn both.
+///
 /// # The forbidden currency
 ///
 /// **A reward is never denominated in screen time, and this file is built so
-/// that making one would be a visible change rather than a quiet one.**
+/// that making one would be a visible change rather than a quiet one.** An
+/// hour *off* the phone is not an hour *on* it, and nothing here can turn one
+/// into the other.
 ///
 /// The reason is the strongest finding in the research behind this backlog: a
 /// whole category of apps — ScreenCoach, Chore Champ, EarnIt — lets chores buy
@@ -20,29 +40,27 @@ import Foundation
 /// reward, and cooperation turns into negotiation. `AutonomyLadder` states the
 /// same rule for autonomy and calls minutes "the one currency Dad must not
 /// mint". The rule is identical here and the exposure is worse, because this
-/// ledger is the one place in the app where something is explicitly *bought*.
+/// ledger is the one place in the app where something is explicitly *bought*
+/// — and now that the unit is an hour, it is one step closer to a duration.
 ///
 /// Four structural defences, and what a reviewer would see if someone undid
 /// each of them:
 ///
-/// 1. **The unit is a day, not a duration.** `Days` wraps an `Int` count of
-///    calendar days on which a session was finished by hand. It is minted by
-///    the session history and by nothing else. There is no initialiser from a
-///    `Double`, no `TimeInterval` anywhere in this file, and no conversion in
-///    either direction.
-/// 2. **`Days` cannot be multiplied or divided.** It has `+`, a saturating
-///    `-`, and `<`, all of them `Days`-to-`Days`. That is the complete set. A
-///    day count becomes a number of minutes by being multiplied by 1440 or by
-///    growing a property that returns seconds, so both of those operations are
-///    simply absent from the type. Adding either is adding an operator or a
-///    member to `Days` — three lines in a diff, in a file whose header says
-///    not to.
+/// 1. **The unit is a whole-hour count, not a duration.** `Hours` wraps an
+///    `Int`. It is minted from the session history by
+///    `wholeHoursEndedByAPerson`, which lives in `DadSession.swift` because
+///    measuring a session needs a `TimeInterval` and this file may not name
+///    one. There is no initialiser from a `Double` and no conversion back.
+/// 2. **`Hours` cannot be multiplied or divided.** It has `+`, a saturating
+///    `-`, and `<`, all of them `Hours`-to-`Hours`. That is the complete set.
+///    An hour count becomes minutes of screen time by being multiplied by 60
+///    or by growing a property that returns seconds, so both of those
+///    operations are simply absent from the type.
 /// 3. **The test suite reads this source.** `testTheLedgerSourceNamesNoUnitOfTime`
 ///    strips the comments out of this file and fails if the code that is left
 ///    contains `TimeInterval`, `Double`, `Float`, `*`, `/`, `autoUnDadAfter`
 ///    or `ModeAllowance`. So the second defence cannot be undone by a
-///    reviewer's inattention: the build goes red. That test is the reason the
-///    arithmetic below is written the long way round in one or two places.
+///    reviewer's inattention: the build goes red.
 /// 4. **Nothing here can release a phone.** A `Redemption` is a `UUID`, a
 ///    name, a price and two dates. It reaches no `DadMode`, no
 ///    `BlockedSelection` and no port, so there is no path from claiming a
@@ -57,24 +75,23 @@ import Foundation
 /// become the point. So:
 ///
 /// * Nothing in this file produces an autonomy level, a rung, or a capability.
-///   Days cannot be spent on any of the things the ladder grants, because this
-///   type cannot name them.
-/// * This ledger never writes to the session history. Spending days does not
+///   Hours cannot be spent on any of the things the ladder grants, because
+///   this type cannot name them.
+/// * This ledger never writes to the session history. Spending hours does not
 ///   delete, mark or reinterpret a single session, so a young person cannot
 ///   spend their way down a rung, and a grown-up cannot price a reward high
 ///   enough to stall the climb.
-/// * The same day is therefore counted by both. That is deliberate and it is
-///   not double-spending, because the two are not one budget. Splitting a
-///   fixed pot between "a lift into town" and "setting my own Sleep window"
-///   would force a choice between them every week, and for a twelve-year-old
-///   the lift wins every time — which is exactly the failure this feature is
-///   supposed to avoid.
+/// * The ladder counts *days* from the same sessions, and an hour here never
+///   costs a day there. They are not one budget. Splitting a fixed pot between
+///   "a lift into town" and "setting my own Sleep window" would force a choice
+///   between them every week, and for a twelve-year-old the lift wins every
+///   time — which is exactly the failure this feature is supposed to avoid.
 ///
 /// # Everything derived, nothing stored twice
 ///
 /// The balance is computed from the history and the redemption list, the way
 /// `AutonomyLadder` computes a rung and `DadStats` computes a streak. A stored
-/// balance is a number that can drift from the days that earned it, can be
+/// balance is a number that can drift from the hours that earned it, can be
 /// edited by anyone who can reach the file, and has to be migrated. Only the
 /// grown-up's decisions are stored: which rewards exist, and which claims were
 /// made and settled.
@@ -82,18 +99,31 @@ struct RewardLedger {
 
     // MARK: - The unit
 
-    /// A whole number of days, and the only currency in this file.
+    /// The most hours one day can earn, however long the phone stayed Dadded.
     ///
-    /// **Why a day, rather than points, or pounds, or minutes.**
+    /// Four, because an evening — home from school to bed — is about that
+    /// long, and that evening is the effort the reward is for. A whole night,
+    /// or a school day with the phone in a locker, earns the same four and no
+    /// more. A promised number: the Rewards screen says it, so
+    /// `PromisedNumbersTests` pins it.
+    static let hoursCountedPerDay = Hours(4)
+
+    /// A whole number of hours off the phone, and the only currency in this
+    /// file.
     ///
-    /// *Not minutes*, for the reason above.
+    /// **Why an hour, and why not points, pounds or minutes.**
+    ///
+    /// *Not minutes*, for the reason above. An hour is the coarsest unit that
+    /// still means "each hour you kept it up", and being whole is what keeps
+    /// it from sliding toward minutes: there is no half hour.
     ///
     /// *Not points.* A point is whatever the app says it is, which means the
-    /// app is minting it, which means the exchange rate between a point and a
-    /// day of actually doing the thing is a number somebody tuned. Tune it
-    /// upward and the ledger inflates; tune it downward and yesterday's
-    /// promises quietly get more expensive. A day cannot be tuned. It either
-    /// happened or it did not, and the session history is the record.
+    /// exchange rate between a point and an hour of actually doing the thing
+    /// is a number somebody tuned. Tune it upward and the ledger inflates;
+    /// tune it downward and yesterday's promises quietly get more expensive.
+    /// An hour either happened or it did not, and the session history is the
+    /// record. The one tunable left is `hoursCountedPerDay`, and it caps what
+    /// is earned without changing what an hour is worth.
     ///
     /// *Not money.* The moment a price reads "£5", Dad is claiming to hold a
     /// balance that it does not hold, and it has acquired everything that
@@ -102,18 +132,10 @@ struct RewardLedger {
     /// reasonable expectation that the app can transfer, refund and reconcile.
     /// Dad is not a payments product and cannot become one by accident. A
     /// grown-up who wants a reward to be five pounds writes "£5 pocket money"
-    /// in the *name* — a string Dad never interprets — and prices it in days.
-    ///
-    /// *A day*, then, because it is a real event the household can both point
-    /// at, it is already the unit `AutonomyLadder` counts in, so a rung and a
-    /// reward are quoted against the same evidence and cannot drift into two
-    /// separate economies, and — the part that matters most here — it is
-    /// indivisible. There is no half day. A unit with no fractions is a unit
-    /// that resists being scaled into anything finer, which is the direction
-    /// minutes lie in.
-    struct Days: Hashable, Comparable, Codable, CustomStringConvertible {
+    /// in the *name* — a string Dad never interprets — and prices it in hours.
+    struct Hours: Hashable, Comparable, Codable, CustomStringConvertible {
 
-        /// Always zero or more. A negative day count is not a debt; it is a
+        /// Always zero or more. A negative hour count is not a debt; it is a
         /// bug, a corrupt file or somebody editing JSON, and in all three
         /// cases the only safe reading is zero. See `init(_:)`.
         let count: Int
@@ -126,8 +148,12 @@ struct RewardLedger {
 
         /// Encoded as a bare number, so stored JSON reads `"price": 5`.
         /// Decoding goes through `init(_:)`, which means a file that has been
-        /// hand-edited to `-5` reads as zero instead of minting five days for
+        /// hand-edited to `-5` reads as zero instead of minting five hours for
         /// whoever edited it.
+        ///
+        /// The same format the day-priced ledger wrote, so a reward stored
+        /// before ADR 009 decodes — as that many hours. The household re-prices
+        /// it; nothing is lost.
         init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
             self.init(try container.decode(Int.self))
@@ -138,15 +164,15 @@ struct RewardLedger {
             try container.encode(count)
         }
 
-        static let zero = Days(0)
+        static let zero = Hours(0)
 
         var isZero: Bool { count == 0 }
 
-        static func < (lhs: Days, rhs: Days) -> Bool { lhs.count < rhs.count }
+        static func < (lhs: Hours, rhs: Hours) -> Bool { lhs.count < rhs.count }
 
-        static func + (lhs: Days, rhs: Days) -> Days { Days(lhs.count + rhs.count) }
+        static func + (lhs: Hours, rhs: Hours) -> Hours { Hours(lhs.count + rhs.count) }
 
-        /// Saturating: `Days(2) - Days(5)` is zero, not minus three.
+        /// Saturating: `Hours(2) - Hours(5)` is zero, not minus three.
         ///
         /// This is the answer to "what happens when a balance would go
         /// negative", made structural. A negative balance is not merely
@@ -158,16 +184,16 @@ struct RewardLedger {
         ///
         /// The alternative was letting the balance go negative and calling it
         /// debt. That was rejected on tone: a screen that tells a young person
-        /// they are four days in arrears to their own family is the guilt
+        /// they are four hours in arrears to their own family is the guilt
         /// register this product does not use, and it invites a household to
         /// treat cooperation as something that can be owed.
-        static func - (lhs: Days, rhs: Days) -> Days { Days(lhs.count - rhs.count) }
+        static func - (lhs: Hours, rhs: Hours) -> Hours { Hours(lhs.count - rhs.count) }
 
         /// Deliberately no `*`, no `/`, no `Double`, no seconds. See the
         /// header. If you are here because you need one of them, the thing you
         /// are building is not a reward.
 
-        var description: String { count == 1 ? "1 day" : "\(count) days" }
+        var description: String { count == 1 ? "1 hour" : "\(count) hours" }
     }
 
     // MARK: - What the grown-up defines
@@ -181,7 +207,7 @@ struct RewardLedger {
     struct Reward: Codable, Identifiable, Hashable {
         var id: UUID = UUID()
         var name: String
-        var price: Days
+        var price: Hours
 
         /// Retired rewards can no longer be claimed but stay readable, so a
         /// grown-up can withdraw an offer without deleting the record of the
@@ -224,12 +250,12 @@ struct RewardLedger {
         /// The price at the moment of claiming.
         ///
         /// Stored rather than looked up, so that re-pricing a reward cannot
-        /// reach backwards. If the price of a lift goes from three days to
+        /// reach backwards. If the price of a lift goes from three hours to
         /// five, last week's lift still cost three — otherwise a grown-up
         /// editing a number would silently overdraw a balance that was
-        /// correct when it was spent, and the young person would watch days
+        /// correct when it was spent, and the young person would watch hours
         /// disappear with nothing to point at.
-        var price: Days
+        var price: Hours
 
         var claimedAt: Date
 
@@ -249,7 +275,7 @@ struct RewardLedger {
         /// `LenientDecoding.array` answers a throw by dropping the element. And
         /// `spent` is a *sum over this list* — so the first time a field is
         /// added to this type, every row written by the older build is
-        /// silently discarded, days are refunded that nobody gave back, and
+        /// silently discarded, hours are refunded that nobody gave back, and
         /// lifts that were actually given disappear from the record.
         ///
         /// That is exactly the harm `DadEngine.claim` stopped doing when the
@@ -262,12 +288,12 @@ struct RewardLedger {
         /// `decodeIfPresent` is total against a missing key and throws on a
         /// mismatch, and `container(keyedBy:)` throws before any of it when
         /// the element is null or a scalar. A first attempt used it bare and
-        /// closed only the add-a-field door: the day `Days` stops encoding as
+        /// closed only the add-a-field door: the day `Hours` stops encoding as
         /// a bare number, every stored `price` is a mismatch and every row
         /// disappears — the same refund by a different route. `try?`
         /// throughout is what makes the claim true rather than nearly true.
         ///
-        /// A row missing everything decodes as a claim of nought days against
+        /// A row missing everything decodes as a claim of nought hours against
         /// an unnamed reward, which is visible and wrong-looking; a row that
         /// vanishes is invisible and changes a balance.
         /// Spelled out rather than synthesised, because the decoder below
@@ -282,7 +308,7 @@ struct RewardLedger {
             id = Self.read(UUID.self, .id, from: c) ?? UUID()
             rewardID = Self.read(UUID.self, .rewardID, from: c) ?? UUID()
             rewardName = Self.read(String.self, .rewardName, from: c) ?? ""
-            price = Self.read(Days.self, .price, from: c) ?? Days(0)
+            price = Self.read(Hours.self, .price, from: c) ?? Hours(0)
             claimedAt = Self.read(Date.self, .claimedAt, from: c)
                 ?? Date(timeIntervalSince1970: 0)
             settledAt = Self.read(Date.self, .settledAt, from: c)
@@ -300,7 +326,7 @@ struct RewardLedger {
         }
 
         init(id: UUID = UUID(), rewardID: UUID, rewardName: String,
-             price: Days, claimedAt: Date, settledAt: Date? = nil) {
+             price: Hours, claimedAt: Date, settledAt: Date? = nil) {
             self.id = id
             self.rewardID = rewardID
             self.rewardName = rewardName
@@ -319,9 +345,9 @@ struct RewardLedger {
     let now: Date
 
     /// - Parameter calendar: injected for the same reason `DadStats` and
-    ///   `AutonomyLadder` inject it. Everything earned here is a count of
-    ///   *days*, and which instant belongs to which day is a property of the
-    ///   household's time zone rather than of this code. Tests pin UTC so a
+    ///   `AutonomyLadder` inject it. Hours are credited to the day a session
+    ///   started and capped per day, and which instant belongs to which day is
+    ///   a property of the household's time zone rather than of this code. Tests pin UTC so a
     ///   runner in another zone cannot move a boundary underneath them; the
     ///   app passes `.current`, which is what the household's days actually
     ///   are.
@@ -336,7 +362,7 @@ struct RewardLedger {
         //
         // Unfinished sessions are excluded, as in `DadStats` and
         // `AutonomyLadder`: an in-flight session has no outcome yet, so
-        // counting it would let a day appear in the balance mid-session and
+        // counting it would let hours appear in the balance mid-session and
         // vanish again when it ended on the emergency button — after a reward
         // had already been claimed with it.
         //
@@ -351,55 +377,58 @@ struct RewardLedger {
 
     // MARK: - Earning
 
-    /// Days that count.
+    /// Hours earned on each day, after the daily ceiling.
+    ///
+    /// The days are the ladder's clean days exactly — the keys come from the
+    /// same `wasEndedByAPerson` filter, so a day with only a forty-minute
+    /// session is present here at zero hours rather than missing. That is
+    /// what lets `TwoLedgersAgreeTests` compare the two files by key.
     ///
     /// A session counts toward the day it *started*, exactly as in `DadStats`:
     /// an evening that runs past midnight credits the evening you began,
-    /// because that is how anybody would describe it out loud.
+    /// because that is how anybody would describe it out loud. Its whole hours
+    /// all land on that day, under that day's ceiling.
     ///
-    /// One qualifying session makes the day, even if another session the same
-    /// day ended on the emergency button. The day contains the evidence, and
-    /// counting the bad one against it would mean a single override could
-    /// cancel a reward that had already been earned that morning.
-    /// The same set of days the ladder spends on rungs, by construction
-    /// rather than by both files agreeing to say the same thing. The `&&
-    /// !endedByEmergency` that used to be here could not change the answer —
-    /// an override already reads as nobody having ended it — and a redundant
-    /// clause in a copied rule is the one that survives when the original
-    /// changes.
-    private var earningDays: Set<Date> { sessions.daysEndedByAPerson(calendar: calendar) }
+    /// A session ended on the emergency button earns nothing, but it does not
+    /// cancel another session the same day that a person finished. The day
+    /// contains the evidence, and counting the bail against it would mean a
+    /// single override could take back hours already earned that morning.
+    var hoursByDay: [Date: Hours] {
+        sessions.wholeHoursEndedByAPerson(calendar: calendar)
+            .mapValues { min(Hours($0), RewardLedger.hoursCountedPerDay) }
+    }
 
-    /// Every day ever earned. It does not decay.
+    /// Every hour ever earned. It does not decay.
     ///
     /// `AutonomyLadder` can withhold a rung after a fortnight away, and that is
     /// right for a rung, because a rung is a standing permission and has to
-    /// describe the present. A day already earned is different: it is a thing
-    /// that happened. Taking it back would mean an app removing days from a
-    /// balance while nobody was using the app, which reads as theft and is the
-    /// point at which a young person stops believing the number.
-    var earned: Days { Days(earningDays.count) }
+    /// describe the present. An hour already earned is different: it is a
+    /// thing that happened. Taking it back would mean an app removing hours
+    /// from a balance while nobody was using the app, which reads as theft and
+    /// is the point at which a young person stops believing the number.
+    var earned: Hours { hoursByDay.values.reduce(Hours.zero, +) }
 
     /// Everything claimed, whether or not the grown-up has settled up yet.
     ///
     /// Claiming spends, not settling. If the balance only fell when a grown-up
     /// got round to confirming, then five claims could be made against the
-    /// same five days and the shortfall would surface at the kitchen table,
+    /// same five hours and the shortfall would surface at the kitchen table,
     /// with somebody having to say no to four things already asked for. The
     /// balance has to mean "what I can ask for right now" or it means nothing.
-    var spent: Days {
-        redemptions.reduce(Days.zero) { $0 + $1.price }
+    var spent: Hours {
+        redemptions.reduce(Hours.zero) { $0 + $1.price }
     }
 
-    /// What is available to spend. Never negative — see `Days.-`.
-    var balance: Days { earned - spent }
+    /// What is available to spend. Never negative — see `Hours.-`.
+    var balance: Hours { earned - spent }
 
     /// How far past the earned total the claims currently reach.
     ///
     /// Normally zero, because `claiming(_:)` refuses anything the balance does
     /// not cover. It can become non-zero without anybody doing wrong: the
     /// stored history is finite, so a household that Dads several times a day
-    /// will eventually see the oldest days fall off the end of it, and days
-    /// that fell off the end cannot be counted. `AutonomyLadder` hit the same
+    /// will eventually see the oldest sessions fall off the end of it, and
+    /// hours that fell off the end cannot be counted. `AutonomyLadder` hit the same
     /// edge and fixed it by writing an earned rung down as it was reached.
     ///
     /// The equivalent fix is not available here and should not be invented:
@@ -408,7 +437,7 @@ struct RewardLedger {
     /// un-settling a lift that was actually given. So nothing is clawed back,
     /// no claim is reversed, and the number is simply reported — positively,
     /// so no screen has to render a minus sign.
-    var spentBeyondEarned: Days { spent - earned }
+    var spentBeyondEarned: Hours { spent - earned }
 
     var isOverdrawn: Bool { !spentBeyondEarned.isZero }
 
@@ -426,9 +455,9 @@ struct RewardLedger {
         reward.price <= balance
     }
 
-    /// How many more days this reward needs. Zero when it is already
+    /// How many more hours this reward needs. Zero when it is already
     /// affordable, so callers can render it without a special case.
-    func shortfall(for reward: Reward) -> Days {
+    func shortfall(for reward: Reward) -> Hours {
         reward.price - balance
     }
 
@@ -444,13 +473,13 @@ struct RewardLedger {
     /// the first element of `outOfReach`: legibility is a design requirement
     /// here for the same reason it is on the ladder — a reward you cannot
     /// predict is not an incentive, it is a surprise. The app can say "two
-    /// more days and the cinema is in reach" without doing any arithmetic of
+    /// more hours and the cinema is in reach" without doing any arithmetic of
     /// its own, and therefore without a second implementation of it to drift.
     var nearestOutOfReach: Reward? { outOfReach.first }
 
-    /// Days remaining until `nearestOutOfReach` is affordable, or `nil` when
+    /// Hours remaining until `nearestOutOfReach` is affordable, or `nil` when
     /// everything on offer is already within reach.
-    var daysUntilNearestOutOfReach: Days? {
+    var hoursUntilNearestOutOfReach: Hours? {
         nearestOutOfReach.map(shortfall(for:))
     }
 
@@ -492,7 +521,7 @@ struct RewardLedger {
     ///
     /// * The balance does not cover the price. Under-covering is refused
     ///   outright rather than part-paid: a claim that leaves a debt behind is
-    ///   the credit model rejected on `Days.-`.
+    ///   the credit model rejected on `Hours.-`.
     /// * The reward has been retired.
     ///
     /// Claiming the same reward twice is allowed as long as the balance covers
@@ -524,7 +553,7 @@ struct RewardLedger {
         return updated
     }
 
-    /// Withdraw a claim that has not been settled, returning its days to the
+    /// Withdraw a claim that has not been settled, returning its hours to the
     /// balance.
     ///
     /// `nil` when there is no such claim, or when it has already been settled.

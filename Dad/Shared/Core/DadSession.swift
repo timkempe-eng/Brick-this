@@ -82,6 +82,15 @@ struct DadSession: Codable, Identifiable, Hashable {
 
     var isActive: Bool { endedAt == nil }
     var duration: TimeInterval { (endedAt ?? Date()).timeIntervalSince(startedAt) }
+
+    /// Full hours between the start and the end, rounded down: fifty-nine
+    /// minutes is none. Zero while the session is running — it has no outcome
+    /// yet — and zero rather than negative for an end recorded before its
+    /// start, which a clock moved backwards can produce.
+    var wholeHours: Int {
+        guard let endedAt else { return 0 }
+        return max(0, Int(endedAt.timeIntervalSince(startedAt) / 3600))
+    }
 }
 
 
@@ -96,11 +105,11 @@ extension DadSession.EndReason {
     }
 }
 
-/// The one definition of "days somebody actually did this".
+/// The one definition of "sessions somebody actually finished".
 ///
-/// Two ledgers count these days — `AutonomyLadder`, which spends them on
-/// rungs, and `RewardLedger`, which spends them on rewards — and for a while
-/// they each wrote the rule out. The copies had already drifted: one filtered
+/// Two ledgers read it — `AutonomyLadder`, which counts the days and spends
+/// them on rungs, and `RewardLedger`, which counts the whole hours and spends
+/// them on rewards — and for a while they each wrote the rule out. The copies had already drifted: one filtered
 /// on `wasEndedByAPerson`, the other on `wasEndedByAPerson && !endedByEmergency`,
 /// where the second clause could not change the answer. A rule stated twice is
 /// a rule that will mean two things, and this one decides what somebody is
@@ -119,6 +128,25 @@ extension Collection where Element == DadSession {
     func daysEndedByAPerson(calendar: Calendar) -> Set<Date> {
         Set(lazy.filter(\.wasEndedByAPerson)
                 .map { calendar.startOfDay(for: $0.startedAt) })
+    }
+
+    /// Whole hours of sessions a person ended, credited to the day each
+    /// started. Uncapped: the ceiling is the reward ledger's rule, not a fact
+    /// about the history.
+    ///
+    /// Every day in `daysEndedByAPerson` is a key, including one whose
+    /// sessions were all under an hour — present at zero rather than absent —
+    /// so the two definitions cannot disagree about which days counted.
+    ///
+    /// Here rather than in `RewardLedger.swift` because measuring a session
+    /// needs a `TimeInterval` and a division, and that file's test fails the
+    /// build if it contains either.
+    func wholeHoursEndedByAPerson(calendar: Calendar) -> [Date: Int] {
+        var hours: [Date: Int] = [:]
+        for session in self where session.wasEndedByAPerson {
+            hours[calendar.startOfDay(for: session.startedAt), default: 0] += session.wholeHours
+        }
+        return hours
     }
 
     /// Any day there was a session at all, however it ended. What stops a

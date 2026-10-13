@@ -22,8 +22,9 @@ Carrots&Cake, EarnIt and Zenvy all do it, and it is the single biggest thing in
 this market. The research says it backfires: paying for a behaviour in the
 thing you are trying to reduce teaches that the thing is worth having. The
 autonomy ladder and the rewards ledger are the same intent built the way the
-evidence supports — consistency buys *control*, and rewards are priced in days
-and cannot be priced in minutes, structurally.
+evidence supports — consistency buys *control*, and rewards are priced in whole
+hours off the phone and cannot be priced in minutes on it, structurally (days
+until [ADR 009](009-rewards-in-hours.md)).
 
 **Message and content monitoring** — declined. Bark and Qustodio ship it. Hard
 rule 3 forbids it, and the research says it damages the trust it is meant to

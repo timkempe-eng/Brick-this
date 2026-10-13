@@ -178,7 +178,7 @@ extension DadEngine {
         return true
     }
 
-    /// Take an unsettled claim back, returning its days.
+    /// Take an unsettled claim back, returning its hours.
     @discardableResult
     func withdraw(claim id: UUID) -> Bool {
         guard let updated = rewardLedger.withdrawing(claim: id) else { return false }

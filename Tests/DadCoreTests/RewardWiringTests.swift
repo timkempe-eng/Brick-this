@@ -15,16 +15,17 @@ import XCTest
 /// actually happened.
 final class RewardWiringTests: XCTestCase {
 
-    private let lift = RewardLedger.Reward(name: "A lift into town", price: RewardLedger.Days(2))
+    private let lift = RewardLedger.Reward(name: "A lift into town", price: RewardLedger.Hours(2))
 
-    /// A young person's phone with a paired tag and `days` earned.
-    private func youngPerson(earning days: Int = 5) -> Harness {
+    /// A young person's phone with a paired tag and `hours` earned: one
+    /// one-hour session, ended at the tag, on each of that many days.
+    private func youngPerson(earning hours: Int = 5) -> Harness {
         let h = Harness()
         h.store.household = Household(role: .youngPerson, autonomyLevel: 0)
         h.engine.pair(tagUID: "PARENT")
         let mode = h.addMode()
-        h.clock.advance(days: -days)
-        for _ in 0..<days {
+        h.clock.advance(days: -hours)
+        for _ in 0..<hours {
             h.engine.dad(with: mode)
             h.clock.advance(60 * 60)
             h.engine.unDad(.tapped)
@@ -55,7 +56,7 @@ final class RewardWiringTests: XCTestCase {
 
         XCTAssertTrue(h.engine.claim(h.store.rewards[0]))
         XCTAssertEqual(h.engine.rewardLedger.pending.count, 1)
-        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Days(3))
+        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Hours(3))
     }
 
     func testSettlingNeedsAGrownUpInTheRoom() {
@@ -83,7 +84,7 @@ final class RewardWiringTests: XCTestCase {
         let claim = h.engine.rewardLedger.pending[0]
 
         XCTAssertTrue(h.engine.withdraw(claim: claim.id))
-        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Days(5), "the days come back")
+        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Hours(5), "the hours come back")
 
         h.engine.claim(h.store.rewards[0])
         let second = h.engine.rewardLedger.pending[0]
@@ -104,16 +105,16 @@ final class RewardWiringTests: XCTestCase {
         XCTAssertTrue(h.engine.retire(rewardID: h.store.rewards[0].id))
     }
 
-    // MARK: - The days themselves
+    // MARK: - The hours themselves
 
-    func testTheDaysComeFromTheHistoryAndNowhereElse() {
+    func testTheHoursComeFromTheHistoryAndNowhereElse() {
         // No stored balance. A stored one is a number somebody could edit, and
         // this one decides what a young person is owed.
         let h = youngPerson(earning: 4)
-        XCTAssertEqual(h.engine.rewardLedger.earned, RewardLedger.Days(4))
+        XCTAssertEqual(h.engine.rewardLedger.earned, RewardLedger.Hours(4))
 
         h.store.history = []
-        XCTAssertEqual(h.engine.rewardLedger.earned, RewardLedger.Days(0))
+        XCTAssertEqual(h.engine.rewardLedger.earned, RewardLedger.Hours(0))
     }
 
     // MARK: - What must never be dropped
@@ -129,7 +130,7 @@ final class RewardWiringTests: XCTestCase {
         // Truncation is a memory strategy. It cannot also be an accounting
         // one, and this is the list where the two collide.
         let h = youngPerson(earning: 400)
-        h.engine.offer(RewardLedger.Reward(name: "A biscuit", price: RewardLedger.Days(1)),
+        h.engine.offer(RewardLedger.Reward(name: "A biscuit", price: RewardLedger.Hours(1)),
                        byTagUID: "PARENT")
         let biscuit = h.store.rewards[0]
 
@@ -139,11 +140,11 @@ final class RewardWiringTests: XCTestCase {
         }
 
         XCTAssertEqual(h.store.redemptions.count, 150)
-        XCTAssertEqual(h.engine.rewardLedger.spent, RewardLedger.Days(150),
-                       "every claim spends, and nothing hands a day back on its own")
+        XCTAssertEqual(h.engine.rewardLedger.spent, RewardLedger.Hours(150),
+                       "every claim spends, and nothing hands an hour back on its own")
         XCTAssertEqual(h.engine.rewardLedger.settled.count, 150,
                        "a lift that was given stays given")
-        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Days(250))
+        XCTAssertEqual(h.engine.rewardLedger.balance, RewardLedger.Hours(250))
     }
 
     func testAClaimRowNeverDisappearsBecauseABuildAddedAField() {
@@ -162,16 +163,16 @@ final class RewardWiringTests: XCTestCase {
         let rows = try? JSONDecoder().decode([RewardLedger.Redemption].self, from: older)
 
         XCTAssertEqual(rows?.count, 1, "a row from an older build must survive")
-        XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+        XCTAssertEqual(rows?.first?.price, RewardLedger.Hours(0))
         XCTAssertEqual(rows?.first?.rewardName, "")
     }
 
     func testARowSurvivesAFieldChangingItsTypeAsWellAsAppearing() {
         // `decodeIfPresent` is total against a *missing* key and throws on a
         // mismatch — so the first version of this decoder closed only the
-        // add-a-field door. The day `Days` stops encoding as a bare number,
+        // add-a-field door. The day `Hours` stops encoding as a bare number,
         // every stored price is a mismatch and every row disappears: the same
-        // day refunded, by a different route.
+        // refund, by a different route.
         // Every shape that reaches a different failure inside the decoder: a
         // wrong scalar type, a wrong container type, a value where a keyed
         // container was expected, and an element that is not an object at all
@@ -190,7 +191,7 @@ final class RewardWiringTests: XCTestCase {
         let rows = LenientDecoding.array(RewardLedger.Redemption.self, from: hostile)
 
         XCTAssertEqual(rows?.count, 8, "not one row may vanish, whatever shape it arrived in")
-        XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+        XCTAssertEqual(rows?.first?.price, RewardLedger.Hours(0))
         XCTAssertEqual(rows?.last?.claimedAt, Date(timeIntervalSince1970: 0),
                        "an element that is not an object at all still becomes a row")
     }
@@ -199,11 +200,11 @@ final class RewardWiringTests: XCTestCase {
         // `settledAt` is decoded by hand and a mutation dropping the line
         // survived the whole suite. It is not cosmetic: `withdrawing` refuses
         // only *settled* claims, so a settled claim that decodes as unsettled
-        // becomes withdrawable — and withdrawing it returns days for a lift
+        // becomes withdrawable — and withdrawing it returns hours for a lift
         // that was actually given. That is the balance made editable by
         // whoever is holding the phone, which is the whole ledger.
         let given = RewardLedger.Redemption(rewardID: UUID(), rewardName: "A lift",
-                                            price: RewardLedger.Days(2),
+                                            price: RewardLedger.Hours(2),
                                             claimedAt: Date(timeIntervalSince1970: 1_000),
                                             settledAt: Date(timeIntervalSince1970: 2_000))
         let data = try? JSONEncoder().encode([given])
@@ -223,18 +224,18 @@ final class RewardWiringTests: XCTestCase {
 
         XCTAssertEqual(rows?.count, 1)
         XCTAssertEqual(rows?.first?.claimedAt, Date(timeIntervalSince1970: 0))
-        XCTAssertEqual(rows?.first?.price, RewardLedger.Days(0))
+        XCTAssertEqual(rows?.first?.price, RewardLedger.Hours(0))
         XCTAssertNil(rows?.first?.settledAt)
     }
 
     func testAClaimYouCannotAffordIsRefused() {
         let h = youngPerson(earning: 1)
-        let expensive = RewardLedger.Reward(name: "A weekend away", price: RewardLedger.Days(30))
+        let expensive = RewardLedger.Reward(name: "A weekend away", price: RewardLedger.Hours(30))
         h.engine.offer(expensive, byTagUID: "PARENT")
 
         XCTAssertFalse(h.engine.claim(h.store.rewards[0]))
         XCTAssertEqual(h.engine.rewardLedger.shortfall(for: h.store.rewards[0]),
-                       RewardLedger.Days(29))
+                       RewardLedger.Hours(29))
     }
 
     func testARetiredRewardIsStillReadableButNoLongerOnOffer() {

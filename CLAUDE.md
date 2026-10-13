@@ -80,7 +80,7 @@ missing is a session whose hook did not run, not a reason to push untested.
 ## Before you push
 
 ```bash
-swift test                      # 862 tests, seconds
+swift test                      # 870 tests, seconds
 ./scripts/lint-vocabulary.sh
 python3 scripts/preflight.py    # 110 checks on the Xcode wiring
 ```
@@ -164,8 +164,10 @@ toward a rung; an exhausted override allowance leaves the phone Dadded rather
 than half-released; a scheduled Mode never stomps a session you began by hand.
 
 From the family layer, where the decision is the feature: only a session a
-*person* ended earns a rung or a reward day, and both read one definition
-(`daysEndedByAPerson`) rather than each writing it out; the household streak
+*person* ended counts toward a rung or earns reward hours, and both read one
+definition (`wasEndedByAPerson`, through `daysEndedByAPerson` and
+`wholeHoursEndedByAPerson`) rather than each writing it out; reward hours are
+whole hours per session, capped at four a day; the household streak
 counts days *everyone* took part, so a grown-up's phone can end it; a stale
 shared number is never shown as a live one; `agreedBy` is derived from a tag
 tap and can never be passed in; and a warning is owed only for a schedule the

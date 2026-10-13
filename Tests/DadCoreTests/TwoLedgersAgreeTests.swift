@@ -1,7 +1,8 @@
 import XCTest
 @testable import DadCore
 
-/// The autonomy ladder and the reward ledger must be spending the *same* days.
+/// The autonomy ladder and the reward ledger must be reading the *same*
+/// sessions — the ladder counting the days, the ledger the whole hours.
 ///
 /// They are separate on purpose — one pot split between "a lift into town" and
 /// "setting my own Sleep window" would make the concrete reward beat the
@@ -25,7 +26,7 @@ final class TwoLedgersAgreeTests: XCTestCase {
         return DadSession(modeID: UUID(),
                           modeName: "Sleep",
                           startedAt: start,
-                          endedAt: start.addingTimeInterval(30 * 60),
+                          endedAt: start.addingTimeInterval(90 * 60),
                           endedByEmergency: legacyEmergency || ending == .emergency,
                           endedBy: ending,
                           startedBySchedule: bySchedule)
@@ -54,12 +55,26 @@ final class TwoLedgersAgreeTests: XCTestCase {
         let ladder = AutonomyLadder(sessions: history, now: now, calendar: calendar)
         let rewards = RewardLedger(sessions: history, now: now, calendar: calendar)
 
-        XCTAssertEqual(rewards.earned.count, ladder.cleanDayCount,
+        XCTAssertEqual(Set(rewards.hoursByDay.keys),
+                       history.daysEndedByAPerson(calendar: calendar))
+        XCTAssertEqual(rewards.hoursByDay.count, ladder.cleanDayCount,
                        """
-                       A day that buys a rung must be a day that buys a reward. \
-                       They read the same history and each used to state the \
-                       counting rule itself.
+                       A day that counts toward a rung must be a day the ledger \
+                       credits. They read the same history and each used to state \
+                       the counting rule itself.
                        """)
+    }
+
+    /// And the hours come from exactly those sessions. Every session in the
+    /// history is ninety minutes, so each one a person ended is worth one hour
+    /// and each one they did not is worth none — the hours are the count of
+    /// qualifying sessions, which a rule paying for the wrong ending would
+    /// miss in one direction or the other.
+    func testTheHoursComeFromTheSessionsTheLadderCounts() {
+        let history = everyKindOfHistory
+        let rewards = RewardLedger(sessions: history, now: now, calendar: calendar)
+        XCTAssertEqual(rewards.earned.count, history.filter(\.wasEndedByAPerson).count)
+        XCTAssertEqual(rewards.earned.count, 4)
     }
 
     /// And the number is not trivially zero or trivially everything, or the

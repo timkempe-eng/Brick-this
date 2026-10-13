@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 862 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 870 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -49,10 +49,13 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   feature costs no account, no server and no network. It carries an opaque id,
   a date and a count and could not carry a name if somebody tried, and it says
   which day the number is true as of rather than pretending to be live.
-- **Rewards priced in days** — earned by ending sessions yourself, spent
-  on things a grown-up offers. Never in minutes, and not by convention:
-  `RewardLedger.Days` has no multiply, no `Double` and no duration member, so
-  paying in screen time does not compile. Offering and settling need a grown-up
+- **Rewards priced in whole hours off the phone** — one for each full hour
+  of a session you ended yourself, up to four a day, spent on things a
+  grown-up offers. A schedule's session earns nothing, and neither does one
+  ended with an override. Never in minutes, and not by convention:
+  `RewardLedger.Hours` has no multiply, no `Double` and no duration member, so
+  paying in screen time does not compile. Priced in days until
+  [ADR 009](adr/009-rewards-in-hours.md). Offering and settling need a grown-up
   demonstrably in the room; claiming does not, because the balance is the
   permission and it was earned.
 - **Ten minutes' notice** before a scheduled Mode lands, over the `Notifying`

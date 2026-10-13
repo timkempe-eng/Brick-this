@@ -1,16 +1,16 @@
 import SwiftUI
 
-/// What the days buy, and who settles up.
+/// What the hours buy, and who settles up.
 ///
-/// The unit is a **day**, never a minute, and that is the whole design rather
-/// than a formatting choice. `RewardLedger` makes screen time structurally
-/// unreachable — there is no multiply, no `TimeInterval`, no duration member on
-/// its unit type, and a test reads its own source to keep it that way. A
-/// blocker that pays you in the thing it took away is one that has agreed the
-/// thing was worth having.
+/// The unit is a **whole hour off the phone**, never a minute on it, and that
+/// is the whole design rather than a formatting choice. `RewardLedger` makes
+/// screen time structurally unreachable — there is no multiply, no
+/// `TimeInterval`, no duration member on its unit type, and a test reads its
+/// own source to keep it that way. A blocker that pays you in the thing it took
+/// away is one that has agreed the thing was worth having.
 ///
 /// So a grown-up who means five pounds writes "£5 pocket money" in the
-/// reward's *name*, which Dad never parses, and prices it in days. Dad holds no
+/// reward's *name*, which Dad never parses, and prices it in hours. Dad holds no
 /// balance in money and makes no promise it could not honour.
 ///
 /// One screen for both people, like every other screen here. What differs is
@@ -24,9 +24,13 @@ struct RewardsView: View {
 
     @State private var isAdding = false
     @State private var newName = ""
-    @State private var newPrice = 3
+    @State private var newPrice = 8
 
     private var ledger: RewardLedger { model.rewardLedger }
+
+    /// Prices on offer: every hour up to ten, then coarser steps up to 120 —
+    /// thirty days at the daily ceiling of four.
+    private static let prices = Array(1...10) + [12, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
 
     var body: some View {
         NavigationStack {
@@ -57,14 +61,15 @@ struct RewardsView: View {
             LabeledContent("To spend", value: ledger.balance.description)
             LabeledContent("Earned in total", value: ledger.earned.description)
         } header: {
-            Text("Days")
+            Text("Hours")
         } footer: {
             Text("""
-                 A day is earned by ending a session yourself — at the \(Vocab.tagNoun), \
-                 or in the app. One counts however many times you \(Vocab.verb) that day. \
-                 A \(Vocab.modeNoun.lowercased()) a schedule opened and closed while the \
-                 phone sat on a table earns nothing. The same days the ladder counts, so a \
-                 rung and a reward quote against the same evidence.
+                 Every full hour \(Vocab.verbPast) earns one, when you end the session \
+                 yourself — at the \(Vocab.tagNoun), or in the app. Up to \
+                 \(RewardLedger.hoursCountedPerDay.description) a day, so an evening counts \
+                 as much as a night. A \(Vocab.modeNoun.lowercased()) a schedule opened and \
+                 closed while the phone sat on a table earns nothing, and neither does one \
+                 ended with an override.
                  """)
         }
     }
@@ -98,7 +103,7 @@ struct RewardsView: View {
                      Swipe to mark one given — on a young person's phone that needs the \
                      \(Vocab.tagNoun), because it is somebody saying a thing happened and \
                      it cannot be undone afterwards. Taking a claim back needs nobody and \
-                     returns the days.
+                     returns the hours.
                      """)
             }
         }
@@ -138,8 +143,8 @@ struct RewardsView: View {
             Text("On offer")
         } footer: {
             Text("""
-                 Priced in days, never in minutes — a blocker that pays you in the thing \
-                 it took away has agreed the thing was worth having. A grown-up who means \
+                 Priced in hours off the phone, never in minutes on it — a blocker that \
+                 pays you in the thing it took away has agreed the thing was worth having. A grown-up who means \
                  five pounds writes it in the name; \(Vocab.appName) never reads it.
                  """)
         }
@@ -164,8 +169,8 @@ struct RewardsView: View {
         NavigationStack {
             Form {
                 TextField("What it is", text: $newName)
-                Picker("Days", selection: $newPrice) {
-                    ForEach(1...30, id: \.self) { Text("\($0)").tag($0) }
+                Picker("Hours", selection: $newPrice) {
+                    ForEach(Self.prices, id: \.self) { Text("\($0)").tag($0) }
                 }
             }
             .navigationTitle("New reward")
@@ -198,7 +203,7 @@ struct RewardsView: View {
 
     private func offer() {
         let reward = RewardLedger.Reward(name: newName.trimmingCharacters(in: .whitespaces),
-                                         price: RewardLedger.Days(newPrice))
+                                         price: RewardLedger.Hours(newPrice))
         withAGrownUp("Hold your iPhone near your \(Vocab.tagNoun) to offer this.") { uid in
             model.offer(reward, byTagUID: uid)
             newName = ""

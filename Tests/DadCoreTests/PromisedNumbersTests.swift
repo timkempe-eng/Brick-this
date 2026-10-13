@@ -34,6 +34,12 @@ final class PromisedNumbersTests: XCTestCase {
         XCTAssertEqual(DadEngine.historyLimit, 500)
     }
 
+    /// "Up to 4 hours a day" — the Rewards screen, the README and ADR 009. The
+    /// ceiling is what stops a night's sleep out-earning an evening's effort.
+    func testRewardsCountAtMostFourHoursADay() {
+        XCTAssertEqual(RewardLedger.hoursCountedPerDay, RewardLedger.Hours(4))
+    }
+
     /// Apple's floor, not ours: `DeviceActivitySchedule` will not monitor a
     /// shorter interval. Lowering it would make timed releases, breaks and
     /// short schedules silently never fire — the failure this codebase spends

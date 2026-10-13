@@ -103,7 +103,7 @@ final class UserDefaultsStore: DadPersisting {
     /// Lenient like the rest, and additionally *total* on the element: a
     /// `Redemption` that failed to decode would be dropped by the lenient
     /// array, and `spent` is a sum over this list — so a dropped row hands
-    /// back a day nobody gave back. See `RewardLedger.Redemption.init(from:)`.
+    /// back hours nobody gave back. See `RewardLedger.Redemption.init(from:)`.
     var redemptions: [RewardLedger.Redemption] {
         get { decodeArray(RewardLedger.Redemption.self, Key.redemptions) ?? [] }
         set { encode(newValue, Key.redemptions) }
