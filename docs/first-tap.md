@@ -1,4 +1,4 @@
-# From a GitHub repo to a Dadded phone, with no Mac
+# From a GitHub repo to a phone that touches grass, with no Mac
 
 You have an iPhone, an iPad and a GitHub account. No Mac, no Xcode. That is
 enough — but the route is different from the usual one, and one part of it
@@ -27,7 +27,7 @@ way around it:
 - Sideloading tools (AltStore and friends) can't grant the Family Controls
   entitlement, which is the whole app.
 - Swift Playgrounds on iPad can build and submit apps, but **not app
-  extensions**, and Dad needs three of them. It cannot build this project.
+  extensions**, and Clover needs three of them. It cannot build this project.
 
 So: TestFlight is the only Mac-free way onto the phone, and TestFlight requires
 the paid program. If that's a dealbreaker, stop here rather than after buying
@@ -91,7 +91,7 @@ One repository **variable** is needed: `MATCH_GIT_URL`, pointing at an empty
 **private** repo for `match` to store the encrypted certificate in — this repo
 is public, so it cannot hold one, and the lane refuses if you try. Plus the
 secret `MATCH_GIT_TOKEN`, a fine-grained PAT with Contents read **and write**
-on that repo. Dad keeps its own certificate rather than sharing another
+on that repo. Clover keeps its own certificate rather than sharing another
 project's, which means **check the certificate count before your first Release
 run** — Apple's ceiling is two or three per account, depending who you ask.
 
@@ -112,21 +112,21 @@ Actions tab → **Release to TestFlight** → Run workflow. Ten minutes or so.
 ### 7. Install from TestFlight
 
 Install Apple's TestFlight app on the iPhone, accept the invite for your own
-build, install Dad.
+build, install Clover.
 
 ## When the tags arrive
 
-1. **Open Dad, grant Screen Time access.** One system prompt.
+1. **Open Clover, grant Screen Time access.** One system prompt.
 2. **Build a Mode.** Start with one — "Deep Work" — and three or four apps you
    actually lose time to. Blocking thirty on day one is how people quit this
    after a week.
-3. **Pair a tag.** Settings → Pair a Dad tag. Until you pair one, any tag works.
-4. **Test it in-app.** Press "Dad my phone", then try to open a blocked app. You
-   should get the "Dadded." shield.
+3. **Pair a tag.** Settings → Pair a Clover tag. Until you pair one, any tag works.
+4. **Test it in-app.** Press "Touch Grass", then try to open a blocked app. You
+   should get the "You're outside." shield.
 5. **Optionally give a Mode a schedule.** Sleep, every night, 22:00–07:00, and
-   the phone Dads itself. A schedule never overrides a session you started by
+   Clover sends you outside on its own. A schedule never overrides a session you started by
    hand, and you can always tap out early.
-6. **Set up the Shortcuts automation** so a tap works with Dad closed —
+6. **Set up the Shortcuts automation** so a tap works with Clover closed —
    [three lines of setup](nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
    This is all on the iPhone, no computer involved.
 7. **Stick the tag somewhere inconvenient.** This is the actual product. A
@@ -156,7 +156,7 @@ off. NFC personal automations need iPhone XS or later.
 
 **"Tag not found."** Is it on metal? Even a laptop lid detunes the antenna.
 
-**Apps aren't blocked but the app says Dadded.** The Mode has nothing selected,
+**Apps aren't blocked but the app says you're outside.** The Mode has nothing selected,
 or Screen Time authorization was declined.
 
 **A scheduled Mode never fires.** It needs at least one day and a window of 15

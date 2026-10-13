@@ -16,7 +16,7 @@ struct StatsView: View {
                         ContentUnavailableView(
                             "No sessions yet",
                             systemImage: "chart.bar",
-                            description: Text("Dad your phone once and this fills in.")
+                            description: Text("Touch grass once and this fills in.")
                         )
                     }
                 } else {
@@ -48,7 +48,7 @@ struct StatsView: View {
 
                     Section {
                         LabeledContent("Finished at the tag", value: "\(stats.cleanFinishes)")
-                        LabeledContent(Vocab.emergencyUnDad, value: "\(stats.emergencyBails)")
+                        LabeledContent(Vocab.emergencyRelease, value: "\(stats.emergencyBails)")
                         if let rate = stats.cleanFinishRate {
                             LabeledContent("Clean finishes",
                                            value: rate.formatted(.percent.precision(.fractionLength(0))))

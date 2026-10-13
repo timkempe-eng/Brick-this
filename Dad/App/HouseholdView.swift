@@ -179,7 +179,7 @@ struct HouseholdView: View {
                 Tap the same \(Vocab.tagNoun) with another phone in the house and it \
                 joins in. The \(Vocab.tagNoun) carries the count itself — no account, \
                 no sign-in, and nothing about either of you leaves it. A grown-up who \
-                \(Vocab.verbThirdPerson) too is the single strongest thing this app has.
+                touches grass too is the single strongest thing this app has.
                 """
         }
         if !streak.isCurrent {

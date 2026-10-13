@@ -119,8 +119,8 @@ and no brim.
    force or falls in.
 2. Stick the tag to the **ceiling** of the lid's well, roughly centred.
 3. **Tap your phone to the closed lid and check it reads — before any glue.**
-   This is the one step that saves a reprint. Pair it in Dad (Settings → Pair
-   a Dad tag), or scan it with any NFC reader app. If it doesn't read through
+   This is the one step that saves a reprint. Pair it in Clover (Settings → Pair
+   a Clover tag), or scan it with any NFC reader app. If it doesn't read through
    1.8mm of plastic, it isn't going to start.
 4. Magnet, if you're fitting one: press it into the base pocket, CA or epoxy,
    flush side out.

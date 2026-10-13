@@ -168,7 +168,7 @@ struct DadStatusWidget: Widget {
             DadWidgetView(entry: entry)
         }
         .configurationDisplayName(Vocab.appName)
-        .description("Whether your phone is \(Vocab.verbPast), and for how long.")
+        .description("Whether you're \(Vocab.stateInProse), and for how long.")
         .supportedFamilies([
             .accessoryInline,
             .accessoryCircular,

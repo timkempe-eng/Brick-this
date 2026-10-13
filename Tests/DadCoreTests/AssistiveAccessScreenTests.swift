@@ -115,7 +115,7 @@ final class AssistiveAccessScreenTests: XCTestCase {
 
         XCTAssertEqual(screen, .dadded(modeName: "Deep Work", rationing: false,
                                        release: .emergency(remaining: 2)))
-        XCTAssertEqual(screen.actionTitle, Vocab.emergencyUnDad)
+        XCTAssertEqual(screen.actionTitle, Vocab.emergencyRelease)
         XCTAssertEqual(screen.actionFootnote, "Only for an emergency. 2 left this month.")
     }
 
@@ -160,7 +160,7 @@ final class AssistiveAccessScreenTests: XCTestCase {
 
     func testTheReleaseHintKeepsTheVerbCapitalised() {
         // Hard rule 4, in the sentences this screen adds to the vocabulary.
-        XCTAssertTrue(Vocab.assistiveAccessExitHint.contains("Dad tag"))
+        XCTAssertTrue(Vocab.assistiveAccessExitHint.contains("Clover tag"))
         XCTAssertFalse(Vocab.assistiveAccessExitHint.lowercased() == Vocab.assistiveAccessExitHint)
     }
 

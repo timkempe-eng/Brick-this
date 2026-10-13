@@ -566,7 +566,7 @@ final class ShieldGapTests: XCTestCase {
         let report = ShieldGap.report(ShieldObservations(
             now: now, authorization: .notApproved, audience: .shared))
         XCTAssertEqual(report.setupNote,
-                       "Screen Time access is not granted. Dad cannot hold anything until it is.")
+                       "Screen Time access is not granted. Clover cannot hold anything until it is.")
     }
 
     // MARK: - The sweep

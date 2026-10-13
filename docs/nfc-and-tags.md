@@ -40,7 +40,7 @@ won't say, pick a different seller.
 - **Metal kills NFC.** Don't stick a plain tag to a laptop, a fridge door, a
   radiator or a tin. Buy "on-metal" or "anti-metal" tags — they have a ferrite
   layer — or mount to wood, plastic, card or glass.
-- **The UID is factory-burned and read-only.** Dad pairs against the UID rather
+- **The UID is factory-burned and read-only.** Clover pairs against the UID rather
   than anything written to the tag, so a paired tag can't be spoofed by writing
   the same text onto a second sticker. It also means a pre-locked or
   "read-only" tag still works for pairing and for Shortcuts.
@@ -59,7 +59,7 @@ is the same "metal kills NFC" problem as the fridge door, just closer.
 
 ### 1. In-app scan — works immediately
 
-Open Dad, press the button, tap the tag. Zero setup. Good for pairing and as a
+Open Clover, press the button, tap the tag. Zero setup. Good for pairing and as a
 fallback. Not how you'll actually use it, because opening your phone is the
 thing you're trying to avoid.
 
@@ -69,8 +69,8 @@ Works with the app closed and with a completely blank tag. No website, no
 associated domain, nothing written to the tag.
 
 1. Shortcuts → **Automation** → **+** → **NFC**
-2. **Scan** → hold your iPhone to the tag → name it "Dad tag"
-3. **Next** → add action → search **Dad** → choose **Dad my phone**
+2. **Scan** → hold your iPhone to the tag → name it "Clover tag"
+3. **Next** → add action → search **Clover** → choose **Touch Grass**
 4. Optionally set a Mode on the action
 5. Turn **Ask Before Running** *off*
 6. Done
@@ -79,17 +79,17 @@ Now a tap runs `ToggleDadIntent` in the background: apps vanish, or come back,
 with no UI. Requires iPhone XS or later and iOS 13.1+ for the NFC trigger; iOS
 15+ to skip the confirmation.
 
-Add a second automation on a second tag with the **Start Dadding** action if you
-want a tag that only ever Dads — a bedside tag that can't accidentally release.
+Add a second automation on a second tag with the **Touch Grass with a Mode** action if you
+want a tag that only ever sends you outside — a bedside tag that can't accidentally release.
 
 ### 3. Background tag reading — what a shipping app does
 
 iOS reads NDEF tags with no app open and shows a banner; tapping it opens your
 app. To make that *your* app you need:
 
-- a domain you control, e.g. `dad.example.com`
+- a domain you control, e.g. `clover.example.com`
 - an `apple-app-site-association` file served from
-  `https://dad.example.com/.well-known/apple-app-site-association`:
+  `https://clover.example.com/.well-known/apple-app-site-association`:
 
   ```json
   {
@@ -101,10 +101,10 @@ app. To make that *your* app you need:
   }
   ```
 
-- `applinks:dad.example.com` in `Dad/App/Dad.entitlements` (already there —
+- `applinks:clover.example.com` in `Dad/App/Dad.entitlements` (already there —
   change the domain)
-- the URL `https://dad.example.com/tap` written to the tag, via **Settings →
-  Pair a Dad tag** in the app or any NFC writer app
+- the URL `https://clover.example.com/tap` written to the tag, via **Settings →
+  Pair a Clover tag** in the app or any NFC writer app
 
 `DadModel.handleIncoming(url:)` handles the path: `/tap` toggles, `/dad` and
 `/undad` are one-directional.
@@ -124,7 +124,7 @@ verified the tag before running, and a universal link only proves the tag holds
 your URL. Pairing therefore guards path 1. That's the correct division — the OS
 does the verifying on the paths where it can.
 
-## What Dad writes on the tag
+## What Clover writes on the tag
 
 Two records, at most, and they coexist:
 

@@ -141,8 +141,8 @@ final class DadModel: ObservableObject {
     /// off rather than Dadding, and saying so is the difference between a
     /// discoverable rule and a surprising one.
     var tapActionText: String {
-        if isDadded { return Vocab.unDadAction }
-        return pendingResume == nil ? Vocab.dadAction : Vocab.breakCancelAction
+        if isDadded { return Vocab.release }
+        return pendingResume == nil ? Vocab.action : Vocab.breakCancelAction
     }
 
     /// The glyph at the top. Rationing gets its own, the same way the widget
@@ -372,15 +372,15 @@ final class DadModel: ObservableObject {
 
         switch engine.handleTap(tagUID: tagUID, preferredMode: mode) {
         case .dadded(let mode, .blocking):
-            banner = "\(Vocab.verbPast) — \(mode.name)."
+            banner = "\(Vocab.state) — \(mode.name)."
         case .dadded(let mode, .rationing(let minutes)):
-            banner = "\(Vocab.verbPast) — \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
+            banner = "\(Vocab.state) — \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
         case .dadded(let mode, .rationAlreadySpent):
-            banner = "\(Vocab.verbPast) — \(Vocab.allowanceAlreadySpent(mode: mode.name, minutes: mode.editableAllowance.minutesPerDay))"
+            banner = "\(Vocab.state) — \(Vocab.allowanceAlreadySpent(mode: mode.name, minutes: mode.editableAllowance.minutesPerDay))"
         case .dadded(let mode, .rationRefused):
             // Said out loud rather than swallowed: they were promised minutes
             // and their apps vanished instead.
-            banner = "\(Vocab.verbPast) — \(mode.name). \(Vocab.allowanceRefused)"
+            banner = "\(Vocab.state) — \(mode.name). \(Vocab.allowanceRefused)"
         case .unDadded(let session):
             let summary = Vocab.sessionSummary(duration: session.duration.dadDurationText)
             // Read the break off the store rather than the result: it is armed
@@ -401,7 +401,7 @@ final class DadModel: ObservableObject {
 
     func emergencyUnDad() {
         if engine.emergencyUnDad() {
-            banner = "\(Vocab.unVerbPast). \(emergencyUnDadsRemaining) emergency overrides left this month."
+            banner = "\(Vocab.released). \(emergencyUnDadsRemaining) emergency overrides left this month."
         } else {
             banner = "No emergency overrides left this month. Go find your tag."
         }
@@ -433,7 +433,7 @@ final class DadModel: ObservableObject {
 
     func pair(tagUID: String, to modeID: UUID? = nil) {
         engine.pair(tagUID: tagUID, to: modeID)
-        banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.verb) your phone."
+        banner = "\(Vocab.tagNoun.capitalized) paired. Tap it to \(Vocab.actionInProse)."
         reload()
     }
 
@@ -474,7 +474,7 @@ final class DadModel: ObservableObject {
 
     func declineRequest() {
         engine.declineRequest()
-        banner = "Not this time. The phone stays \(Vocab.verbPast)."
+        banner = "Not this time. You stay \(Vocab.stateInProse)."
         reload()
     }
 

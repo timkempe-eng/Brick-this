@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dad</string>
+	<string>Clover</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
@@ -31,7 +31,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 
-	<!-- Dad ships a streamlined scene for Assistive Access, so it declares
+	<!-- Clover ships a streamlined scene for Assistive Access, so it declares
 	     itself Optimized for Assistive Access — that label is what a trusted
 	     supporter sees when they choose which apps a phone in that mode gets.
 	     The key is iOS 26, which is also where the scene type starts, so the
@@ -44,7 +44,7 @@
 
 	<!-- Shown in the system NFC scan sheet. -->
 	<key>NFCReaderUsageDescription</key>
-	<string>Dad reads your tag to hide and unhide your apps.</string>
+	<string>Clover reads your tag to hide and unhide your apps.</string>
 
 	<!-- Only needed for the optional custom-scheme fallback described in
 	     docs/nfc-and-tags.md; background NFC uses universal links instead. -->

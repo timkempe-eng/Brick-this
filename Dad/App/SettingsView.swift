@@ -40,8 +40,8 @@ struct SettingsView: View {
                     Text("Tags")
                 } footer: {
                     Text(model.pairedTagCount == 0
-                         ? "No tag paired yet, so any NFC tag will work. Pair one to lock Dad to it."
-                         : "Only your paired tags can \(Vocab.verb) and \(Vocab.unVerb) this phone.")
+                         ? "No tag paired yet, so any NFC tag will work. Pair one to lock Clover to it."
+                         : "Only your paired tags can send this phone outside and bring it back in.")
                 }
 
                 Section {
@@ -82,33 +82,33 @@ struct SettingsView: View {
                 Section {
                     LabeledContent("Left this month", value: "\(model.emergencyUnDadsRemaining) of \(model.emergencyUnDadCeiling)")
                 } header: {
-                    Text(Vocab.emergencyUnDad)
+                    Text(Vocab.emergencyRelease)
                 } footer: {
                     Text("Five overrides per rolling 30 days, for when the tag is genuinely out of reach. They come back on their own.")
                 }
 
                 Section {
                     Text("""
-                         Set up a Shortcuts automation so a tap works with Dad closed: \
+                         Set up a Shortcuts automation so a tap works with Clover closed: \
                          Shortcuts › Automation › NFC › scan your tag › add the \
-                         “\(Vocab.dadAction)” action › turn off Ask Before Running.
+                         “\(Vocab.action)” action › turn off Ask Before Running.
                          """)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 } header: {
-                    Text("Tapping without opening Dad")
+                    Text("Tapping without opening Clover")
                 }
 
                 Section {
                     Text("""
-                         Dad can't switch Assistive Access on. No app can, and going in \
-                         or out needs its own passcode — so Dad asks, and you \
+                         Clover can't switch Assistive Access on. No app can, and going in \
+                         or out needs its own passcode — so Clover asks, and you \
                          triple-click. Set up once:
                          """)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
-                    Label("Settings › Accessibility › Assistive Access. Set it up, and include Dad in the apps you choose.",
+                    Label("Settings › Accessibility › Assistive Access. Set it up, and include Clover in the apps you choose.",
                           systemImage: "1.circle")
                         .font(.footnote)
                     Label("Settings › Accessibility › Accessibility Shortcut. Tick Assistive Access, so a triple-click gets you in and out.",
@@ -125,7 +125,7 @@ struct SettingsView: View {
                     Text("""
                          Going in and coming back out both need the Assistive Access \
                          passcode — which is your Screen Time passcode, if you have one. \
-                         Dad cannot ask for it. So this is a commitment you make to \
+                         Clover cannot ask for it. So this is a commitment you make to \
                          yourself, or one a household makes together with a grown-up \
                          typing the code; it is not a lock a young person can put \
                          themselves behind alone. Coming back is the same two steps in \
@@ -134,7 +134,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    TextField("https://dad.example.com/tap", text: $linkToWrite)
+                    TextField("https://clover.example.com/tap", text: $linkToWrite)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)

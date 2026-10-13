@@ -9,9 +9,9 @@ import Foundation
 /// needs no website, no associated domain and nothing written to the tag.
 
 struct ToggleDadIntent: AppIntent {
-    static var title: LocalizedStringResource = "Dad my phone"
+    static var title: LocalizedStringResource = "Touch Grass"
     static var description = IntentDescription(
-        "Hides your chosen apps, or brings them back if your phone is already Dadded."
+        "Hides your chosen apps, or brings them back if you're already outside."
     )
     /// The whole point is that it runs without the app coming forward.
     static var openAppWhenRun = false
@@ -61,13 +61,13 @@ struct ToggleDadIntent: AppIntent {
     static func dialog(mode: DadMode, start: DadEngine.DadStart) -> IntentDialog {
         switch start {
         case .blocking:
-            return "\(Vocab.verbPast). \(mode.name)."
+            return "\(Vocab.activeTitle). \(mode.name)."
         case .rationing(let minutes):
-            return "\(Vocab.verbPast). \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
+            return "\(Vocab.activeTitle). \(Vocab.allowanceRunning(mode: mode.name, minutes: minutes))"
         case .rationAlreadySpent:
-            return "\(Vocab.verbPast). \(Vocab.allowanceAlreadySpent(mode: mode.name, minutes: mode.editableAllowance.minutesPerDay))"
+            return "\(Vocab.activeTitle). \(Vocab.allowanceAlreadySpent(mode: mode.name, minutes: mode.editableAllowance.minutesPerDay))"
         case .rationRefused:
-            return "\(Vocab.verbPast). \(mode.name). \(Vocab.allowanceRefused)"
+            return "\(Vocab.activeTitle). \(mode.name). \(Vocab.allowanceRefused)"
         }
     }
 }
@@ -75,7 +75,7 @@ struct ToggleDadIntent: AppIntent {
 /// One-directional variants, for when you'd rather an automation not toggle —
 /// a tag by the bed that only ever Dads, for instance.
 struct StartDadIntent: AppIntent {
-    static var title: LocalizedStringResource = "Start Dadding"
+    static var title: LocalizedStringResource = "Touch Grass with a Mode"
     static var openAppWhenRun = false
 
     @Parameter(title: "Mode", optionsProvider: ModeNameOptions())
@@ -84,7 +84,7 @@ struct StartDadIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let engine = DadEngine.live
         guard engine.store.activeSession == nil else {
-            return .result(dialog: "Already \(Vocab.verbPast).")
+            return .result(dialog: "Already \(Vocab.stateInProse).")
         }
         guard let name = modeName,
               let mode = engine.store.modes.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }),
@@ -97,28 +97,28 @@ struct StartDadIntent: AppIntent {
 }
 
 struct StopDadIntent: AppIntent {
-    static var title: LocalizedStringResource = "Un-Dad my phone"
+    static var title: LocalizedStringResource = "Come Back In"
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         // `.tapped`: this is a person deliberately releasing, so it starts a
         // break on a Mode that takes them, exactly as the tag would.
         guard let finished = DadEngine.live.unDad(.tapped) else {
-            return .result(dialog: "Your phone isn't \(Vocab.verbPast).")
+            return .result(dialog: "You're not out touching grass.")
         }
         return .result(dialog: "\(Vocab.sessionSummary(duration: finished.duration.dadDurationText))")
     }
 }
 
 struct DadStatusIntent: AppIntent {
-    static var title: LocalizedStringResource = "Is my phone Dadded?"
+    static var title: LocalizedStringResource = "Am I outside?"
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<Bool> {
         if let session = DadEngine.live.store.activeSession {
             return .result(
                 value: true,
-                dialog: "\(Vocab.verbPast) for \(session.duration.dadDurationText) — \(session.modeName)."
+                dialog: "\(Vocab.state) for \(session.duration.dadDurationText) — \(session.modeName)."
             )
         }
         return .result(value: false, dialog: "\(Vocab.idleTitle).")
@@ -138,27 +138,27 @@ struct DadShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: ToggleDadIntent(),
             phrases: [
-                "Dad my phone with \(.applicationName)",
-                "\(.applicationName) my phone",
+                "Touch grass with \(.applicationName)",
+                "Touch grass in \(.applicationName)",
             ],
-            shortTitle: "Dad my phone",
+            shortTitle: "Touch Grass",
             systemImageName: "lock.iphone"
         )
         AppShortcut(
             intent: StopDadIntent(),
             phrases: [
-                "Un-Dad my phone with \(.applicationName)",
+                "Come back in with \(.applicationName)",
                 "Unlock my phone with \(.applicationName)",
             ],
-            shortTitle: "Un-Dad my phone",
+            shortTitle: "Come Back In",
             systemImageName: "lock.open.iphone"
         )
         AppShortcut(
             intent: DadStatusIntent(),
             phrases: [
-                "Is my phone Dadded in \(.applicationName)",
+                "Am I outside in \(.applicationName)",
             ],
-            shortTitle: "Dad status",
+            shortTitle: "Clover status",
             systemImageName: "questionmark.circle"
         )
     }

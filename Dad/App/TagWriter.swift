@@ -25,14 +25,14 @@ final class TagWriter: NSObject, ObservableObject {
     private let pending = PendingMessage()
 
     /// - Parameter url: the universal link to burn onto the tag, e.g.
-    ///   `https://dad.example.com/tap`.
+    ///   `https://clover.example.com/tap`.
     func write(url: URL) {
         guard NFCNDEFReaderSession.readingAvailable else {
             lastError = "This iPhone can't write NFC tags."
             return
         }
         guard let uriPayload = NFCNDEFPayload.wellKnownTypeURIPayload(url: url) else {
-            lastError = "That isn't a URL Dad can write."
+            lastError = "That isn't a URL Clover can write."
             return
         }
         pending.value = NFCNDEFMessage(records: [uriPayload])

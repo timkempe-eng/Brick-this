@@ -1,44 +1,41 @@
 #!/usr/bin/env bash
-# The verb is the product. docs/naming.md says capital T throughout, including
-# mid-sentence — "Dad your phone", never "dad your phone". Lowercasing it makes
-# the whole conceit read like a typo, and it had crept into eight call sites
-# before this check existed.
+# The app was called Dad, and a family turned it down over the name alone. It
+# is Clover now, and its action is Touch Grass — docs/naming.md. This fails if
+# the old name reaches anything a person reads.
 #
-# The list below is the EXEMPTIONS, not the targets, and that inversion is the
-# fix for a hole a review found. Naming the forbidden symbols meant a new one
-# was unwatched the moment it was added: `verbsThirdPerson` was declared as an
-# alias of `verbThirdPerson`, its own comment claimed the lint covered it, and
-# it did not. Anything on `Vocab` is now suspect unless it is listed here, so
-# adding a symbol makes the check stricter rather than blinder.
+# The unit tests already check every line `Vocab` produces. They cannot see the
+# rest: SwiftUI views, App Intents and the Info.plists are not compiled on
+# Linux, and those hold most of the app's sentences. So this reads the source.
 #
-# `modeNoun` is the ONLY exemption: "mode" is an ordinary common noun.
+# What counts as the old name: Dad, Dads, Dadded, Dadding and Un-Dad as whole
+# words. Code identifiers survive on purpose (`DadMode`, `.dadded`, the
+# `app.dad.*` bundle ids and the `group.app.dad.shared` App Group — changing
+# those costs Apple round trips and testers' data for nothing a person sees),
+# and a whole-word, case-sensitive match leaves every one of them alone.
 #
-# There were three. The other two — `dadAction` and `emergencyUnDad` — were
-# added on the theory that they were common nouns, and they are not: they
-# expand to "Dad my phone" and "Emergency Un-Dad", so lowercasing them produces
-# "dad my phone", the literal example in hard rule 4. A review confirmed the
-# lint passed with both spelled out in a shipping file. Neither had a call
-# site; they were exempted for nothing and would have permitted the one thing
-# this script exists to stop. **Add an exemption only for a symbol that
-# contains no form of the verb, and check by expanding it.**
-#
-# The match also covers a function call and the two other ways Swift lowercases
-# a string, because the interpolating helpers — `warning`, `asking` — are where
-# the verb most often ends up mid-sentence, and they were entirely unwatched.
+# Comment lines are skipped: what a comment says about history is not copy.
+# A trailing `//` comment after code is stripped first, but only when the
+# slashes follow a space, so a "https://" inside a string is still checked.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-EXEMPT="modeNoun"
+OLD='\b(Dad|Dads|Dadded|Dadding|Un-Dad|Un-Dadded)\b'
 
-hits=$(grep -rnoE "Vocab\.[A-Za-z]+(\([^)]*\))?\.(lowercased\(|localizedLowercase)" Dad/ \
-       | grep -vE "Vocab\.($EXEMPT)\.lowercased\(" || true)
+swift_hits=$(grep -rnP --include='*.swift' '' Dad/ \
+  | grep -vP '^[^:]+:\d+:\s*(//|\*)' \
+  | sed -E 's# //.*$##' \
+  | grep -P "^[^:]+:\d+:.*$OLD" || true)
 
+plist_hits=$(grep -rnP --include='*.plist' "<string>[^<]*$OLD[^<]*</string>" Dad/ \
+  | grep -v 'app\.dad\.' || true)
+
+hits=$(printf '%s\n%s' "$swift_hits" "$plist_hits" | sed '/^$/d')
 if [ -n "$hits" ]; then
-  echo "Vocabulary lint failed — these lowercase a proper form of the verb:"
+  echo "Vocabulary lint failed — the old name is still in copy a person reads:"
   echo "$hits"
   echo
-  echo "See docs/naming.md. Use the form as declared, add a new one to Vocab,"
-  echo "or add it to EXEMPT in this script if it really is a common noun."
+  echo "See docs/naming.md. Use Vocab.appName, Vocab.action, Vocab.state or"
+  echo "Vocab.release rather than writing a word out."
   exit 1
 fi
 echo "Vocabulary lint passed."

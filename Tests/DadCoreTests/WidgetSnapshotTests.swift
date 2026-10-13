@@ -56,26 +56,26 @@ final class WidgetSnapshotTests: XCTestCase {
 
     func testDaddedCopy() {
         let snapshot = WidgetSnapshot.dadded(modeName: "Sleep", since: now, rationing: false)
-        XCTAssertEqual(snapshot.headline, "Dadded")
+        XCTAssertEqual(snapshot.headline, "Outside")
         XCTAssertEqual(snapshot.detail, "Sleep")
-        XCTAssertEqual(snapshot.inlineText, "Dadded · Sleep")
+        XCTAssertEqual(snapshot.inlineText, "Outside · Sleep")
     }
 
     func testStreakCopyAgreesWithItsNumber() {
         XCTAssertEqual(WidgetSnapshot.free(streakDays: 1).detail, "1 day in a row")
         XCTAssertEqual(WidgetSnapshot.free(streakDays: 4).detail, "4 days in a row")
-        XCTAssertEqual(WidgetSnapshot.free(streakDays: 1).inlineText, "1 day Dad streak")
+        XCTAssertEqual(WidgetSnapshot.free(streakDays: 1).inlineText, "1 day grass streak")
     }
 
     func testWithNoStreakTheWidgetInvitesRatherThanShowingAZero() {
         // "0 days in a row" is a scold, and a widget has no room to explain.
         let snapshot = WidgetSnapshot.free(streakDays: 0)
-        XCTAssertEqual(snapshot.detail, "Dad my phone")
+        XCTAssertEqual(snapshot.detail, "Touch Grass")
         XCTAssertFalse(snapshot.detail.contains("0"))
-        XCTAssertEqual(snapshot.inlineText, "Dad")
+        XCTAssertEqual(snapshot.inlineText, "Clover")
     }
 
-    func testTheVerbIsNeverLowercasedOnTheLockScreen() {
+    func testTheOldNameIsNotOnTheLockScreen() {
         let all: [WidgetSnapshot] = [
             .dadded(modeName: "Deep Work", since: now, rationing: false),
             .free(streakDays: 0),
@@ -83,8 +83,8 @@ final class WidgetSnapshotTests: XCTestCase {
         ]
         for snapshot in all {
             for line in [snapshot.headline, snapshot.detail, snapshot.inlineText] {
-                XCTAssertFalse(line.lowercased().contains("dad") && !line.contains("Dad"),
-                               "lowercase verb in: \(line)")
+                XCTAssertNil(line.range(of: #"\bDad|Un-Dad"#, options: .regularExpression),
+                             "the old name survives in: \(line)")
             }
         }
     }
@@ -118,9 +118,9 @@ final class IncomingLinkTests: XCTestCase {
     }
 
     func testTheVocabulary() {
-        XCTAssertEqual(action("https://dad.example.com/tap"), .toggle)
-        XCTAssertEqual(action("https://dad.example.com/dad"), .dad)
-        XCTAssertEqual(action("https://dad.example.com/undad"), .unDad)
+        XCTAssertEqual(action("https://clover.example.com/tap"), .toggle)
+        XCTAssertEqual(action("https://clover.example.com/dad"), .dad)
+        XCTAssertEqual(action("https://clover.example.com/undad"), .unDad)
         XCTAssertEqual(action("dad://open"), .open)
     }
 
@@ -132,14 +132,14 @@ final class IncomingLinkTests: XCTestCase {
     }
 
     func testAnUnrecognisedLinkDoesNothing() {
-        XCTAssertNil(action("https://dad.example.com/"))
-        XCTAssertNil(action("https://dad.example.com/something"))
+        XCTAssertNil(action("https://clover.example.com/"))
+        XCTAssertNil(action("https://clover.example.com/something"))
         XCTAssertNil(action("dad://wat"))
     }
 
     func testMatchingIsCaseInsensitive() {
         XCTAssertEqual(action("dad://OPEN"), .open)
-        XCTAssertEqual(action("https://dad.example.com/Tap"), .toggle)
+        XCTAssertEqual(action("https://clover.example.com/Tap"), .toggle)
     }
 }
 

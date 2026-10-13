@@ -19,11 +19,11 @@ struct OnboardingView: View {
                 .multilineTextAlignment(.center)
 
             Text("""
-                 Dad hides the apps you choose until you tap an NFC tag. \
+                 Clover hides the apps you choose until you tap an NFC tag. \
                  Leave the tag in another room and the apps stay gone.
 
                  To do that it needs Screen Time access — the same system \
-                 that powers Apple's own app limits. Dad never sees which \
+                 that powers Apple's own app limits. Clover never sees which \
                  apps you picked; iOS keeps that to itself.
                  """)
                 .foregroundStyle(.secondary)
@@ -32,7 +32,7 @@ struct OnboardingView: View {
             Spacer()
 
             if model.authorization == .denied {
-                Text("Screen Time access is off. Turn it on in Settings › Screen Time to use Dad.")
+                Text("Screen Time access is off. Turn it on in Settings › Screen Time to use Clover.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

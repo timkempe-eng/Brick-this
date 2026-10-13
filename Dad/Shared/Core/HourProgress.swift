@@ -65,5 +65,5 @@ struct HourProgress: Equatable {
     }
 
     /// Said once, under the line, because the hours are not banked yet.
-    static let caveat = "They count when you \(Vocab.unVerb) yourself."
+    static let caveat = "They count when you \(Vocab.releaseInProse) yourself."
 }

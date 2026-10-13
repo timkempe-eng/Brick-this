@@ -30,7 +30,7 @@ struct AssistiveAccessView: View {
                 // system prompt, a role question and a Mode picker — three
                 // workflows that do not belong here. Say who can finish it
                 // instead of starting something that cannot be completed.
-                Text("Dad isn't set up yet.")
+                Text("Clover isn't set up yet.")
                     .font(.system(size: 34, weight: .bold))
                     .multilineTextAlignment(.center)
                 Text("Ask whoever set up this phone to finish it.")

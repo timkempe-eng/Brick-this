@@ -1,4 +1,4 @@
-// The Dad puck — a printed home for a 30p NFC sticker.
+// The Clover puck — a printed home for a 30p NFC sticker.
 //
 // Brick charges $59 for the object; the electronics in it are a sticker. What
 // the money actually buys is *heft and a place*: something you can find by

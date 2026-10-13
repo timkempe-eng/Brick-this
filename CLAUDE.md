@@ -1,4 +1,4 @@
-# Dad — the contract
+# Clover — the contract
 
 Read this before non-trivial work. It is the set of rules that are easy to
 break by accident and expensive to notice later.
@@ -11,7 +11,7 @@ disappear until someone taps it again. Native Swift, five targets, no Capacitor.
 **The unit is the home, not one adult.** Parents and teenagers both, everyone
 playing, with a teenager earning more control over their own phone as they hold
 the habit. The reward for a good decision is autonomy — never more screen time,
-which is a trap an entire category fell into. Dad is a boundary, not a spy: it
+which is a trap an entire category fell into. Clover is a boundary, not a spy: it
 cannot monitor, by construction (rule 3), and that is a commitment rather than
 an omission. The README carries the philosophy in full; the family work is all
 built or declined in an ADR — what is left in `PARKING_LOT.md` needs Apple, not
@@ -21,7 +21,11 @@ This began as a DIY [Brick](https://getbrick.com/) and the teardown still holds
 — the $59 puck is a $0.30 sticker. That is no longer the objective. It is what
 makes tags in four rooms for four phones affordable at all.
 
-The verb is **Dad**: Dad / Dads / Dadding / Dadded, and **Un-Dad** to release.
+The app is **Clover** and the action is **Touch Grass** — you touch your phone
+to a tag, and you step back into the room. You are then *outside*, and you
+**Come Back In** to release. It was called Dad until a family turned it down
+over the name; [docs/naming.md](docs/naming.md) has the words and the reasons.
+The code, folders and bundle ids still say Dad, on purpose — see there.
 
 ## The machines
 
@@ -55,9 +59,12 @@ missing is a session whose hook did not run, not a reason to push untested.
 3. **Only `DadMode+FamilyControls` may interpret a `BlockedSelection` payload.**
    It is an opaque blob everywhere else. That is the privacy model made
    structural: the app is not supposed to learn which apps you blocked.
-4. **The verb is never lowercased.** "Dad your phone", never "dad your phone".
-   `scripts/lint-vocabulary.sh` enforces it; it crept into eight call sites
-   before that existed. `modeNoun` is exempt — "mode" is a common noun.
+4. **The old name never reaches a person.** No "Dad", "Dadded" or "Un-Dad"
+   in anything a user reads — the reason the app was renamed. Copy goes
+   through `Vocab`; `scripts/lint-vocabulary.sh` reads the views and
+   Info.plists the Linux build cannot compile, and `VocabularyTests` covers
+   what `Vocab` produces. Identifiers keep the old name on purpose. And never
+   phrase the action as an order ("go touch grass" is also an insult).
 5. **Signing is fastlane `match`, never Xcode automatic signing.**
    [docs/signing.md](docs/signing.md) explains what that costs if ignored.
    Preflight fails on `-allowProvisioningUpdates` reappearing.
@@ -80,9 +87,9 @@ missing is a session whose hook did not run, not a reason to push untested.
 ## Before you push
 
 ```bash
-swift test                      # 905 tests, seconds
+swift test                      # 906 tests, seconds
 ./scripts/lint-vocabulary.sh
-python3 scripts/preflight.py    # 110 checks on the Xcode wiring
+python3 scripts/preflight.py    # 112 checks on the Xcode wiring
 ```
 
 Preflight catches what fails *silently on a device* — a mismatched App Group
@@ -158,9 +165,9 @@ at a missing assertion.
 
 Things the tests deliberately pin down, because they are decisions rather than
 implementation details: a session counts toward the day it *started*; a streak
-with nothing today but something yesterday is still current; a day you Dadded
+with nothing today but something yesterday is still current; a day you went outside
 and then spent an override on still counts toward that streak, though not
-toward a rung; an exhausted override allowance leaves the phone Dadded rather
+toward a rung; an exhausted override allowance leaves the phone outside rather
 than half-released; a scheduled Mode never stomps a session you began by hand.
 
 From the family layer, where the decision is the feature: only a session a

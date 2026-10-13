@@ -53,7 +53,7 @@ shield.
 
 ## Associated Domains
 
-`applinks:dad.example.com` — only needed for background tag reading. Delete the
+`applinks:clover.example.com` — only needed for background tag reading. Delete the
 key if you're using the Shortcuts route. See [nfc-and-tags.md](nfc-and-tags.md).
 
 ## Changing the identifiers

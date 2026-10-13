@@ -75,7 +75,7 @@ final class WeeklyReviewTests: XCTestCase {
         XCTAssertEqual(r.comparison, .noBaseline(thisWeek: 0))
         XCTAssertNil(r.comparison.fraction)
         XCTAssertEqual(r.daysTheOverrideAllowanceRanOutCount, 0)
-        XCTAssertEqual(r.headline, "No Dad sessions this week.")
+        XCTAssertEqual(r.headline, "No time outside this week.")
     }
 
     func testEvenAnEmptyWeekStillHasSevenDayRowsSoTheChartKeepsItsShape() {
@@ -434,12 +434,12 @@ final class WeeklyReviewTests: XCTestCase {
         let r = review([session(start(day: 0, hour: 9), minutes: 60),
                         session(start(day: 2, hour: 9), minutes: 30),
                         session(start(day: 2, hour: 14), minutes: 15)])
-        XCTAssertEqual(r.headline, "1h 45m Dadded over 3 sessions on 2 days.")
+        XCTAssertEqual(r.headline, "1h 45m outside over 3 sessions on 2 days.")
     }
 
     func testTheHeadlineIsSingularWhenThereIsOneOfSomething() {
         let r = review([session(start(day: 0, hour: 9), minutes: 60)])
-        XCTAssertEqual(r.headline, "1h 0m Dadded over 1 session on 1 day.")
+        XCTAssertEqual(r.headline, "1h 0m outside over 1 session on 1 day.")
     }
 
     /// The tone requirement, made mechanical. A future edit that reaches for
@@ -467,7 +467,7 @@ final class WeeklyReviewTests: XCTestCase {
     /// The verb is the product; a lowercase one in the review reads as a typo.
     func testTheVerbKeepsItsCapitalInTheHeadline() {
         let headline = review([session(start(day: 0, hour: 9))]).headline
-        XCTAssertTrue(headline.contains("Dadded"))
+        XCTAssertTrue(headline.contains("outside"))
         XCTAssertFalse(headline.contains("dadded"))
     }
 }

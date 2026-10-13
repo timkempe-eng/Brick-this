@@ -20,7 +20,7 @@ final class ScreenTests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["-DadBypassOnboarding"]
         app.launch()
-        XCTAssertTrue(app.buttons["Dad my phone"].waitForExistence(timeout: 30),
+        XCTAssertTrue(app.buttons["Touch Grass"].waitForExistence(timeout: 30),
                       "The home screen never appeared.")
     }
 
@@ -99,8 +99,8 @@ final class ScreenTests: XCTestCase {
         // not the promise this test is about. It is off for a starter Mode
         // today, and a test that only passes because a nearby feature happens
         // to be off is one that breaks for the wrong reason later.
-        XCTAssertFalse(footer(containing: "Dads itself").exists,
-                       "A Mode that blocks nothing must not promise to Dad your phone.")
+        XCTAssertFalse(footer(containing: "sends you outside").exists,
+                       "A Mode that blocks nothing must not promise to send you outside.")
     }
 
     /// Every label currently on screen, for a failure message. A test that says
@@ -196,7 +196,7 @@ final class ScreenTests: XCTestCase {
         // The pairing action, not the section header: a header's element type
         // is a SwiftUI implementation detail, and the button is the thing a
         // user actually needs to find.
-        XCTAssertTrue(app.buttons["Pair a Dad tag"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Pair a Clover tag"].waitForExistence(timeout: 10))
     }
 
     func testStatsOpensWithNoHistory() {
@@ -212,7 +212,7 @@ final class ScreenTests: XCTestCase {
             XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 10),
                           "\(label) did not present.")
             app.buttons["Done"].tap()
-            XCTAssertTrue(app.buttons["Dad my phone"].waitForExistence(timeout: 10),
+            XCTAssertTrue(app.buttons["Touch Grass"].waitForExistence(timeout: 10),
                           "Did not get back from \(label).")
         }
         XCTAssertEqual(app.state, .runningForeground)

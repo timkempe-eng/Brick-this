@@ -1,12 +1,13 @@
-# Dad
+# Clover
 
-**Dad your phone. Get the room back.**
+**Touch grass. Your phone will wait.**
 
 Tap an NFC sticker and the apps you chose disappear. Leave the sticker in
 another room and they stay gone until someone walks back and taps it again.
 
-> Dad / Dads / Dadding / Dadded. "I Dadded my phone at nine." "Your phone is
-> Dadded." "Un-Dad my phone." — [the full verb spec](docs/naming.md)
+> Tap your phone to a tag and you touch grass — literally, and then the other
+> way: the apps you chose step aside, and so do you. "Touch Grass" to go out,
+> "Come Back In" to return. — [the words, and why](docs/naming.md)
 
 ## The idea
 
@@ -26,7 +27,7 @@ The goal is not to police a teenager. It is to make phones less of a constant
 presence for everyone under one roof, and to hand a teenager more control over
 their own as they show they can hold it.
 
-## What Dad believes
+## What Clover believes
 
 Five commitments. Each one has a consequence in the code, which is the only
 reason to write them down.
@@ -39,16 +40,16 @@ the adult.
 entire category pays for chores and homework in minutes: ScreenCoach, Chore
 Champ, Carrots&Cake, EarnIt, Zenvy. The research says it backfires — screens
 become the thing worth working for, and cooperation turns into "what do I get
-for this?". Dad escapes that trap only because of a distinction worth being
+for this?". Clover escapes that trap only because of a distinction worth being
 precise about: those apps pay for *unrelated* behaviour with the thing they are
 trying to limit, whereas here the good decision *is* the habit. So consistency
 buys freedom — a later self-set Sleep window, the right to edit your own Modes,
 more overrides, eventually the tag living in your own room. Earned minutes are
-the one currency Dad will not mint.
+the one currency Clover will not mint.
 
-**3. Dad is a boundary, not a spy.** Teenagers whose parents used monitoring
+**3. Clover is a boundary, not a spy.** Teenagers whose parents used monitoring
 apps experienced *more* online risk, not less, and the apps correlate with
-eroded trust. Dad cannot monitor anything, and not as a matter of policy:
+eroded trust. Clover cannot monitor anything, and not as a matter of policy:
 `FamilyActivityPicker` hands back opaque tokens only iOS can resolve, Core holds
 them as a `Data` blob it cannot read, and exactly one adapter file is allowed to
 interpret them. The app does not learn which apps were blocked, there is no
@@ -62,11 +63,11 @@ involvement in screen decisions is associated with better compliance and
 greater prosociality — it is the best-supported thing in the literature and
 close to the cheapest thing to build.
 
-**5. There is an ending.** A teenager who keeps the habit ends up running Dad
+**5. There is an ending.** A teenager who keeps the habit ends up running Clover
 the way an adult does, with the tag in their own room and nobody else holding
 it. A tool for teaching a habit should plan its own obsolescence.
 
-## What Dad will not do
+## What Clover will not do
 
 The declines are as much the design as the features, and each has a reason so it
 does not get re-litigated:
@@ -85,10 +86,10 @@ does not get re-litigated:
 - **Put your phone into Assistive Access on a tap.** Not a decision — no API
   enters, leaves or configures that mode, and entering it needs its own
   passcode by design, because it is built so the person using the phone cannot
-  simply walk back out. Dad runs *inside* it instead: a phone already in
+  simply walk back out. Clover runs *inside* it instead: a phone already in
   Assistive Access gets one sentence, one line and at most one button.
-  [ADR 008](docs/adr/008-assistive-access.md). What Dad does instead is ask: a
-  Mode can prompt you to triple-click when it starts, and Dad renders inside
+  [ADR 008](docs/adr/008-assistive-access.md). What Clover does instead is ask: a
+  Mode can prompt you to triple-click when it starts, and Clover renders inside
   the mode so the tag is still reachable once you are there. What people
   usually mean by a profile is an allowlist Mode, which arrives on a tag tap
   and leaves on one.
@@ -110,9 +111,9 @@ where consistency buys control and never minutes, request-and-grant answered by
 a tag tap, co-authored agreements with a date to talk about them again, rewards
 priced in whole hours off the phone (up to four a day, none from 23:00 to 06:00), a weekly review aimed at a conversation, ten minutes' notice
 before a scheduled Mode lands, a shared streak carried on the tag itself, and an
-honest report of the stretches Dad cannot account for.
+honest report of the stretches Clover cannot account for.
 
-**The one thing still missing is not code.** Dad uses Family Controls
+**The one thing still missing is not code.** Clover uses Family Controls
 *individual* authorization, where the phone's owner is in charge — correct for
 an adult and useless for a teenager, who can revoke it in Settings.
 `requestAuthorization(for: .child)` is Apple's route to the real thing, and it
@@ -152,7 +153,7 @@ four minutes per push.
 The one unavoidable cost is the **Apple Developer Program, $99/year**. Free
 provisioning needs Xcode on a Mac, sideloading tools can't grant the Family
 Controls entitlement, and Swift Playgrounds on iPad can't build app extensions
-(Dad has four). TestFlight is the only Mac-free route onto a phone, and it
+(Clover has four). TestFlight is the only Mac-free route onto a phone, and it
 requires the paid program.
 
 Signing is fastlane `match`, not Xcode automatic signing —
@@ -213,7 +214,7 @@ NFC tag ──tap──▶ Shortcuts automation ──▶ ToggleDadIntent ──
  Settings  Activity       (usage events)                           Notifications
               │
       iOS shields the apps ──▶ ShieldConfigurationExtension
-                                    "Dadded."
+                                    "You're outside."
 ```
 
 Every trigger funnels through one engine, so there is exactly one place a
@@ -225,14 +226,14 @@ way and cost exactly one new port: roles, the ladder, grants and agreements are
 all values in Core, and only the ten-minute warning needed a new framework
 behind a protocol.
 
-The restrictions are held by the system, not by this app. Force-quitting Dad
+The restrictions are held by the system, not by this app. Force-quitting Clover
 does not unblock anything. Strict Mode additionally sets `denyAppRemoval`, so
-you can't delete Dad to escape it either. If a crash ever leaves the shield and
+you can't delete Clover to escape it either. If a crash ever leaves the shield and
 the stored session disagreeing, `reconcile()` settles it on next launch — in
 both directions, so neither a half-finished start nor a half-finished stop can
 strand you.
 
-Two roles will eventually need shared state, which Dad has none of today — no
+Two roles will eventually need shared state, which Clover has none of today — no
 accounts, no network. That is worth spending carefully: it is a real advantage
 over Brick, which needs a connection to block or unblock at all. The plan is
 in-person and tag-mediated first, CloudKit only if remote grant proves
@@ -255,7 +256,7 @@ Dad/
       DadEngine        start/stop/toggle — one path for every trigger
       Ports            the six protocols the engine depends on
       DadMode          a Mode; BlockedSelection is opaque here by design
-      DadSession       one stretch of being Dadded
+      DadSession       one stretch of being outside
       DadStats         streaks, totals, chart data
       ShieldPolicy     whether the apps are currently taken away — one answer
       ModeSchedule     recurring windows; wall-clock, not instants
@@ -273,7 +274,7 @@ Dad/
   App/             the SwiftUI app, NFC scanning, App Intents
   Widget/          Lock Screen and Home Screen status — Core plus the store only
   Extensions/
-    ShieldConfiguration   the "Dadded." screen over blocked apps
+    ShieldConfiguration   the "You're outside." screen over blocked apps
     ShieldAction          its two buttons
     ActivityMonitor       ends timed sessions, and rations, with the app closed
   Widget/          the Lock Screen widget — Core plus one adapter, no

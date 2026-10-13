@@ -61,7 +61,7 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   06:00, spent on things a grown-up offers. A granted break or a timer you set keeps the hours; a
   schedule's session earns nothing, and neither does one ended with an
   override. Hours outlive the bounded history, and the home screen counts
-  down to the next one while Dadded. Never in minutes, and not by convention:
+  down to the next one while outside. Never in minutes, and not by convention:
   `RewardLedger.Hours` has no multiply, no `Double` and no duration member, so
   paying in screen time does not compile. Priced in days until
   [ADR 009](adr/009-rewards-in-hours.md). Offering and settling need a grown-up
@@ -71,11 +71,11 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   port. It names the Mode and the time, asks for nothing, and makes no sound.
 - **Saying when the shield went missing** — as an upper bound, never a
   measurement, with the caveat beside the number rather than in a help screen.
-  An adult Dadding their own phone is told nothing about the past.
+  An adult touching grass on their own phone is told nothing about the past.
 - **A puck to put the tag in** — [hardware/](../hardware/), two printed parts,
   about a dollar, rendered by CI rather than committed.
 - **The triple-click prompt** — a Mode can ask for Assistive Access, and one
-  notice after the tap says to triple-click for it. Dad cannot switch the mode
+  notice after the tap says to triple-click for it. Clover cannot switch the mode
   on and says so in the copy; what it can do is ask at the moment the phone is
   in your hand. Entry is passcode-gated — measured, not assumed — so the prompt
   names the passcode, and a young person's phone is told to ask a grown-up
@@ -96,7 +96,7 @@ is built around. [ADR 002](adr/002-no-live-activity.md) has the reasoning.
 
 **Family Controls child authorization.** The one piece of the family layer
 still missing, and the one that makes the rest binding rather than
-co-operative: Dad authorizes as an *individual*, so the phone's owner is in
+co-operative: Clover authorizes as an *individual*, so the phone's owner is in
 charge and a young person can revoke it in Settings. `.child` authorization is
 Apple's blessed route and needs the device signed into a child iCloud account
 inside an iCloud Family. Everything above works today as an agreement between
@@ -106,7 +106,7 @@ doesn't.
 **Switching an Assistive Access profile on a tap — not declined, impossible.**
 The whole third-party API surface for that mode is five symbols and every one
 of them reads or draws; nothing enters, leaves or configures it, and entering
-needs its own passcode by design. Dad runs inside the mode instead.
+needs its own passcode by design. Clover runs inside the mode instead.
 [ADR 008](adr/008-assistive-access.md) has the surface, the evidence and the
 re-runnable check.
 
@@ -115,7 +115,7 @@ implements it: the first shape of granting is in-person, because the parent
 already holds a tag and a tag needs no account, server or crypto. A PIN is what
 that becomes when they are not in the room.
 
-**A digest of what you missed while Dadded — declined.** Reviewers of every
+**A digest of what you missed while outside — declined.** Reviewers of every
 blocker ask for it, and iOS does not expose enough to build it honestly. A
 half-true digest is worse than none: it teaches people to check it, and then to
 distrust it. [ADR 005](adr/005-missed-while-dadded.md).
@@ -145,7 +145,7 @@ the first evidence that a tap actually blocks an app remains TestFlight.
 configured either.** `FamilyActivityPicker` returns no apps, which means every
 Mode a UI test can reach blocks nothing, which means no schedule it turns on
 will ever be registered. The app says so — a scheduled Mode that blocks nothing
-tells you what is still missing instead of promising to Dad your phone — and
+tells you what is still missing instead of promising to send you outside — and
 that honesty is the deepest a Simulator test can go. Configuring a Mode
 end-to-end is a TestFlight step.
 
@@ -185,7 +185,7 @@ Mode's daily limit is *reached* it stays reached for the rest of the day, across
 as many sessions as you start — otherwise ending and re-tapping would be a
 two-tap reset. But the system only reports the moment a threshold is crossed
 and nothing before it, so ten minutes used in a session you ended early are ten
-minutes Dad never hears about, and the next session starts with the full
+minutes Clover never hears about, and the next session starts with the full
 allowance. A smaller hole than the one it replaces, and not closable with the
 API as it stands.
 

@@ -64,7 +64,7 @@ struct RewardsView: View {
             Text("Hours")
         } footer: {
             Text("""
-                 Every full hour \(Vocab.verbPast) earns one, when you end the session \
+                 Every full hour \(Vocab.stateInProse) earns one, when you end the session \
                  yourself — at the \(Vocab.tagNoun), in the app, with a timer you set, or \
                  with a break a grown-up grants. Up to \
                  \(RewardLedger.hoursCountedPerDay.description) a day, and none between \

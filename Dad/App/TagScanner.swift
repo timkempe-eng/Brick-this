@@ -127,7 +127,7 @@ extension TagScanner: NFCTagReaderSessionDelegate {
                 return
             }
             guard let uid = Self.identifier(of: tag) else {
-                session.invalidate(errorMessage: "That tag isn't a type Dad can use.")
+                session.invalidate(errorMessage: "That tag isn't a type Clover can use.")
                 return
             }
             self.exchangeLedger(on: tag) {

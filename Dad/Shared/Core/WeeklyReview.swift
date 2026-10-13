@@ -520,11 +520,11 @@ struct WeeklyReview {
     var headline: String {
         switch adequacy {
         case .nothingYet:
-            return "No \(Vocab.sessionNoun)s this week."
+            return "No time \(Vocab.stateInProse) this week."
         case .oneDayOnly(let count), .enough(_, let count):
             let sessions = "\(count) session\(count == 1 ? "" : "s")"
             let days = "\(activeDayCount) day\(activeDayCount == 1 ? "" : "s")"
-            return "\(totalThisWeek.dadDurationText) \(Vocab.verbPast) over \(sessions) on \(days)."
+            return "\(totalThisWeek.dadDurationText) \(Vocab.stateInProse) over \(sessions) on \(days)."
         }
     }
 }

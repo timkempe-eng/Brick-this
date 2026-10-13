@@ -140,7 +140,7 @@ struct AutonomyLadder {
         var unlocks: [String] {
             switch self {
             case .gettingStarted:
-                return ["\(Vocab.verb) and \(Vocab.unVerb) your phone whenever you want",
+                return ["Touch grass and come back in whenever you want",
                         "See your own history and \(Vocab.streakNoun)"]
             case .trusted:
                 return ["Choose which apps each \(Vocab.modeNoun) takes away"]
@@ -148,7 +148,7 @@ struct AutonomyLadder {
                 return ["Set your own Sleep window, inside the range a parent chose"]
             case .selfGoverning:
                 return ["Make and name your own \(Vocab.modeNoun)s",
-                        "A wider emergency \(Vocab.unVerb) allowance"]
+                        "A wider \(Vocab.emergencyRelease) allowance"]
             case .keeperOfTheTag:
                 return ["The \(Vocab.tagNoun) lives in your room"]
             }

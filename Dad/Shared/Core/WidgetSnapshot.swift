@@ -49,7 +49,7 @@ enum WidgetSnapshot: Equatable {
     /// The one word you read from across the room.
     var headline: String {
         switch self {
-        case .dadded:  return Vocab.verbPast
+        case .dadded:  return Vocab.state
         case .onBreak: return Vocab.breakNoun.capitalized
         case .free:    return "Free"
         }
@@ -63,7 +63,7 @@ enum WidgetSnapshot: Equatable {
         case .onBreak(let modeName, let until):
             return Vocab.breakRunning(mode: modeName, until: until)
         case .free(let streak):
-            guard streak > 0 else { return Vocab.dadAction }
+            guard streak > 0 else { return Vocab.action }
             return "\(streak) day\(streak == 1 ? "" : "s") in a row"
         }
     }
@@ -85,7 +85,7 @@ enum WidgetSnapshot: Equatable {
         case .dadded(let modeName, _, let rationing):
             return rationing
                 ? "\(modeName) · \(Vocab.rationedNoun)"
-                : "\(Vocab.verbPast) · \(modeName)"
+                : "\(Vocab.state) · \(modeName)"
         case .onBreak(let modeName, _):
             return "\(Vocab.breakNoun.capitalized) · \(modeName)"
         case .free(let streak):

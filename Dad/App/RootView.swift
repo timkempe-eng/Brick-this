@@ -97,7 +97,7 @@ struct HomeView: View {
                 VStack(spacing: 12) {
                     Button {
                         scanner.scan(prompt: model.isDadded
-                                     ? "Hold your iPhone near your \(Vocab.tagNoun) to \(Vocab.unVerb)."
+                                     ? "Hold your iPhone near your \(Vocab.tagNoun) to \(Vocab.releaseInProse)."
                                      : "Hold your iPhone near your \(Vocab.tagNoun).",
                                      // The household exchange rides along on the
                                      // same session, so it costs no second
@@ -146,7 +146,7 @@ struct HomeView: View {
                         Button(role: .destructive) {
                             model.emergencyUnDad()
                         } label: {
-                            Text("\(Vocab.emergencyUnDad) (\(model.emergencyUnDadsRemaining) left)")
+                            Text("\(Vocab.emergencyRelease) (\(model.emergencyUnDadsRemaining) left)")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)

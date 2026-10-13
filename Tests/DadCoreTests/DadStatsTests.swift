@@ -215,42 +215,63 @@ final class FormattingTests: XCTestCase {
 }
 
 final class VocabularyTests: XCTestCase {
-    /// The verb is the product. If the doubling rule ever regresses to
-    /// "Timed"/"Timing" the whole thing reads as a typo.
-    func testVerbDoublesTheFinalConsonant() {
-        XCTAssertEqual(Vocab.verbPast, "Dadded")
-        XCTAssertEqual(Vocab.verbGerund, "Dadding")
-        XCTAssertEqual(Vocab.unVerb, "Un-Dad")
+    /// docs/naming.md: the action is title case where it stands alone as the
+    /// name of something you press, and ordinary lower case mid-sentence.
+    func testTheNameAndTheAction() {
+        XCTAssertEqual(Vocab.appName, "Clover")
+        XCTAssertEqual(Vocab.action, "Touch Grass")
+        XCTAssertEqual(Vocab.release, "Come Back In")
+        XCTAssertEqual(Vocab.state, "Outside")
     }
 
-    func testStatusCopyUsesTheVerbCorrectly() {
-        XCTAssertEqual(Vocab.activeTitle, "Your phone is Dadded")
-        XCTAssertEqual(Vocab.sessionSummary(duration: "1h 42m"), "You were Dadded for 1h 42m.")
+    func testProseUsesTheLowerCaseForms() {
+        XCTAssertEqual(Vocab.idleSubtitle, "Tap your Clover tag to touch grass.")
+        XCTAssertEqual(Vocab.activeTitle, "You're outside")
+        XCTAssertEqual(Vocab.sessionSummary(duration: "1h 42m"), "You were outside for 1h 42m.")
+        XCTAssertEqual(Vocab.warning(mode: "Sleep", at: "22:00", minutes: 10),
+                       "Sleep sends you outside at 22:00 — 10 minutes.")
     }
 
-    /// naming.md: capital T mid-sentence, always. A lowercase verb anywhere in
-    /// the produced copy reads as a typo and undoes the whole conceit.
-    func testTheVerbIsNeverLowercasedInProducedCopy() {
-        let copy = [
-            Vocab.activeTitle,
-            Vocab.idleSubtitle,
-            Vocab.activeSubtitle(mode: "Deep Work"),
-            Vocab.shieldTitle,
-            Vocab.shieldSubtitle(mode: "Deep Work"),
-            Vocab.shieldSecondaryButton,
-            Vocab.dadAction,
-            Vocab.unDadAction,
-            Vocab.emergencyUnDad,
+    /// Every line the app can produce from here, for the two checks below.
+    private var everyLine: [String] {
+        var lines = [
+            Vocab.appName, Vocab.action, Vocab.release, Vocab.released,
+            Vocab.emergencyRelease, Vocab.tagline, Vocab.idleTitle,
+            Vocab.idleSubtitle, Vocab.activeTitle, Vocab.activeSubtitle(mode: "Deep Work"),
+            Vocab.assistiveAccessPromptTitle(mode: "Deep Work"),
+            Vocab.assistiveAccessExitHint, Vocab.authorizationDeclined,
+            Vocab.childAuthorizationFailed,
+            Vocab.warning(mode: "Sleep", at: "22:00", minutes: 1),
+            Vocab.askAction, Vocab.asking(mode: "Sleep"), Vocab.granted(mode: "Sleep", minutes: 15),
+            Vocab.breakCancelled(mode: "Sleep"), Vocab.breakTapHint, Vocab.breakTitle,
+            Vocab.breakCancelAction, Vocab.allowanceRunning(mode: "Games", minutes: 30),
+            Vocab.allowanceSpent(mode: "Games", minutes: 30),
+            Vocab.allowanceAlreadySpent(mode: "Games", minutes: 30), Vocab.allowanceRefused,
+            Vocab.shieldTitle, Vocab.shieldSubtitle(mode: "Deep Work"),
+            Vocab.shieldSubtitleAllowanceSpent(mode: "Games"), Vocab.shieldSecondaryButton,
             Vocab.sessionSummary(duration: "1h"),
-            Vocab.tagline,
         ]
-        for line in copy {
-            XCTAssertFalse(line.contains("dad") && !line.contains("Dad"),
-                           "lowercase verb in: \(line)")
-            for bad in ["dadded", "dadding", "un-dad", "dad your", "dad my"] {
-                XCTAssertFalse(line.lowercased().contains(bad) && !line.contains("Dad"),
-                               "lowercase verb form '\(bad)' in: \(line)")
-            }
+        lines += HouseholdRole.allCases.map(Vocab.assistiveAccessPromptBody(role:))
+        lines += HouseholdCapability.allCases.map(Vocab.refusal)
+        return lines
+    }
+
+    /// The rename's whole reason for existing. A family turned the app down
+    /// over the old name, so one surviving in produced copy is a regression
+    /// in the one thing they were asked to judge.
+    func testNoProducedCopyStillCarriesTheOldName() {
+        for line in everyLine {
+            XCTAssertNil(line.range(of: #"\bDad|Un-Dad"#, options: .regularExpression),
+                         "the old name survives in: \(line)")
+        }
+    }
+
+    /// "Go touch grass" is also an insult. The copy says it as something you
+    /// do, never as something you tell someone else to go and do.
+    func testTheActionIsNeverAnOrderToSomeoneElse() {
+        for line in everyLine {
+            XCTAssertFalse(line.lowercased().contains("go touch grass"),
+                           "touch grass said as a put-down in: \(line)")
         }
     }
 }

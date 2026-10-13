@@ -24,7 +24,7 @@ final class LaunchTests: XCTestCase {
         // authorization, and either is a pass — the point is that it rendered
         // rather than crashed.
         let onboarding = app.buttons["Allow Screen Time access"]
-        let home = app.buttons["Dad my phone"]
+        let home = app.buttons["Touch Grass"]
         let rendered = onboarding.waitForExistence(timeout: 30)
             || home.waitForExistence(timeout: 5)
 
@@ -43,13 +43,13 @@ final class LaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         XCTAssertTrue(app.buttons["Allow Screen Time access"].waitForExistence(timeout: 30)
-                      || app.buttons["Dad my phone"].waitForExistence(timeout: 5))
+                      || app.buttons["Touch Grass"].waitForExistence(timeout: 5))
 
         app.terminate()
         app.launch()
 
         XCTAssertTrue(app.buttons["Allow Screen Time access"].waitForExistence(timeout: 30)
-                      || app.buttons["Dad my phone"].waitForExistence(timeout: 5),
+                      || app.buttons["Touch Grass"].waitForExistence(timeout: 5),
                       "The app rendered on a fresh install but not on a relaunch.")
         XCTAssertEqual(app.state, .runningForeground)
     }

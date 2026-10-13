@@ -1,58 +1,65 @@
 import Foundation
 
-/// Every user-facing string that carries the verb lives here.
+/// Every user-facing string that carries the product's words lives here.
 ///
-/// The product verb is **Dad**. It conjugates like any other one-syllable
-/// consonant-vowel-consonant verb, so the final `d` doubles before a vowel
-/// suffix: Dad / Dads / Dadding / Dadded.
+/// The app is **Clover**. The action is **Touch Grass**: physically, because
+/// you touch your phone to a tag; and the other way, because the point is to
+/// step away from the screen and back into the room you are in.
 ///
-///     "Dad your phone."            (imperative)
-///     "I Dadded my phone at 9am."  (past)
-///     "Your phone is Dadded."      (state)
-///     "Stop Dadding and answer me." (gerund, affectionate)
-///     "Un-Dad"                      (release)
+///     "Touch Grass"                 (the action, standing alone — a button)
+///     "Tap your Clover tag to touch grass."  (the action, mid-sentence)
+///     "You're outside."             (the state)
+///     "Come Back In"                (the release)
+///
+/// The action is an English idiom rather than a coined word, so it follows
+/// English: title case where it stands alone as the name of an action, lower
+/// case in a sentence. docs/naming.md has the reasoning and the one thing to
+/// watch — "go touch grass" is also an insult, so it is said as something you
+/// do, never as something you tell someone else to do.
 ///
 /// Keeping the copy in one place means the tone stays consistent across the
 /// app, the shield extension, the widgets and the Shortcuts phrases — the
 /// shield extension in particular runs in a separate process and cannot
 /// reach the app's own strings any other way.
 enum Vocab {
-    // MARK: Core verb forms
-    static let verb          = "Dad"
-    static let verbThirdPerson = "Dads"
-    static let verbPast      = "Dadded"
-    static let verbGerund    = "Dadding"
-    static let unVerb        = "Un-Dad"
-    static let unVerbPast    = "Un-Dadded"
+    // MARK: The name and the action
+    static let appName         = "Clover"
+    static let action          = "Touch Grass"
+    static let actionInProse   = "touch grass"
+    static let actionPast      = "touched grass"
+    /// The state, as one word you can read from across the room.
+    static let state           = "Outside"
+    static let stateInProse    = "outside"
+    static let release         = "Come Back In"
+    static let releaseInProse  = "come back in"
+    /// What you are once you have come back in.
+    static let released        = "Back in"
+    static let emergencyRelease = "Emergency Exit"
 
     // MARK: Nouns
-    static let appName       = "Dad"
-    static let tagline       = "Dad your phone. Get your day back."
+    static let tagline       = "Touch grass. Your phone will wait."
     static let modeNoun      = "Mode"
-    static let sessionNoun   = "Dad session"
-    static let tagNoun       = "Dad tag"
-    static let streakNoun    = "Dad streak"
+    static let tagNoun       = "Clover tag"
+    static let streakNoun    = "grass streak"
 
-    /// A Mode that rations rather than forbids is *not* a form of the verb, so
-    /// it is an ordinary lowercase word — the same exemption `modeNoun` has.
-    /// "Dadded · rationed" reads as one state with a qualifier, which is what
-    /// it is.
+    /// A Mode that rations rather than forbids is a qualifier on the state,
+    /// not a state of its own: "Outside · rationed".
     static let rationedNoun  = "rationed"
 
     // MARK: Status copy
     static let idleTitle     = "Your phone is free"
-    static let idleSubtitle  = "Tap your \(tagNoun) to Dad it."
-    static let activeTitle   = "Your phone is \(verbPast)"
+    static let idleSubtitle  = "Tap your \(tagNoun) to \(actionInProse)."
+    static let activeTitle   = "You're \(stateInProse)"
     static func activeSubtitle(mode: String) -> String {
-        "\(mode) · tap your \(tagNoun) again to \(unVerb)."
+        "\(mode) · tap your \(tagNoun) again to \(releaseInProse)."
     }
 
     // MARK: Assistive Access copy
     //
     // A phone in Assistive Access is a phone reduced to large buttons and
     // plain sentences, so the release hint is said without the "·" and without
-    // the verb's release form: "Un-Dad" is the product's word, and the whole
-    // point of the mode is that it does not make you learn one.
+    // the release's name: "Come Back In" is the product's phrase, and the
+    // whole point of the mode is that it does not make you learn one.
 
     /// The prompt after a tap, on a Mode that asks for the second half of the
     /// gesture. It names the Mode so a notification that arrives a moment late
@@ -62,7 +69,7 @@ enum Vocab {
     }
 
     /// "Side button (or Home)" rather than either alone: which one it is
-    /// depends on the iPhone, Dad cannot tell from here, and a prompt naming
+    /// depends on the iPhone, Clover cannot tell from here, and a prompt naming
     /// the button somebody does not have is a prompt they conclude is broken.
     ///
     /// It names the passcode because Apple's own wording is that the Assistive
@@ -112,7 +119,7 @@ enum Vocab {
         case .unpairTag:
             return "Un-pairing the \(tagNoun) would end the arrangement, so it isn't yours alone to do."
         case .spendEmergencyOverride:
-            return "Emergency \(unVerb) isn't available on this phone yet."
+            return "\(emergencyRelease) isn't available on this phone yet."
         case .turnDadOff:
             return "Turning \(appName) off isn't something either of you can do from here."
         }
@@ -134,7 +141,7 @@ enum Vocab {
 
     // MARK: The warning before a scheduled Mode
 
-    /// "Sleep Dads your phone at 22:00 — 10 minutes."
+    /// "Sleep sends you outside at 22:00 — 10 minutes."
     ///
     /// The whole answer to the most-repeated complaint about scheduled
     /// blockers: one that lands mid-sentence is the one that gets switched off.
@@ -142,7 +149,7 @@ enum Vocab {
     /// nothing — a warning with a "postpone" button is a schedule you did not
     /// agree to.
     static func warning(mode: String, at time: String, minutes: Int) -> String {
-        "\(mode) \(verbThirdPerson) your phone at \(time) — \(minutes) minute\(minutes == 1 ? "" : "s")."
+        "\(mode) sends you \(stateInProse) at \(time) — \(minutes) minute\(minutes == 1 ? "" : "s")."
     }
 
     // MARK: Asking, and granting
@@ -184,27 +191,22 @@ enum Vocab {
         "The system wouldn't count your app use, so \(appName) hid the apps instead of rationing them."
 
     // MARK: Shield copy — what you see when you open a blocked app
-    static let shieldTitle   = "\(verbPast)."
+    static let shieldTitle   = "\(activeTitle)."
     static func shieldSubtitle(mode: String) -> String {
-        "You Dadded your phone for \(mode). Tap your \(tagNoun) when you're ready to come back."
+        "You \(actionPast) for \(mode). Tap your \(tagNoun) when you're ready to \(releaseInProse)."
     }
     /// The shield you meet after using up a rationed Mode's minutes. Different
     /// from the one above on purpose: nothing was taken away when you started,
-    /// so "you Dadded your phone" would read as a non-sequitur.
+    /// so "you touched grass" would read as a non-sequitur.
     static func shieldSubtitleAllowanceSpent(mode: String) -> String {
-        "Your \(mode) allowance is gone for today. Tap your \(tagNoun) to \(unVerb), or come back tomorrow."
+        "Your \(mode) allowance is gone for today. Tap your \(tagNoun) to \(releaseInProse), or wait for tomorrow."
     }
     static let shieldPrimaryButton   = "OK"
-    static let shieldSecondaryButton = "Emergency \(unVerb)"
-
-    // MARK: Actions
-    static let dadAction     = "\(verb) my phone"
-    static let unDadAction   = "\(unVerb) my phone"
-    static let emergencyUnDad = "Emergency \(unVerb)"
+    static let shieldSecondaryButton = emergencyRelease
 
     /// Past-tense sentence for a finished session, e.g.
-    /// "You were Dadded for 1h 42m."
+    /// "You were outside for 1h 42m."
     static func sessionSummary(duration: String) -> String {
-        "You were \(verbPast) for \(duration)."
+        "You were \(stateInProse) for \(duration)."
     }
 }

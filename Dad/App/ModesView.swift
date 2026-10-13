@@ -33,7 +33,7 @@ struct ModesView: View {
                         offsets.map { model.modes[$0] }.forEach(model.delete)
                     }
                 } footer: {
-                    Text("A \(Vocab.modeNoun.lowercased()) is a set of apps to take away. Pick one when you \(Vocab.verb) your phone.")
+                    Text("A \(Vocab.modeNoun.lowercased()) is a set of apps to take away. Pick one when you \(Vocab.actionInProse).")
                 }
 
                 Button {
@@ -72,7 +72,7 @@ struct ModeEditorView: View {
     /// chosen rather than discovered afterwards.
     static let fullBrickExplanation = """
         Every app and website goes — including your never-blocked list and \
-        anything installed later — and Dad can't be deleted. As close to off as \
+        anything installed later — and Clover can't be deleted. As close to off as \
         iOS allows: no app can power the phone down, and Phone and emergency \
         calls always work. The emergency override still works too.
         """
@@ -178,7 +178,7 @@ struct ModeEditorView: View {
                             }
                         }
                     } footer: {
-                        Text("Chosen with Apple's own picker. Dad receives anonymous tokens, not the names of your apps. Anything on your never-blocked list in Settings stays reachable even if a \(Vocab.modeNoun.lowercased()) names it.")
+                        Text("Chosen with Apple's own picker. Clover receives anonymous tokens, not the names of your apps. Anything on your never-blocked list in Settings stays reachable even if a \(Vocab.modeNoun.lowercased()) names it.")
                     }
 
                     AllowanceSection(mode: $mode)
@@ -203,7 +203,7 @@ struct ModeEditorView: View {
                 }
 
                 Section {
-                    Picker("\(Vocab.unVerb) automatically", selection: $mode.autoUnDadAfter) {
+                    Picker("Come back in automatically", selection: $mode.autoUnDadAfter) {
                         ForEach(durations) { option in
                             Text(option.id).tag(option.seconds)
                         }
@@ -213,8 +213,8 @@ struct ModeEditorView: View {
                         .disabled(mode.isFullBrick)
                     Toggle("Ask for Assistive Access", isOn: $mode.asksForAssistiveAccess)
                 } footer: {
-                    Text("Strict stops Dad being deleted while your phone is \(Vocab.verbPast) — the fastest way to cheat.")
-                    Text("Assistive Access strips the phone back to a few large buttons. Dad can't switch it on — nothing can — so this asks you to triple-click when the Mode starts. Set it up in Settings › Accessibility first.")
+                    Text("Strict stops \(Vocab.appName) being deleted while you're \(Vocab.stateInProse) — the fastest way to cheat.")
+                    Text("Assistive Access strips the phone back to a few large buttons. Clover can't switch it on — nothing can — so this asks you to triple-click when the Mode starts. Set it up in Settings › Accessibility first.")
                 }
             }
             .navigationTitle(mode.name)
@@ -297,7 +297,7 @@ private struct AllowanceSection: View {
                     Text("An allowance needs apps to count — pick some above.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("These apps stay usable until the allowance runs out, then they go until midnight — including across a second session the same day, so ending and restarting doesn't hand back the time. Strict applies throughout. Minutes from a session you ended before reaching the limit aren't carried over; the system only tells \(Vocab.appName) when the limit is reached. Changing the allowance while your phone is \(Vocab.verbPast) starts today's count again.")
+                    Text("These apps stay usable until the allowance runs out, then they go until midnight — including across a second session the same day, so ending and restarting doesn't hand back the time. Strict applies throughout. Minutes from a session you ended before reaching the limit aren't carried over; the system only tells \(Vocab.appName) when the limit is reached. Changing the allowance while you're \(Vocab.stateInProse) starts today's count again.")
                 }
             } else {
                 Text("Off. This \(Vocab.modeNoun.lowercased()) takes its apps away for as long as it runs.")
@@ -364,9 +364,9 @@ private struct ScheduleSection: View {
                     Text("This schedule won't run until the \(Vocab.modeNoun.lowercased()) blocks something — pick apps above.")
                         .foregroundStyle(.orange)
                 } else if let next = schedule.nextStart(after: Date()) {
-                    Text("\(schedule.displayText()). Next: \(next.formatted(.dateTime.weekday(.wide).hour().minute())). Your phone \(Vocab.verbThirdPerson) itself, and you can still tap out early.")
+                    Text("\(schedule.displayText()). Next: \(next.formatted(.dateTime.weekday(.wide).hour().minute())). \(Vocab.appName) sends you \(Vocab.stateInProse) on its own, and you can still \(Vocab.releaseInProse) early.")
                 } else {
-                    Text("\(schedule.displayText()). Your phone \(Vocab.verbThirdPerson) itself, and you can still tap out early.")
+                    Text("\(schedule.displayText()). \(Vocab.appName) sends you \(Vocab.stateInProse) on its own, and you can still \(Vocab.releaseInProse) early.")
                 }
             } else {
                 Text("Off. This \(Vocab.modeNoun.lowercased()) only runs when you tap.")

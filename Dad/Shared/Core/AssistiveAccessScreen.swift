@@ -126,7 +126,7 @@ enum AssistiveAccessScreen: Equatable {
     /// The single button, or `nil` when the tag is the only way out.
     var actionTitle: String? {
         guard case .dadded(_, _, .emergency) = self else { return nil }
-        return Vocab.emergencyUnDad
+        return Vocab.emergencyRelease
     }
 
     /// The line under the button. It says what is left *before* the button is
