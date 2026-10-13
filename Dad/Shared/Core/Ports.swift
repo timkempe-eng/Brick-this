@@ -263,6 +263,11 @@ protocol DadPersisting: AnyObject {
     var rewards: [RewardLedger.Reward] { get set }
     var redemptions: [RewardLedger.Redemption] { get set }
 
+    /// Reward hours from sessions the bounded history has let go of. The one
+    /// earned quantity that is stored — see `RewardLedger.ArchivedDay` for
+    /// why it has to be.
+    var archivedRewardHours: [RewardLedger.ArchivedDay] { get set }
+
     /// The last moment the app saw a session running *and* authorization
     /// approved — the most recent instant it can honestly say the shield was
     /// in place.

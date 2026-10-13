@@ -39,7 +39,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         switch ScheduleActivityNaming.activity(named: activity.rawValue) {
         case .release:
-            DadEngine.live.unDad(.system)
+            DadEngine.live.unDad(.timed)
 
         case .resume:
             // The break is over: the Mode brings itself back.

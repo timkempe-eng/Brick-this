@@ -241,9 +241,11 @@ struct AutonomyLadder {
     /// month of thirty-second sessions.
     struct Requirement: Equatable {
         /// Days on which at least one session was ended by a person — at the
-        /// tag, in the app, or through the Un-Dad intent. Not "at the tag":
-        /// `DadSession.EndReason.tapped` covers all three, and the copy that
-        /// said otherwise was promising a ceremony the code does not require.
+        /// tag, in the app, or through the Un-Dad intent, by a grown-up's
+        /// granted release, or by a timer the person set when they started.
+        /// Not "at the tag": `DadSession.wasEndedByAPerson` covers all of
+        /// these, and the copy that said otherwise was promising a ceremony the
+        /// code does not require.
         let cleanDays: Int
         /// The longest run of consecutive such days — ever, not currently.
         let cleanStreak: Int
@@ -289,8 +291,8 @@ struct AutonomyLadder {
     /// must never be the thing that costs a rung.
     private var activeDays: Set<Date> { sessions.daysWithASession(calendar: calendar) }
 
-    /// Days with at least one session a *person* ended by walking back to the
-    /// tag. One such finish makes the day clean even if another session that
+    /// Days with at least one session a *person* ended — see
+    /// `DadSession.wasEndedByAPerson` for which endings count. One such finish makes the day clean even if another session that
     /// day ended on the emergency button: the day contains the evidence.
     ///
     /// "A person ended it" rather than "it wasn't an override", and the

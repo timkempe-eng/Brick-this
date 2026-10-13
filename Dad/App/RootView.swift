@@ -66,6 +66,16 @@ struct HomeView: View {
                             .font(.system(size: 44, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .padding(.top, 4)
+                        if let progress = model.hourProgressText {
+                            VStack(spacing: 2) {
+                                Label(progress, systemImage: "star.circle")
+                                    .font(.subheadline)
+                                    .monospacedDigit()
+                                Text(HourProgress.caveat)
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.secondary)
+                        }
                     } else {
                         Text(Vocab.idleSubtitle)
                             .foregroundStyle(.secondary)

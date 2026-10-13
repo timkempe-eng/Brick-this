@@ -84,8 +84,14 @@ struct DadEngine {
         /// the tag is out of reach, and coming back in fifteen minutes would
         /// leave someone blocked with no way out.
         case emergency
-        /// A timed release, a schedule boundary, a Mode deleted underneath a
-        /// running session. Each has already said when this Mode should stop.
+        /// A grown-up granted a release at their tag, answering a request.
+        /// Never starts the Mode's own break: the grant already is one.
+        case granted
+        /// The Mode's own timed release ran out — the timer the person set
+        /// when they started. Never starts a break.
+        case timed
+        /// A schedule boundary, a Mode deleted underneath a running session,
+        /// or a new session replacing one. Nobody was necessarily present.
         case system
     }
 
@@ -492,10 +498,12 @@ struct DadEngine {
         guard let session = store.activeSession,
               let mode = store.modes.first(where: { $0.id == session.modeID }) else { return }
 
-        // `.system`, not `.tapped`: the Mode's own break must not *also* arm,
+        // `.granted`, not `.tapped`: the Mode's own break must not *also* arm,
         // or a Mode that takes fifteen-minute breaks would quietly extend
-        // every granted hour by another fifteen minutes.
-        unDad(.system)
+        // every granted hour by another fifteen minutes. Not `.system`
+        // either, which earns nothing: a grown-up tapped their tag to end
+        // this, and the hours before it were kept.
+        unDad(.granted)
         startBreak(mode: mode, length: grant.duration.seconds,
                    startedBySchedule: session.startedBySchedule)
     }
@@ -640,7 +648,7 @@ struct DadEngine {
             let release = session.startedAt.addingTimeInterval(
                 max(duration, Self.minimumScheduledRelease))
             if clock.now >= release {
-                unDad(.system)
+                unDad(.timed)
                 return
             }
             scheduler.scheduleRelease(at: release)
@@ -898,6 +906,29 @@ struct DadEngine {
         return max(ladder.level, store.household.autonomyLevel)
     }
 
+    /// Writes down the reward hours of sessions about to leave the history,
+    /// so a balance nobody spent does not shrink when they go — the ledger's
+    /// counterpart of `recordEarnedRung` below.
+    ///
+    /// Kept per day and before the ceiling, merged into what is already
+    /// there: see `RewardLedger.ArchivedDay`. Filtered exactly as the ledger
+    /// filters the history, so a session counts the same on either side of
+    /// the trim.
+    private func rememberRewardHours<S: Sequence>(of sessions: S) where S.Element == DadSession {
+        let leaving = sessions.filter { $0.endedAt != nil && $0.startedAt <= clock.now }
+        let hours = leaving.wholeHoursEndedByAPerson(calendar: calendar).filter { $0.value > 0 }
+        guard !hours.isEmpty else { return }
+
+        var byDay: [Date: Int] = [:]
+        for entry in store.archivedRewardHours {
+            byDay[calendar.startOfDay(for: entry.day), default: 0] += entry.hours.count
+        }
+        for (day, count) in hours { byDay[day, default: 0] += count }
+        store.archivedRewardHours = byDay
+            .map { RewardLedger.ArchivedDay(day: $0.key, hours: RewardLedger.Hours($0.value)) }
+            .sorted { $0.day < $1.day }
+    }
+
     /// Records a rung the moment it is earned, so the history running out
     /// cannot take it back.
     ///
@@ -1081,7 +1112,10 @@ struct DadEngine {
     // MARK: -
 
     private func archive(_ session: DadSession) {
-        store.history = Array((store.history + [session]).suffix(Self.historyLimit))
+        let all = store.history + [session]
+        let trimmed = all.dropLast(Self.historyLimit)
+        if !trimmed.isEmpty { rememberRewardHours(of: trimmed) }
+        store.history = Array(all.suffix(Self.historyLimit))
         // The one moment the ladder's inputs change, so the one moment a rung
         // can be newly earned — and the moment the oldest day can fall off the
         // end. Recording here is what keeps the second from undoing the first.

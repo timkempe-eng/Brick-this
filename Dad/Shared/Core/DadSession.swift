@@ -41,8 +41,13 @@ struct DadSession: Codable, Identifiable, Hashable {
         case tapped
         /// An override was spent.
         case emergency
-        /// A timed release, a schedule boundary, a Mode deleted underneath it.
-        /// Nobody was necessarily present.
+        /// A grown-up granted a release at their tag. A person did this.
+        case granted
+        /// The Mode's timed release ran out. A person chose it — when they
+        /// started the session, unless a schedule started it.
+        case timed
+        /// A schedule boundary, a Mode deleted underneath it, or a new session
+        /// replacing it. Nobody was necessarily present.
         case system
     }
 
@@ -57,7 +62,10 @@ struct DadSession: Codable, Identifiable, Hashable {
     /// therefore still count. Nothing recorded them, so nothing can tell.
     var wasEndedByAPerson: Bool {
         switch endedBy {
-        case .tapped:             return true
+        case .tapped, .granted:   return true
+        // A timer is a person's choice only if a person started the session.
+        // A schedule with a timed release is still a schedule.
+        case .timed:              return startedBySchedule != true
         case .emergency, .system: return false
         case .none:               return !endedByEmergency
         }
@@ -100,6 +108,8 @@ extension DadSession.EndReason {
         switch end {
         case .tapped:    self = .tapped
         case .emergency: self = .emergency
+        case .granted:   self = .granted
+        case .timed:     self = .timed
         case .system:    self = .system
         }
     }

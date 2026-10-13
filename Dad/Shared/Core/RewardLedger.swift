@@ -336,11 +336,51 @@ struct RewardLedger {
         }
     }
 
+    // MARK: - Hours the history no longer holds
+
+    /// Whole hours earned by sessions that have since fallen off the end of
+    /// the bounded history, kept per day and *before* the daily ceiling.
+    ///
+    /// The one stored number in this ledger, and the reason is the same one
+    /// `DadEngine.recordEarnedRung` gives for the ladder: the history keeps
+    /// the last `historyLimit` sessions, so without this a balance nobody
+    /// spent would shrink on its own once the oldest sessions dropped away —
+    /// a few months in, for a household that Dads several times a day.
+    ///
+    /// Per day and uncapped, rather than one running total, because a day can
+    /// be split by the trim: its first sessions archived, its last still in
+    /// the history. Adding the two halves before capping is what stops that
+    /// day earning the ceiling twice.
+    ///
+    /// Written only by the engine, at the moment it trims. Nothing a person
+    /// does reaches it.
+    struct ArchivedDay: Codable, Hashable {
+        var day: Date
+        var hours: Hours
+
+        init(day: Date, hours: Hours) {
+            self.day = day
+            self.hours = hours
+        }
+
+        /// Total, for `Redemption`'s reason: the lenient array drops a row
+        /// that throws, and a dropped row here is hours vanishing — the
+        /// defect this type exists to prevent.
+        init(from decoder: Decoder) throws {
+            let c = try? decoder.container(keyedBy: CodingKeys.self)
+            day = (try? c?.decodeIfPresent(Date.self, forKey: .day)) ?? Date.distantPast
+            hours = (try? c?.decodeIfPresent(Hours.self, forKey: .hours)) ?? Hours.zero
+        }
+
+        private enum CodingKeys: String, CodingKey { case day, hours }
+    }
+
     // MARK: - Construction
 
     let rewards: [Reward]
     let redemptions: [Redemption]
     let sessions: [DadSession]
+    let archived: [ArchivedDay]
     let calendar: Calendar
     let now: Date
 
@@ -354,10 +394,12 @@ struct RewardLedger {
     init(rewards: [Reward] = [],
          redemptions: [Redemption] = [],
          sessions: [DadSession] = [],
+         archived: [ArchivedDay] = [],
          now: Date = Date(),
          calendar: Calendar = .current) {
         self.rewards = rewards
         self.redemptions = redemptions
+        self.archived = archived
         // Two filters, both of them decisions.
         //
         // Unfinished sessions are excluded, as in `DadStats` and
@@ -379,10 +421,16 @@ struct RewardLedger {
 
     /// Hours earned on each day, after the daily ceiling.
     ///
-    /// The days are the ladder's clean days exactly — the keys come from the
-    /// same `wasEndedByAPerson` filter, so a day with only a forty-minute
-    /// session is present here at zero hours rather than missing. That is
-    /// what lets `TwoLedgersAgreeTests` compare the two files by key.
+    /// Over the history, the days are the ladder's clean days exactly — the
+    /// keys come from the same `wasEndedByAPerson` filter, so a day with only
+    /// a forty-minute session is present here at zero hours rather than
+    /// missing. That is what lets `TwoLedgersAgreeTests` compare the two files
+    /// by key. Days only `archived` remembers are added on top.
+    ///
+    /// An archived day is re-read through `calendar`, so a time-zone change
+    /// since it was written can move its hours to the neighbouring day — and
+    /// at worst let that day's ceiling apply twice. A trip abroad, not a
+    /// habit.
     ///
     /// A session counts toward the day it *started*, exactly as in `DadStats`:
     /// an evening that runs past midnight credits the evening you began,
@@ -394,8 +442,11 @@ struct RewardLedger {
     /// contains the evidence, and counting the bail against it would mean a
     /// single override could take back hours already earned that morning.
     var hoursByDay: [Date: Hours] {
-        sessions.wholeHoursEndedByAPerson(calendar: calendar)
-            .mapValues { min(Hours($0), RewardLedger.hoursCountedPerDay) }
+        var raw = sessions.wholeHoursEndedByAPerson(calendar: calendar)
+        for entry in archived {
+            raw[calendar.startOfDay(for: entry.day), default: 0] += entry.hours.count
+        }
+        return raw.mapValues { min(Hours($0), RewardLedger.hoursCountedPerDay) }
     }
 
     /// Every hour ever earned. It does not decay.
@@ -425,16 +476,16 @@ struct RewardLedger {
     /// How far past the earned total the claims currently reach.
     ///
     /// Normally zero, because `claiming(_:)` refuses anything the balance does
-    /// not cover. It can become non-zero without anybody doing wrong: the
-    /// stored history is finite, so a household that Dads several times a day
-    /// will eventually see the oldest sessions fall off the end of it, and
-    /// hours that fell off the end cannot be counted. `AutonomyLadder` hit the same
-    /// edge and fixed it by writing an earned rung down as it was reached.
+    /// not cover, and `archived` keeps the hours of sessions that fell off the
+    /// end of the history. It can still become non-zero without anybody doing
+    /// wrong: the history from before `archived` existed lost its oldest
+    /// sessions with nothing written down, and a hand-edited or restored store
+    /// can lose either list.
     ///
-    /// The equivalent fix is not available here and should not be invented:
-    /// what is stored is a list of things a household did for each other, and
-    /// the ledger reporting a shortfall is preferable to the ledger
-    /// un-settling a lift that was actually given. So nothing is clawed back,
+    /// When it happens, the ledger reports it rather than repairing it: what
+    /// is stored is a list of things a household did for each other, and a
+    /// shortfall on screen is preferable to the ledger un-settling a lift that
+    /// was actually given. So nothing is clawed back,
     /// no claim is reversed, and the number is simply reported — positively,
     /// so no screen has to render a minus sign.
     var spentBeyondEarned: Hours { spent - earned }

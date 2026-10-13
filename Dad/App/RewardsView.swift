@@ -65,7 +65,8 @@ struct RewardsView: View {
         } footer: {
             Text("""
                  Every full hour \(Vocab.verbPast) earns one, when you end the session \
-                 yourself — at the \(Vocab.tagNoun), or in the app. Up to \
+                 yourself — at the \(Vocab.tagNoun), in the app, with a timer you set, or \
+                 with a break a grown-up grants. Up to \
                  \(RewardLedger.hoursCountedPerDay.description) a day, so an evening counts \
                  as much as a night. A \(Vocab.modeNoun.lowercased()) a schedule opened and \
                  closed while the phone sat on a table earns nothing, and neither does one \

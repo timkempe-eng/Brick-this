@@ -75,3 +75,32 @@ What did not change:
   that question.
 - `PromisedNumbersTests` pins the ceiling at four, because the Rewards screen
   prints it.
+
+## Follow-up: where hours leaked (2026-10-13)
+
+Going through how sessions end against the rule above found two ways for hours
+to vanish with nobody doing anything wrong, and two improvements.
+
+- **A granted break ended the session as `.system`**, which earns nothing, so
+  three hours Dadded followed by a break a grown-up approved at their tag
+  earned zero. It now ends `.granted`, which counts as a person ending it.
+- **A Mode's timed release also ended `.system`.** It now ends `.timed`, which
+  counts if a person started the session, because they chose the timer. It
+  does not count on a session a schedule started, because nobody chose that
+  timer at the moment it ran.
+- Both new endings feed `wasEndedByAPerson`, so **they count toward a rung as
+  well**. That is the one-definition rule working as intended. Sessions stored
+  before this keep their `.system` ending, and nothing can tell them apart.
+- The two new stored values bump `SchemaCoding.current` to 3. An older build
+  would otherwise drop every session carrying one and then write the shorter
+  history back.
+- **Hours left with the history.** The history keeps the last
+  `DadEngine.historyLimit` sessions, so once the oldest dropped off, the
+  balance shrank. The engine now writes those sessions' hours to
+  `archivedRewardHours` (per day, before the ceiling) as it trims them, and
+  the ledger adds them back. It is the one stored earned quantity, for the
+  same reason the ladder writes its rung down. Hours lost to trims before this
+  change are not recovered.
+- **A countdown while Dadded.** `HourProgress` shows "2 hours so far · next in
+  18 min" on the home screen, under a note that the hours count only when you
+  Un-Dad yourself. It is a forecast and never enters the balance.

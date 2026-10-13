@@ -39,6 +39,7 @@ final class UserDefaultsStore: DadPersisting {
         static let agreements = "agreements"
         static let rewards = "rewards"
         static let redemptions = "redemptions"
+        static let archivedRewardHours = "archivedRewardHours"
         static let lastShieldConfirmedAt = "lastShieldConfirmedAt"
         static let memberID = "memberID"
         static let ledger = "ledger"
@@ -107,6 +108,13 @@ final class UserDefaultsStore: DadPersisting {
     var redemptions: [RewardLedger.Redemption] {
         get { decodeArray(RewardLedger.Redemption.self, Key.redemptions) ?? [] }
         set { encode(newValue, Key.redemptions) }
+    }
+
+    /// Lenient, and total on the element for the same reason as
+    /// `redemptions`: a dropped row is hours vanishing.
+    var archivedRewardHours: [RewardLedger.ArchivedDay] {
+        get { decodeArray(RewardLedger.ArchivedDay.self, Key.archivedRewardHours) ?? [] }
+        set { encode(newValue, Key.archivedRewardHours) }
     }
 
     /// The last moment a session was seen running with authorization

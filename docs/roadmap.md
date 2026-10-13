@@ -4,7 +4,7 @@ The core loop is complete: pick a Mode, tap, the apps disappear, tap, they come
 back. Scheduled Modes, stats and streaks are built on top of it.
 
 The engine, its ports, the schedule maths and the stats are covered by
-`swift test` — 870 tests, runnable anywhere. The iOS layer above them compiles
+`swift test` — 886 tests, runnable anywhere. The iOS layer above them compiles
 on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 
 ## Built
@@ -51,8 +51,10 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
   which day the number is true as of rather than pretending to be live.
 - **Rewards priced in whole hours off the phone** — one for each full hour
   of a session you ended yourself, up to four a day, spent on things a
-  grown-up offers. A schedule's session earns nothing, and neither does one
-  ended with an override. Never in minutes, and not by convention:
+  grown-up offers. A granted break or a timer you set keeps the hours; a
+  schedule's session earns nothing, and neither does one ended with an
+  override. Hours outlive the bounded history, and the home screen counts
+  down to the next one while Dadded. Never in minutes, and not by convention:
   `RewardLedger.Hours` has no multiply, no `Double` and no duration member, so
   paying in screen time does not compile. Priced in days until
   [ADR 009](adr/009-rewards-in-hours.md). Offering and settling need a grown-up

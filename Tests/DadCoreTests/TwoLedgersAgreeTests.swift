@@ -39,6 +39,11 @@ final class TwoLedgersAgreeTests: XCTestCase {
             session(daysAgo: 2, .emergency),
             session(daysAgo: 3, .system, bySchedule: true),
             session(daysAgo: 4, .tapped, bySchedule: true),
+            // A grown-up's granted release, a timer the person set, and a
+            // timer on a session a schedule started.
+            session(daysAgo: 8, .granted),
+            session(daysAgo: 9, .timed),
+            session(daysAgo: 10, .timed, bySchedule: true),
             // Recorded before `endedBy` existed: nothing can tell how it
             // ended, so the fallback is the one bit that was stored.
             session(daysAgo: 5, nil),
@@ -74,7 +79,7 @@ final class TwoLedgersAgreeTests: XCTestCase {
         let history = everyKindOfHistory
         let rewards = RewardLedger(sessions: history, now: now, calendar: calendar)
         XCTAssertEqual(rewards.earned.count, history.filter(\.wasEndedByAPerson).count)
-        XCTAssertEqual(rewards.earned.count, 4)
+        XCTAssertEqual(rewards.earned.count, 6)
     }
 
     /// And the number is not trivially zero or trivially everything, or the
@@ -83,19 +88,20 @@ final class TwoLedgersAgreeTests: XCTestCase {
         let history = everyKindOfHistory
         let ladder = AutonomyLadder(sessions: history, now: now, calendar: calendar)
 
-        XCTAssertEqual(ladder.cleanDayCount, 4, """
-            Four days somebody ended a session on: tapped, tapped after a \
+        XCTAssertEqual(ladder.cleanDayCount, 6, """
+            Six days somebody ended a session on: tapped, tapped after a \
             schedule opened it, one legacy session that was not an override, \
-            and the day with both a bail and a finish.
+            the day with both a bail and a finish, a granted release, and a \
+            timer set by hand.
             """)
-        XCTAssertEqual(history.daysWithASession(calendar: calendar).count, 7,
-                       "seven distinct days had a session of some kind")
+        XCTAssertEqual(history.daysWithASession(calendar: calendar).count, 10,
+                       "ten distinct days had a session of some kind")
     }
 
     func testEveryEndingIsRepresentedInThatHistory() {
         // Otherwise the agreement above is over a history missing the case
         // that would break it — which is how a passing suite hides a defect.
         let endings = Set(everyKindOfHistory.map(\.endedBy))
-        XCTAssertEqual(endings, [.tapped, .emergency, .system, nil])
+        XCTAssertEqual(endings, [.tapped, .emergency, .granted, .timed, .system, nil])
     }
 }

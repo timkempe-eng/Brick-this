@@ -13,7 +13,7 @@ import Foundation
 enum SchemaCoding {
 
     /// Bump when a stored shape changes, and add the migration below.
-    static let current = 2
+    static let current = 3
 
     private enum Key {
         static let schema = "schema"
@@ -139,6 +139,13 @@ enum SchemaCoding {
                 // migration key-aware rather than to special-case here.
                 value = TagPairing.Migration.flatUIDListToNamedPairs(value)
                 version = 2
+            case 2:
+                // 2 → 3: a session can end `granted` or `timed`. Nothing older
+                // needs changing — no stored session has either — but a build
+                // that predates them drops any session carrying one, and then
+                // writes the shorter history back. The bump is what makes a
+                // downgrade see `.tooNew` and leave the history alone instead.
+                version = 3
             default:
                 // A gap in the ladder is a programming error, not user data
                 // being wrong. Refuse rather than hand back a half-migrated

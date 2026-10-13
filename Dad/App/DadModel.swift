@@ -86,6 +86,7 @@ final class DadModel: ObservableObject {
     func reload() {
         modes = engine.store.modes
         activeSession = engine.store.activeSession
+        hoursEarnedOnSessionDay = engine.hoursEarnedOnRunningSessionsDay
         shieldState = engine.shieldState
         pendingResume = engine.pendingResume
         pendingRequest = engine.pendingRequest
@@ -157,6 +158,16 @@ final class DadModel: ObservableObject {
     var elapsedText: String {
         guard let session = activeSession else { return "" }
         return now.timeIntervalSince(session.startedAt).dadDurationText
+    }
+
+    /// Refreshed on `reload()`, not per tick: see
+    /// `DadEngine.hoursEarnedOnRunningSessionsDay`.
+    private var hoursEarnedOnSessionDay = RewardLedger.Hours.zero
+
+    /// "2 hours so far · next in 18 min", or `nil` when nothing is running.
+    var hourProgressText: String? {
+        HourProgress(session: activeSession, earnedThatDay: hoursEarnedOnSessionDay, now: now)?
+            .text(at: now)
     }
 
     /// What a phone running in Assistive Access shows.

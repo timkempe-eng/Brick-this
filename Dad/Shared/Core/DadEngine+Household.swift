@@ -114,9 +114,23 @@ extension DadEngine {
         RewardLedger(rewards: store.rewards,
                      redemptions: store.redemptions,
                      sessions: store.history,
+                     archived: store.archivedRewardHours,
                      now: clock.now,
                      calendar: calendar)
     }
+
+    /// What the ledger already credits to the day the running session
+    /// started, or zero when nothing is running — the `earnedThatDay` an
+    /// `HourProgress` needs.
+    ///
+    /// Separate from the progress itself so a caller ticking every second can
+    /// read this once per change rather than re-deriving the ledger, which
+    /// decodes the whole history, on every tick.
+    var hoursEarnedOnRunningSessionsDay: RewardLedger.Hours {
+        guard let session = store.activeSession else { return .zero }
+        return rewardLedger.hoursByDay[calendar.startOfDay(for: session.startedAt)] ?? .zero
+    }
+
 
     /// Whether a grown-up is demonstrably here.
     ///

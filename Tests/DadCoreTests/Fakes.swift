@@ -12,6 +12,7 @@ final class FakeStore: DadPersisting {
     var agreements: [ModeAgreement] = []
     var rewards: [RewardLedger.Reward] = []
     var redemptions: [RewardLedger.Redemption] = []
+    var archivedRewardHours: [RewardLedger.ArchivedDay] = []
     var lastShieldConfirmedAt: Date?
     var memberID: MemberID?
     var ledger = HouseholdLedger()
