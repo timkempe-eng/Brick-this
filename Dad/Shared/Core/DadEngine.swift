@@ -105,7 +105,10 @@ struct DadEngine {
         /// Tapped during a break, which calls it off. Reaching a Mode that
         /// takes breaks is the only way to get here.
         case breakCancelled(mode: DadMode)
-        case needsModeChoice
+        /// Somebody has to say which. `among` is what to offer: the tag's own
+        /// Modes when it names several, otherwise every Mode that blocks
+        /// anything — never a Mode the tag was not set to start.
+        case needsModeChoice(among: [DadMode])
         case unknownTag
     }
 
@@ -122,6 +125,8 @@ struct DadEngine {
         // whole point of pairing more than one: the kitchen tag starts Dinner
         // and the desk tag starts Deep Work, without anyone opening the app.
         var namedMode: DadMode?
+        // Set only when the tag names several: the Modes it may start.
+        var tagChoices: [DadMode]?
         if let uid = tagUID {
             switch store.tags.resolve(uid, knownModeIDs: Set(store.modes.map(\.id))) {
             case .unknownTag:
@@ -130,11 +135,13 @@ struct DadEngine {
                 break
             case .mode(let id):
                 namedMode = store.modes.first { $0.id == id }
+            case .oneOf(let ids):
+                tagChoices = ids.compactMap { id in store.modes.first { $0.id == id } }
             }
         }
 
         if store.activeSession != nil {
-            guard let ended = unDad(.tapped) else { return .needsModeChoice }
+            guard let ended = unDad(.tapped) else { return .needsModeChoice(among: usableModes) }
             return .unDadded(session: ended)
         }
 
@@ -164,8 +171,21 @@ struct DadEngine {
         // An explicitly requested Mode still wins over the one the tag names:
         // the request comes from a person answering a question, the tag from a
         // sticker somebody labelled months ago.
-        guard let mode = preferredMode ?? namedMode ?? soleUsableMode(), mode.blocksAnything else {
-            return .needsModeChoice
+        //
+        // A tag naming several Modes stands in for "the only one" with its own
+        // list: if just one of them blocks anything, that is the one — the
+        // others were emptied, and asking to choose between one Mode and
+        // nothing is not a question.
+        let fallback: DadMode?
+        if let tagChoices {
+            let usable = tagChoices.filter(\.blocksAnything)
+            fallback = usable.count == 1 ? usable[0] : nil
+        } else {
+            fallback = soleUsableMode()
+        }
+        guard let mode = preferredMode ?? namedMode ?? fallback, mode.blocksAnything else {
+            let tagUsable = tagChoices?.filter(\.blocksAnything) ?? []
+            return .needsModeChoice(among: tagUsable.isEmpty ? usableModes : tagUsable)
         }
         return .dadded(mode: mode, start: dad(with: mode))
     }
@@ -864,6 +884,14 @@ struct DadEngine {
         store.tags = tags
     }
 
+    /// Several Modes: a tap asks which, offering only these. One behaves
+    /// exactly as `pair(tagUID:to:)` with that Mode, and none as a toggle.
+    func pair(tagUID: String, to modeIDs: [UUID]) {
+        var tags = store.tags
+        tags.pair(tagUID, to: modeIDs)
+        store.tags = tags
+    }
+
     /// Ungated, like re-pointing: a name changes what a tag is called, not
     /// whether it works or which phone it can reach.
     func rename(tagUID: String, to name: String?) {
@@ -1124,9 +1152,12 @@ struct DadEngine {
     }
 
     private func soleUsableMode() -> DadMode? {
-        let usable = store.modes.filter(\.blocksAnything)
+        let usable = usableModes
         return usable.count == 1 ? usable.first : nil
     }
+
+    /// Every Mode a session could start on: one that blocks anything.
+    private var usableModes: [DadMode] { store.modes.filter(\.blocksAnything) }
 
     // MARK: -
 

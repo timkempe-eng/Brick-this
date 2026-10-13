@@ -64,6 +64,9 @@ final class DadModel: ObservableObject {
     @Published var authorization: AuthorizationStatus = AuthorizationCenter.shared.authorizationStatus
     @Published var banner: String?
     @Published var pendingModeChoice = false
+    /// What the "which one?" question offers — a tag's own Modes when it
+    /// names several, otherwise every Mode that blocks anything.
+    @Published private(set) var modeChoices: [DadMode] = []
 
     /// Ticks once a second while Dadded so the counter on the home screen moves.
     @Published private(set) var now = Date()
@@ -400,7 +403,8 @@ final class DadModel: ObservableObject {
             } ?? summary
         case .breakCancelled(let mode):
             banner = Vocab.breakCancelled(mode: mode.name)
-        case .needsModeChoice:
+        case .needsModeChoice(let among):
+            modeChoices = among
             pendingModeChoice = true
         case .unknownTag:
             banner = "That isn't one of your \(Vocab.tagNoun)s."
@@ -452,8 +456,8 @@ final class DadModel: ObservableObject {
     }
 
     /// Which Mode a tag starts, keeping its name.
-    func point(tagUID: String, to modeID: UUID?) {
-        engine.pair(tagUID: tagUID, to: modeID)
+    func point(tagUID: String, to modeIDs: [UUID]) {
+        engine.pair(tagUID: tagUID, to: modeIDs)
         tagsChanged()
     }
 
@@ -467,12 +471,11 @@ final class DadModel: ObservableObject {
         tagsChanged()
     }
 
-    /// The name of the Mode a tag starts, or `nil` when it toggles or names a
-    /// Mode that has since been deleted — the two cases in which a tap falls
-    /// back to the app's choice.
+    /// The Modes a tag starts, as Settings shows them — "Deep Work or
+    /// Meetings" — or `nil` when it toggles or names only Modes since
+    /// deleted, the two cases in which a tap falls back to the app's choice.
     func modeName(forTag pair: TagPairing.Pair) -> String? {
-        guard let id = pair.modeID else { return nil }
-        return modes.first { $0.id == id }?.name
+        Vocab.tagStarts(pair.modeIDs.compactMap { id in modes.first { $0.id == id }?.name })
     }
 
     /// Re-reads the store, and tells Shortcuts the tag list moved: the

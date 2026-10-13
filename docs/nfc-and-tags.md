@@ -88,7 +88,8 @@ An NFC automation tells its action nothing about which tag fired it, so each
 tag gets its own automation, built around that tag:
 
 1. In Clover, **Settings → Tags**, open the tag (or pair it), give it a name
-   and choose the Mode a tap starts.
+   and tick the Mode a tap starts. Tick one and the tap starts it; tick
+   several and the tap asks which, offering only those.
 2. Build the automation as above, and at step 4 tap **Tag** on the action and
    pick it by name.
 

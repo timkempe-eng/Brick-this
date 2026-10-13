@@ -166,6 +166,15 @@ enum Vocab {
     static func breakRunning(mode: String, until: Date) -> String {
         "\(mode) comes back at \(until.formatted(date: .omitted, time: .shortened))."
     }
+    /// What a tag starts, in a line: "Deep Work", "Deep Work or Meetings",
+    /// "Deep Work, Meetings or Focus". `nil` for none, so a caller says what
+    /// a tag with no Mode does in its own words rather than showing "".
+    static func tagStarts(_ modeNames: [String]) -> String? {
+        guard let last = modeNames.last else { return nil }
+        let rest = modeNames.dropLast()
+        return rest.isEmpty ? last : "\(rest.joined(separator: ", ")) or \(last)"
+    }
+
     static func breakCancelled(mode: String) -> String {
         "\(breakNoun.capitalized) called off. \(mode) won't come back on its own."
     }

@@ -67,7 +67,7 @@ final class DadEngineTests: XCTestCase {
         h.addMode(name: "A")
         h.addMode(name: "B")
 
-        XCTAssertEqual(h.engine.handleTap(), .needsModeChoice)
+        XCTAssertEqual(h.engine.handleTap(), .needsModeChoice(among: h.store.modes.filter(\.blocksAnything)))
         XCTAssertNil(h.store.activeSession)
         XCTAssertTrue(h.shield.calls.isEmpty, "nothing should be shielded yet")
     }
@@ -76,7 +76,7 @@ final class DadEngineTests: XCTestCase {
         let h = Harness()
         h.addEmptyMode()
 
-        XCTAssertEqual(h.engine.handleTap(), .needsModeChoice)
+        XCTAssertEqual(h.engine.handleTap(), .needsModeChoice(among: h.store.modes.filter(\.blocksAnything)))
         XCTAssertNil(h.store.activeSession)
     }
 
@@ -86,7 +86,7 @@ final class DadEngineTests: XCTestCase {
         let h = Harness()
         let empty = h.addEmptyMode()
 
-        XCTAssertEqual(h.engine.handleTap(preferredMode: empty), .needsModeChoice)
+        XCTAssertEqual(h.engine.handleTap(preferredMode: empty), .needsModeChoice(among: h.store.modes.filter(\.blocksAnything)))
         XCTAssertNil(h.store.activeSession)
         XCTAssertTrue(h.shield.calls.isEmpty)
     }

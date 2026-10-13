@@ -37,7 +37,7 @@ final class TagPerModeTests: XCTestCase {
         h.addMode(name: "Deep Work")
         h.engine.pair(tagUID: "PLAIN")
 
-        XCTAssertEqual(h.engine.handleTap(tagUID: "PLAIN"), .needsModeChoice)
+        XCTAssertEqual(h.engine.handleTap(tagUID: "PLAIN"), .needsModeChoice(among: h.store.modes))
     }
 
     func testAnExplicitChoiceStillBeatsWhatTheTagNames() {

@@ -16,22 +16,43 @@ struct TagEditorView: View {
 
     private let uid: String
     private let originalName: String
-    /// What the picker showed on arrival. A tag naming a deleted Mode shows
-    /// "whichever you pick" — which is what it does — but is only re-pointed
-    /// if the person changes it: `TagPairing.resolve` keeps the old id on
+    /// What the list showed ticked on arrival. A deleted Mode is not shown —
+    /// a tap no longer starts it — and nor is one that blocks nothing, which
+    /// a tap passes over. Either is the tag is only re-pointed if the
+    /// person changes something: `TagPairing.resolve` keeps the old id on
     /// purpose, in case the Mode was only briefly unreadable.
-    private let originalModeID: UUID?
+    private let originalModeIDs: [UUID]
 
     @State private var name: String
-    @State private var modeID: UUID?
+    /// In the order they were ticked, which is the order a tap offers them.
+    @State private var modeIDs: [UUID]
 
     init(pair: TagPairing.Pair, modes: [DadMode]) {
         uid = pair.uid
         originalName = pair.name ?? ""
-        let live = pair.modeID.flatMap { id in modes.contains { $0.id == id } ? id : nil }
-        originalModeID = live
+        let live = pair.modeIDs.filter { id in modes.contains { $0.id == id && $0.blocksAnything } }
+        originalModeIDs = live
         _name = State(initialValue: pair.name ?? "")
-        _modeID = State(initialValue: live)
+        _modeIDs = State(initialValue: live)
+    }
+
+    private func toggle(_ id: UUID) {
+        if let i = modeIDs.firstIndex(of: id) {
+            modeIDs.remove(at: i)
+        } else {
+            modeIDs.append(id)
+        }
+    }
+
+    private var startsFooter: String {
+        switch modeIDs.count {
+        case 0:
+            return "Nothing ticked: a tap starts your only \(Vocab.modeNoun.lowercased()), or asks which if you have several."
+        case 1:
+            return "A tap starts it straight away. Tick another and a tap asks which, offering only the ones ticked here."
+        default:
+            return "A tap asks which, offering only these."
+        }
     }
 
     private var shownName: String {
@@ -51,19 +72,25 @@ struct TagEditorView: View {
                 }
 
                 Section {
-                    Picker(Vocab.modeNoun, selection: $modeID) {
-                        Text("Whichever you pick").tag(UUID?.none)
-                        ForEach(model.modes.filter(\.blocksAnything)) { mode in
-                            Text(mode.name).tag(UUID?.some(mode.id))
+                    ForEach(model.modes.filter(\.blocksAnything)) { mode in
+                        Button { toggle(mode.id) } label: {
+                            HStack {
+                                Text(mode.name)
+                                Spacer()
+                                if modeIDs.contains(mode.id) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
                         }
+                        .foregroundStyle(.primary)
                     }
                 } header: {
                     Text("A tap starts")
                 } footer: {
                     Text("""
-                         When you're outside, any of your \(Vocab.tagNoun)s brings the phone \
-                         back in — this one included, whichever \(Vocab.modeNoun.lowercased()) \
-                         is running.
+                         \(startsFooter) When you're outside, any of your \(Vocab.tagNoun)s \
+                         brings the phone back in.
                          """)
                 }
 
@@ -104,7 +131,7 @@ struct TagEditorView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         if name != originalName { model.rename(tagUID: uid, to: name) }
-                        if modeID != originalModeID { model.point(tagUID: uid, to: modeID) }
+                        if modeIDs != originalModeIDs { model.point(tagUID: uid, to: modeIDs) }
                         dismiss()
                     }
                 }

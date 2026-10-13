@@ -45,7 +45,7 @@ final class TagNameTests: XCTestCase {
         pairing.rename("WORK", to: "Work")
         pairing.pair("WORK", to: deepWork)
         XCTAssertEqual(pairing.pair(for: "WORK")?.name, "Work")
-        XCTAssertEqual(pairing.modeID(for: "WORK"), deepWork)
+        XCTAssertEqual(pairing.modeIDs(for: "WORK").first, deepWork)
     }
 
     func testAnEmptyPairingNamesNoTag() {
@@ -61,7 +61,7 @@ final class TagNameTests: XCTestCase {
         let pairing = try JSONDecoder().decode(TagPairing.self, from: Data(stored.utf8))
         XCTAssertEqual(pairing.uids, ["HOME", "WORK"])
         XCTAssertNil(pairing.pair(for: "HOME")?.name)
-        XCTAssertNotNil(pairing.modeID(for: "HOME"), "and its Mode survived")
+        XCTAssertNotNil(pairing.modeIDs(for: "HOME").first, "and its Mode survived")
     }
 
     func testANameSurvivesARoundTrip() throws {

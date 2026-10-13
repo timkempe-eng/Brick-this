@@ -16,7 +16,7 @@ struct ToggleDadIntent: AppIntent {
     /// The whole point is that it runs without the app coming forward.
     static var openAppWhenRun = false
 
-    @Parameter(title: "Mode", optionsProvider: ModeNameOptions())
+    @Parameter(title: "Mode", optionsProvider: TagModeNameOptions())
     var modeName: String?
 
     /// The tag this run stands in for. An NFC automation tells its action
@@ -61,8 +61,13 @@ struct ToggleDadIntent: AppIntent {
             return .result(dialog: "\(Vocab.sessionSummary(duration: session.duration.dadDurationText)) \(Vocab.breakRunning(mode: resume.modeName, until: resume.at))")
         case .breakCancelled(let mode):
             return .result(dialog: "\(Vocab.breakCancelled(mode: mode.name))")
-        case .needsModeChoice:
-            throw $modeName.needsValueError("Which \(Vocab.modeNoun.lowercased())?")
+        case .needsModeChoice(let among):
+            // Names the choices, so a tag set to two Modes asks between those
+            // two out loud rather than an open "which one?".
+            guard let choices = Vocab.tagStarts(among.map(\.name)) else {
+                throw $modeName.needsValueError("Which \(Vocab.modeNoun.lowercased())?")
+            }
+            throw $modeName.needsValueError("\(choices)?")
         case .unknownTag:
             return .result(dialog: "That isn't one of your \(Vocab.tagNoun)s.")
         }
@@ -150,6 +155,22 @@ struct ModeNameOptions: DynamicOptionsProvider {
     }
 }
 
+/// The same, narrowed to the chosen tag's own Modes when it names several —
+/// the list the question "Deep Work or Meetings?" is answered from.
+struct TagModeNameOptions: DynamicOptionsProvider {
+    @IntentParameterDependency<ToggleDadIntent>(\.$tag)
+    var toggle
+
+    func results() async throws -> [String] {
+        let store = DadEngine.live.store
+        let usable = store.modes.filter(\.blocksAnything)
+        guard let uid = toggle?.tag?.id else { return usable.map(\.name) }
+        let named = store.tags.modeIDs(for: uid)
+        let mine = usable.filter { named.contains($0.id) }
+        return (mine.count > 1 ? mine : usable).map(\.name)
+    }
+}
+
 /// A paired tag, as Shortcuts sees it.
 ///
 /// Carries the UID as its id because the UID is what the engine resolves; it
@@ -162,6 +183,7 @@ struct TagEntity: AppEntity {
 
     let id: String
     let name: String
+    /// "Deep Work", or "Deep Work or Meetings"; `nil` for the app's choice.
     let startsMode: String?
 
     var displayRepresentation: DisplayRepresentation {
@@ -176,7 +198,9 @@ struct TagEntity: AppEntity {
         return store.tags.pairs.map { pair in
             TagEntity(id: pair.uid,
                       name: pair.displayName,
-                      startsMode: pair.modeID.flatMap { id in modes.first { $0.id == id }?.name })
+                      startsMode: Vocab.tagStarts(pair.modeIDs.compactMap { id in
+                          modes.first { $0.id == id }?.name
+                      }))
         }
     }
 }

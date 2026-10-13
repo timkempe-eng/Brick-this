@@ -190,7 +190,7 @@ struct HomeView: View {
             .confirmationDialog("Which \(Vocab.modeNoun.lowercased())?",
                                 isPresented: $model.pendingModeChoice,
                                 titleVisibility: .visible) {
-                ForEach(model.modes.filter(\.blocksAnything)) { mode in
+                ForEach(model.modeChoices) { mode in
                     Button(mode.name) { model.tap(mode: mode) }
                 }
                 if model.modes.allSatisfy({ !$0.blocksAnything }) {

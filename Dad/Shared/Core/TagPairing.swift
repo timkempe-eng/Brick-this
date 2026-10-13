@@ -9,10 +9,11 @@ import Foundation
 /// and it is a mapping — so it lives in one value type rather than spread
 /// across the engine, the store and the settings screen.
 ///
-/// The mapping it owns is `tag UID → optional Mode id`:
+/// The mapping it owns is `tag UID → list of Mode ids`:
 ///
-/// - `.some(id)` — this tag names a Mode. Tapping it starts that Mode.
-/// - `nil`       — this tag toggles and the app decides which Mode, which is
+/// - one id      — this tag names a Mode. Tapping it starts that Mode.
+/// - several     — tapping asks which, offering only these.
+/// - none        — this tag toggles and the app decides which Mode, which is
 ///                 exactly what every tag did before this type existed. Every
 ///                 tag paired by an older build reads back this way, so the
 ///                 old behaviour is the default rather than a special case.
@@ -33,8 +34,19 @@ struct TagPairing: Equatable, Codable {
     struct Pair: Equatable, Hashable, Codable {
         var uid: String
 
-        /// The Mode this tag names, or `nil` for "toggle, app's choice".
-        var modeID: UUID?
+        /// The first Mode this tag names, or `nil` for "toggle, app's
+        /// choice". Read and write `modeIDs`; this and `moreModeIDs` are how
+        /// the list is stored.
+        ///
+        /// Stored split rather than as one array so that every row already on
+        /// a phone is a valid row of this shape with no ladder step, and so
+        /// that a build from before tags could name several Modes reads a
+        /// several-Mode tag as naming its first — a tag that starts something
+        /// it was set to start, rather than one that has gone blank.
+        private(set) var modeID: UUID?
+
+        /// The rest of the list, absent when there is one Mode or none.
+        private(set) var moreModeIDs: [UUID]?
 
         /// What the person calls it — "Home", "Work". `nil` until they say.
         ///
@@ -45,10 +57,31 @@ struct TagPairing: Equatable, Codable {
         /// and an absent key decodes to `nil`, so this needs no ladder step.
         var name: String?
 
-        init(uid: String, modeID: UUID? = nil, name: String? = nil) {
+        init(uid: String, modeIDs: [UUID] = [], name: String? = nil) {
             self.uid = uid
-            self.modeID = modeID
             self.name = Pair.cleaned(name)
+            self.modeIDs = modeIDs
+        }
+
+        init(uid: String, modeID: UUID?, name: String? = nil) {
+            self.init(uid: uid, modeIDs: modeID.map { [$0] } ?? [], name: name)
+        }
+
+        /// The Modes a tap on this tag may start, in the order they were
+        /// chosen. Empty: the app's choice, as every tag was before tags
+        /// could name a Mode. One: a tap starts it. Several: a tap asks
+        /// which, offering only these.
+        ///
+        /// Duplicates are dropped on the way in, first one kept, so "asks
+        /// between Work and Work" is a state no caller can build.
+        var modeIDs: [UUID] {
+            get { (modeID.map { [$0] } ?? []) + (moreModeIDs ?? []) }
+            set {
+                var seen = Set<UUID>()
+                let unique = newValue.filter { seen.insert($0).inserted }
+                modeID = unique.first
+                moreModeIDs = unique.count > 1 ? Array(unique.dropFirst()) : nil
+            }
         }
 
         /// The name, or the last four characters of the UID when there is
@@ -79,6 +112,9 @@ struct TagPairing: Equatable, Codable {
         case anyMode
         /// Yours, and it names this Mode.
         case mode(UUID)
+        /// Yours, and it names more than one — in the tag's order. A tap
+        /// asks which, offering these and nothing else.
+        case oneOf([UUID])
     }
 
     /// In pairing order, which is the order Settings lists them in. Order is
@@ -132,8 +168,8 @@ struct TagPairing: Equatable, Codable {
     /// still exists. `resolve` is what a caller acting on a tap should ask;
     /// this is for the settings screen, which wants to show what the user
     /// configured even when it currently points at nothing.
-    func modeID(for uid: String) -> UUID? {
-        pairs.first { $0.uid == uid }?.modeID
+    func modeIDs(for uid: String) -> [UUID] {
+        pairs.first { $0.uid == uid }?.modeIDs ?? []
     }
 
     /// The paired row for this UID, if there is one. Unlike `isPaired`, an
@@ -148,7 +184,11 @@ struct TagPairing: Equatable, Codable {
     /// `knownModeIDs` is passed in rather than reached for: this type never
     /// holds Modes, so a Mode list and a tag list cannot drift apart inside it.
     ///
-    /// **A tag naming a deleted Mode falls back to toggling — it does not stop
+    /// A tag naming several Modes, some since deleted, names the ones that
+    /// remain — and a tag left naming one starts it, as if only it had been
+    /// chosen.
+    ///
+    /// **A tag naming only deleted Modes falls back to toggling — it does not stop
     /// working.** The alternative is a sticker on the fridge that silently
     /// does nothing, which is the failure this codebase exists to avoid, and
     /// it would arrive weeks after the delete that caused it with no screen
@@ -173,11 +213,16 @@ struct TagPairing: Equatable, Codable {
     /// notice on their own.
     func resolve(_ uid: String, knownModeIDs: Set<UUID>) -> Resolution {
         guard isPaired(uid) else { return .unknownTag }
-        guard let modeID = modeID(for: uid) else { return .anyMode }
-        return knownModeIDs.contains(modeID) ? .mode(modeID) : .anyMode
+        let live = modeIDs(for: uid).filter(knownModeIDs.contains)
+        switch live.count {
+        case 0:  return .anyMode
+        case 1:  return .mode(live[0])
+        default: return .oneOf(live)
+        }
     }
 
-    /// Tags pointing at a Mode that no longer exists, in pairing order.
+    /// Tags that named Modes, none of which exist any more, in pairing order
+    /// — the tags `resolve` has fallen back to toggling.
     ///
     /// Empty is the normal answer. A non-empty one is something to say out
     /// loud — "the kitchen tag pointed at Dinner, which is gone; it now starts
@@ -185,7 +230,8 @@ struct TagPairing: Equatable, Codable {
     /// wrong thing is a tag doing the wrong thing quietly.
     func danglingUIDs(knownModeIDs: Set<UUID>) -> [String] {
         pairs.compactMap { pair in
-            guard let modeID = pair.modeID, !knownModeIDs.contains(modeID) else { return nil }
+            let named = pair.modeIDs
+            guard !named.isEmpty, !named.contains(where: knownModeIDs.contains) else { return nil }
             return pair.uid
         }
     }
@@ -202,12 +248,17 @@ struct TagPairing: Equatable, Codable {
     /// Re-pointing keeps the name. Pointing the Work tag at a different Mode
     /// is not renaming it, and a Shortcut that chose it by name must still
     /// find it.
-    mutating func pair(_ uid: String, to modeID: UUID? = nil) {
+    mutating func pair(_ uid: String, to modeIDs: [UUID]) {
         if let i = pairs.firstIndex(where: { $0.uid == uid }) {
-            pairs[i].modeID = modeID
+            pairs[i].modeIDs = modeIDs
         } else {
-            pairs.append(Pair(uid: uid, modeID: modeID))
+            pairs.append(Pair(uid: uid, modeIDs: modeIDs))
         }
+    }
+
+    /// One Mode, or `nil` for none — the shape most callers have.
+    mutating func pair(_ uid: String, to modeID: UUID? = nil) {
+        pair(uid, to: modeID.map { [$0] } ?? [])
     }
 
     /// Names a paired tag, or clears its name with `nil` or blank text.

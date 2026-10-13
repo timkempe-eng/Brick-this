@@ -77,14 +77,14 @@ final class TagPairingTests: XCTestCase {
         var pairing = TagPairing(uids: ["KITCHEN", "DESK", "BEDSIDE"])
         pairing.pair("DESK", to: deepWork)
         XCTAssertEqual(pairing.uids, ["KITCHEN", "DESK", "BEDSIDE"])
-        XCTAssertEqual(pairing.modeID(for: "DESK"), deepWork)
+        XCTAssertEqual(pairing.modeIDs(for: "DESK").first, deepWork)
     }
 
     func testATagCanBeRePointedBackToToggling() {
         var pairing = TagPairing()
         pairing.pair("KITCHEN", to: dinner)
         pairing.pair("KITCHEN", to: nil)
-        XCTAssertNil(pairing.modeID(for: "KITCHEN"))
+        XCTAssertNil(pairing.modeIDs(for: "KITCHEN").first)
         XCTAssertEqual(pairing.resolve("KITCHEN", knownModeIDs: [dinner]), .anyMode)
     }
 
@@ -118,7 +118,7 @@ final class TagPairingTests: XCTestCase {
             .init(uid: "KITCHEN", modeID: deepWork),
         ])
         XCTAssertEqual(pairing.count, 1)
-        XCTAssertEqual(pairing.modeID(for: "KITCHEN"), dinner)
+        XCTAssertEqual(pairing.modeIDs(for: "KITCHEN").first, dinner)
     }
 
     func testCountIsWhatSettingsOffersToForget() {
@@ -174,7 +174,7 @@ final class TagPairingTests: XCTestCase {
         var pairing = TagPairing()
         pairing.pair("KITCHEN", to: dinner)
         XCTAssertEqual(pairing.resolve("KITCHEN", knownModeIDs: []), .anyMode)
-        XCTAssertEqual(pairing.modeID(for: "KITCHEN"), dinner, "still remembers Dinner")
+        XCTAssertEqual(pairing.modeIDs(for: "KITCHEN").first, dinner, "still remembers Dinner")
         XCTAssertEqual(pairing.resolve("KITCHEN", knownModeIDs: [dinner]), .mode(dinner))
     }
 
@@ -267,7 +267,7 @@ final class TagPairingTests: XCTestCase {
     func testAFlatListOfUIDsBecomesTagsThatToggle() {
         let migrated = readThroughTheLadder(#"["04A2","0B11"]"#)
         XCTAssertEqual(migrated?.uids, ["04A2", "0B11"])
-        XCTAssertNil(migrated?.modeID(for: "04A2"), "an upgraded tag keeps doing what it did")
+        XCTAssertNil(migrated?.modeIDs(for: "04A2").first, "an upgraded tag keeps doing what it did")
         XCTAssertEqual(migrated?.resolve("04A2", knownModeIDs: [dinner]), .anyMode)
     }
 

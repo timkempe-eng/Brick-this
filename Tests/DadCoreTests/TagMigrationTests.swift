@@ -29,7 +29,7 @@ final class TagMigrationTests: XCTestCase {
         XCTAssertEqual(tags.count, 2)
         XCTAssertTrue(tags.isPaired("ABC123"))
         XCTAssertTrue(tags.isPaired("DEADBEEF"))
-        XCTAssertNil(tags.modeID(for: "ABC123"), "and it is still just a toggle")
+        XCTAssertNil(tags.modeIDs(for: "ABC123").first, "and it is still just a toggle")
     }
 
     func testAPhoneFromBeforeEnvelopesExistedStillMigratesAllTheWay() {
@@ -76,8 +76,8 @@ final class TagMigrationTests: XCTestCase {
         guard case .value(let read) = SchemaCoding.read(TagPairing.self, from: data) else {
             return XCTFail("a value this build wrote must read back")
         }
-        XCTAssertEqual(read.modeID(for: "KITCHEN"), dinner)
-        XCTAssertNil(read.modeID(for: "DESK"))
+        XCTAssertEqual(read.modeIDs(for: "KITCHEN").first, dinner)
+        XCTAssertNil(read.modeIDs(for: "DESK").first)
     }
 
     func testAnOlderBuildRefusesToOverwriteWhatThisOneWrote() {
