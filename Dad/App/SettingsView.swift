@@ -140,12 +140,12 @@ struct SettingsView: View {
                     // are deciding whether to do this rather than after.
                     Text("""
                          Going in and coming back out both need the Assistive Access \
-                         passcode — which is your Screen Time passcode, if you have one. \
-                         Clover cannot ask for it. So this is a commitment you make to \
-                         yourself, or one a household makes together with a grown-up \
-                         typing the code; it is not a lock a young person can put \
-                         themselves behind alone. Coming back is the same two steps in \
-                         reverse: triple-click to leave, then tap your \(Vocab.tagNoun).
+                         passcode — the Screen Time passcode, where one is set, which may \
+                         well not be yours. Clover cannot ask for it. So this is a \
+                         commitment you make with whoever holds that code, and not a lock \
+                         anybody can put themselves behind alone. Coming back is the same \
+                         two steps in reverse: triple-click to leave, then tap your \
+                         \(Vocab.tagNoun).
                          """)
                 }
 

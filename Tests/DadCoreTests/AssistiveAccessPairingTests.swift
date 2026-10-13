@@ -71,6 +71,13 @@ final class AssistiveAccessPairingTests: XCTestCase {
                        Vocab.assistiveAccessPromptBody(role: .grownUp))
     }
 
+    func testTheGrownUpsSentenceDoesNotAssumeTheyHoldThePasscode() {
+        // A grown-up may have handed the code to someone else on purpose.
+        let body = Vocab.assistiveAccessPromptBody(role: .grownUp)
+        XCTAssertTrue(body.contains("the Screen Time passcode"), body)
+        XCTAssertFalse(body.contains("your Screen Time passcode"), body)
+    }
+
     // MARK: - When it stays quiet
 
     func testAModeThatDoesNotAskSaysNothing() {
