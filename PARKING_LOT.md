@@ -30,13 +30,6 @@ Where the rest went:
 Nothing here is code. The whole ranked feature backlog is finished; what is
 left is calendar time, a browser and a phone.
 
-- [ ] **Rename the App Store Connect record to Clover.** The app on the phone
-      says Clover from the next build, but the store listing's name is set in
-      App Store Connect (App Information › Name), not in this repo. Names are
-      unique across the store, so check "Clover" is free and fall back to a
-      longer one ("Clover: Phone Off Switch") if it isn't — not one with
-      "Touch Grass" in it, which is four competitors' name. Bundle ids stay.
-
 - [ ] **First TestFlight build on the iPhone.** Build 1.0 (25) reached
       internal testers on 2026-10-12 (run 38284229412). What is left is the
       phone: install it from TestFlight and tap a tag.
