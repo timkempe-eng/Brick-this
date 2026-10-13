@@ -164,7 +164,7 @@ struct TagModeNameOptions: DynamicOptionsProvider {
     func results() async throws -> [String] {
         let store = DadEngine.live.store
         let usable = store.modes.filter(\.blocksAnything)
-        guard let uid = toggle?.tag?.id else { return usable.map(\.name) }
+        guard let uid = toggle?.tag.id else { return usable.map(\.name) }
         let named = store.tags.modeIDs(for: uid)
         let mine = usable.filter { named.contains($0.id) }
         return (mine.count > 1 ? mine : usable).map(\.name)
