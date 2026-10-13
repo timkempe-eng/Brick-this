@@ -30,14 +30,19 @@ Where the rest went:
 Nothing here is code. The whole ranked feature backlog is finished; what is
 left is calendar time, a browser and a phone.
 
-- [ ] **First TestFlight build on the iPhone.** Build 1.0 (25) reached
-      internal testers on 2026-10-12 (run 38284229412). What is left is the
-      phone: install it from TestFlight and tap a tag.
-
-      **On the device, write a tag as well as tapping one.** Writing uses
+- [ ] **Write a tag from the app, on a device.** Tapping works: build 1.0
+      (29) was installed from TestFlight on 2026-10-13 and a paired tag
+      locked and released the phone. Writing has never run. It uses
       `NFCNDEFReaderSession`, and the NFC entitlement lost its `NDEF` value on
       2026-10-12 because upload validation now rejects it. Current guidance
       is that `TAG` covers NDEF sessions too; nothing here has run it.
+
+      To check: use a *spare* tag, not the paired one. Settings › Background
+      tag reading › type `https://example.com` › **Write link to a tag** ›
+      hold the tag to the phone. "Written" with a checkmark closes this; an
+      alert means it is open, and its exact wording is the evidence. The
+      domain does not matter for this check — it proves the write, not
+      background reading, which needs a domain this project does not have.
 
 - [ ] **Prove child authorization on a real device.** The code is built and
       shipped: `requestAuthorization(for: .child)` when the role is a young
