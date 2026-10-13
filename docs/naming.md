@@ -25,8 +25,8 @@ the *action*, and the app has a name of its own.
 
 ## The store listing
 
-The App Store Connect record is named **Clover: Go Touch Grass** (set
-2026-10-13, by the account holder). Store names are unique, so "Clover" alone
+The App Store Connect record is named **Clover: Go Touch Grass** (set in
+App Store Connect on 2026-10-13). Store names are unique, so "Clover" alone
 was not the whole of it. Note that this is the one place the phrase appears as
 an order, which copy rule 2 below keeps out of the app itself — the listing is
 a decision taken knowing that, not an oversight, and nothing in the repo
