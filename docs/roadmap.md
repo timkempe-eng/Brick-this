@@ -19,7 +19,9 @@ on every push, on a GitHub macOS runner. Neither needs a Mac of your own.
 - **Crash reconciliation** — the shield and the stored session are made to agree
   on every foreground, in both directions.
 - **Lock Screen widget** — status and a live timer without unlocking, in all
-  three accessory families plus a Home Screen tile.
+  three accessory families plus a Home Screen tile. **Not yet seen on a phone:**
+  through build 31 it crashed before reaching the widget gallery (see
+  `PARKING_LOT.md`).
 - **Allowance Modes** — a Mode can ration rather than forbid: the apps stay
   usable for a set number of minutes a day, then go until midnight. Strict
   still holds through the free period, and an allowance the system refuses to

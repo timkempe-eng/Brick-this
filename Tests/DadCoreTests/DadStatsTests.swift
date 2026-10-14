@@ -227,6 +227,7 @@ final class VocabularyTests: XCTestCase {
     func testProseUsesTheLowerCaseForms() {
         XCTAssertEqual(Vocab.idleSubtitle, "Tap your Clover tag to touch grass.")
         XCTAssertEqual(Vocab.activeTitle, "You're outside")
+        XCTAssertEqual(Vocab.widgetDescription, "Whether you're outside, and for how long.")
         XCTAssertEqual(Vocab.sessionSummary(duration: "1h 42m"), "You were outside for 1h 42m.")
         XCTAssertEqual(Vocab.warning(mode: "Sleep", at: "22:00", minutes: 10),
                        "Sleep sends you outside at 22:00 — 10 minutes.")
@@ -249,7 +250,7 @@ final class VocabularyTests: XCTestCase {
             Vocab.allowanceAlreadySpent(mode: "Games", minutes: 30), Vocab.allowanceRefused,
             Vocab.shieldTitle, Vocab.shieldSubtitle(mode: "Deep Work"),
             Vocab.shieldSubtitleAllowanceSpent(mode: "Games"), Vocab.shieldSecondaryButton,
-            Vocab.sessionSummary(duration: "1h"),
+            Vocab.sessionSummary(duration: "1h"), Vocab.widgetDescription,
         ]
         lines += HouseholdRole.allCases.map(Vocab.assistiveAccessPromptBody(role:))
         lines += HouseholdCapability.allCases.map(Vocab.refusal)

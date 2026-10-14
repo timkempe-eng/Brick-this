@@ -47,6 +47,9 @@ enum Vocab {
     static let rationedNoun  = "rationed"
 
     // MARK: Status copy
+    /// The widget gallery's one line under the name. A plain `String` on
+    /// purpose: see `DadStatusWidget`.
+    static let widgetDescription = "Whether you're \(stateInProse), and for how long."
     static let idleTitle     = "Your phone is free"
     static let idleSubtitle  = "Tap your \(tagNoun) to \(actionInProse)."
     static let activeTitle   = "You're \(stateInProse)"

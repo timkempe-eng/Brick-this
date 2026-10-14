@@ -167,8 +167,17 @@ struct DadStatusWidget: Widget {
         StaticConfiguration(kind: "DadStatus", provider: DadProvider()) { entry in
             DadWidgetView(entry: entry)
         }
+        // Both strings go in as plain `String`s, which WidgetKit takes
+        // verbatim. The description used to be an interpolated literal, which
+        // Swift resolves to the `LocalizedStringKey` overload — a translation
+        // template with an argument. Build 31 crashed on iOS 27.2 beta inside
+        // WidgetKit while it read this configuration, with SwiftUI's
+        // `_LocalizationInfo` in a register, and the widget never reached the
+        // gallery. That template was the one unusual input, so it went. This
+        // is the hypothesis being tested, not a proven cause: if the next
+        // build still crashes, it was not this.
         .configurationDisplayName(Vocab.appName)
-        .description("Whether you're \(Vocab.stateInProse), and for how long.")
+        .description(Vocab.widgetDescription)
         .supportedFamilies([
             .accessoryInline,
             .accessoryCircular,
