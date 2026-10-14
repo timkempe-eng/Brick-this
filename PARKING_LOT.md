@@ -30,17 +30,6 @@ Where the rest went:
 Nothing here is code. The whole ranked feature backlog is finished; what is
 left is calendar time, a browser and a phone.
 
-- [ ] **See the widget in the gallery.** It has never appeared on a phone.
-      Every Clover crash file on the test phone is `DadWidget`, and the report
-      read (build 31, iOS 27.2 beta 24B5089g) is WidgetKit asserting about
-      60 ms after launch while it reads the widget's configuration, before a
-      timeline is ever asked for. Clover was missing from the Lock Screen's
-      widget list. The interpolated description was changed to a plain string
-      on the evidence of one register; the next build either lists Clover or
-      says that was not it. Check: Lock Screen › Customize › the widget area,
-      and Settings › Privacy & Security › Analytics Data for new `DadWidget`
-      files.
-
 - [ ] **Prove child authorization on a real device.** The code is built and
       shipped: `requestAuthorization(for: .child)` when the role is a young
       person, with its own failure message, because a household not on Family

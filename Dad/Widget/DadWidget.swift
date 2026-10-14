@@ -168,14 +168,13 @@ struct DadStatusWidget: Widget {
             DadWidgetView(entry: entry)
         }
         // Both strings go in as plain `String`s, which WidgetKit takes
-        // verbatim. The description used to be an interpolated literal, which
-        // Swift resolves to the `LocalizedStringKey` overload — a translation
-        // template with an argument. Build 31 crashed on iOS 27.2 beta inside
-        // WidgetKit while it read this configuration, with SwiftUI's
-        // `_LocalizationInfo` in a register, and the widget never reached the
-        // gallery. That template was the one unusual input, so it went. This
-        // is the hypothesis being tested, not a proven cause: if the next
-        // build still crashes, it was not this.
+        // verbatim. Do not turn the description back into an interpolated
+        // literal: Swift resolves that to the `LocalizedStringKey` overload,
+        // and on iOS 27.2 beta WidgetKit asserted on it while reading this
+        // configuration — the extension died about 60 ms after every launch
+        // and Clover never reached the widget gallery (reports from builds
+        // 27 and 31). Build 32's only widget change was this one, and the
+        // widget appeared.
         .configurationDisplayName(Vocab.appName)
         .description(Vocab.widgetDescription)
         .supportedFamilies([
