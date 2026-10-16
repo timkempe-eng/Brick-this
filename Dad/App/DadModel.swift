@@ -68,6 +68,12 @@ final class DadModel: ObservableObject {
     /// names several, otherwise every Mode that blocks anything.
     @Published private(set) var modeChoices: [DadMode] = []
 
+    /// What the home screen's setup card offers. Snapshotted with everything
+    /// else in `reload`, so the card and the tap read the same Modes.
+    @Published private(set) var setupChecklist = SetupChecklist(modes: [], pairedTagCount: 0,
+                                                                hasEverStarted: false)
+    @Published private(set) var hasFinishedSetup = false
+
     /// Ticks once a second while Dadded so the counter on the home screen moves.
     @Published private(set) var now = Date()
     private var ticker: Timer?
@@ -101,6 +107,8 @@ final class DadModel: ObservableObject {
         stats = engine.stats
         householdStreak = engine.householdStreak
         shieldGap = engine.shieldGap
+        setupChecklist = engine.setupChecklist
+        hasFinishedSetup = engine.store.hasFinishedSetup
         authorization = AuthorizationCenter.shared.authorizationStatus
         updateTicker()
     }
@@ -403,6 +411,10 @@ final class DadModel: ObservableObject {
             } ?? summary
         case .breakCancelled(let mode):
             banner = Vocab.breakCancelled(mode: mode.name)
+        case .needsModeChoice(let among) where among.isEmpty:
+            // Nothing blocks anything, so there is no question to ask. The
+            // home screen's setup card is offering the fix at the same moment.
+            banner = Vocab.nothingToHideYet
         case .needsModeChoice(let among):
             modeChoices = among
             pendingModeChoice = true
@@ -418,6 +430,18 @@ final class DadModel: ObservableObject {
         } else {
             banner = "No emergency overrides left this month. Go find your tag."
         }
+        reload()
+    }
+
+    // MARK: - Setup
+
+    /// Whether the home screen shows the setup card at all. It stays until
+    /// it is dismissed, and it can only be dismissed from its last card, so a
+    /// skipped step is never quietly lost.
+    var showsSetupCard: Bool { !hasFinishedSetup }
+
+    func finishSetup() {
+        engine.store.hasFinishedSetup = true
         reload()
     }
 

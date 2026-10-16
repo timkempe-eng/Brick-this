@@ -295,6 +295,11 @@ protocol DadPersisting: AnyObject {
     var emergencyUses: [Date] { get set }
     var hasOnboarded: Bool { get set }
 
+    /// Set when somebody dismisses the home screen's setup card, the last
+    /// step of which is optional advice the checklist cannot see done. Every
+    /// earlier step is derived from the data instead — see `SetupChecklist`.
+    var hasFinishedSetup: Bool { get set }
+
     /// The schedule set last handed to the system. Kept so we can tell whether
     /// a re-registration is actually needed — see `DadEngine.syncSchedules`.
     var syncedSchedules: [RecurringSchedule] { get set }

@@ -87,7 +87,7 @@ missing is a session whose hook did not run, not a reason to push untested.
 ## Before you push
 
 ```bash
-swift test                      # 932 tests, seconds
+swift test                      # 939 tests, seconds
 ./scripts/lint-vocabulary.sh
 python3 scripts/preflight.py    # 112 checks on the Xcode wiring
 ```

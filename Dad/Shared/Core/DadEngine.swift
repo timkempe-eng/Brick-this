@@ -1183,6 +1183,17 @@ struct DadEngine {
                  now: clock.now, calendar: calendar)
     }
 
+    /// How far this phone is from a tap that takes something away.
+    ///
+    /// "Has ever started" reads the history as well as the running session,
+    /// so the step stays done after the session ends. The history trim keeps
+    /// the newest sessions, so it never empties a history that had any.
+    var setupChecklist: SetupChecklist {
+        SetupChecklist(modes: store.modes,
+                       pairedTagCount: store.tags.count,
+                       hasEverStarted: store.activeSession != nil || !store.history.isEmpty)
+    }
+
     // MARK: - Warning before a scheduled Mode lands
 
     /// Hands the soonest warning owed to the system, replacing whatever was

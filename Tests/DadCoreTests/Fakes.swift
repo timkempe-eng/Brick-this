@@ -22,6 +22,7 @@ final class FakeStore: DadPersisting {
     var pendingResume: PendingResume?
     var emergencyUses: [Date] = []
     var hasOnboarded = false
+    var hasFinishedSetup = false
     var syncedSchedules: [RecurringSchedule] = []
     var hasDataFromANewerBuild = false
 }

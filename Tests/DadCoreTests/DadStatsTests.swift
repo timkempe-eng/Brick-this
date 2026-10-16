@@ -254,6 +254,12 @@ final class VocabularyTests: XCTestCase {
         ]
         lines += HouseholdRole.allCases.map(Vocab.assistiveAccessPromptBody(role:))
         lines += HouseholdCapability.allCases.map(Vocab.refusal)
+        lines += HouseholdRole.allCases.map(Vocab.roleExplanation)
+        lines += SetupChecklist.Step.allCases.flatMap {
+            [Vocab.setupStepTitle($0), Vocab.setupStepDetail($0), Vocab.setupStepAction($0)].compactMap { $0 }
+        }
+        lines += [Vocab.setupTitle, Vocab.setupFinishingTitle, Vocab.setupShortcutsTip,
+                  Vocab.setupPlacementTip, Vocab.setupDoneAction, Vocab.nothingToHideYet]
         return lines
     }
 

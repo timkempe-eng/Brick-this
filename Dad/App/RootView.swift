@@ -43,6 +43,8 @@ struct HomeView: View {
     @State private var showingModes = false
     @State private var showingSettings = false
     @State private var showingStats = false
+    /// The Mode the setup card's "choose apps" step is filling in.
+    @State private var settingUpMode: DadMode?
 
     var body: some View {
         NavigationStack {
@@ -95,6 +97,19 @@ struct HomeView: View {
                 Spacer()
 
                 VStack(spacing: 12) {
+                    // Idle only: while outside the screen has one job, and a
+                    // checklist under the timer is a second one.
+                    if model.showsSetupCard, !model.isDadded, model.pendingResume == nil {
+                        SetupCard(checklist: model.setupChecklist,
+                                  canScan: scanner.isAvailable,
+                                  chooseApps: {
+                                      settingUpMode = model.modes.first
+                                          ?? DadMode(name: "Deep Work", symbol: "brain.head.profile")
+                                  },
+                                  pairTag: { pairTag() },
+                                  finish: { model.finishSetup() })
+                    }
+
                     Button {
                         scanner.scan(prompt: model.isDadded
                                      ? "Hold your iPhone near your \(Vocab.tagNoun) to \(Vocab.releaseInProse)."
@@ -161,8 +176,12 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { showingModes = true } label: { Image(systemName: "square.grid.2x2") }
-                        .accessibilityLabel("\(Vocab.modeNoun)s")
+                    // Named, not just drawn: an unlabelled grid was where a
+                    // new user had to guess the apps were chosen.
+                    Button { showingModes = true } label: {
+                        Label("\(Vocab.modeNoun)s", systemImage: "square.grid.2x2")
+                            .labelStyle(.titleAndIcon)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingStats = true } label: { Image(systemName: "chart.bar") }
@@ -186,15 +205,17 @@ struct HomeView: View {
             .sheet(isPresented: $showingModes) { ModesView() }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(isPresented: $showingStats) { StatsView() }
+            .sheet(item: $settingUpMode) { mode in
+                ModeEditorView(mode: mode, opensPicker: true) { model.save($0) }
+            }
             // Reached when a tap arrives and more than one mode could apply.
             .confirmationDialog("Which \(Vocab.modeNoun.lowercased())?",
                                 isPresented: $model.pendingModeChoice,
                                 titleVisibility: .visible) {
+                // Never empty: a tap with nothing to choose between says
+                // `Vocab.nothingToHideYet` instead of asking.
                 ForEach(model.modeChoices) { mode in
                     Button(mode.name) { model.tap(mode: mode) }
-                }
-                if model.modes.allSatisfy({ !$0.blocksAnything }) {
-                    Button("Set up a \(Vocab.modeNoun.lowercased())") { showingModes = true }
                 }
             }
             .alert(Vocab.appName, isPresented: Binding(get: { model.banner != nil },
@@ -204,6 +225,88 @@ struct HomeView: View {
                 Text(model.banner ?? "")
             }
         }
+    }
+}
+
+extension HomeView {
+    /// The same pairing Settings does, offered where a new user is looking.
+    fileprivate func pairTag() {
+        scanner.scan(prompt: "Hold your iPhone near the tag you want to pair.") { uid in
+            if !model.tags.contains(where: { $0.uid == uid }) {
+                model.pair(tagUID: uid)
+            }
+        }
+    }
+}
+
+/// What is left between this phone and a tap that takes something away.
+///
+/// Every step but the last card is read off the data — see `SetupChecklist` —
+/// so it ticks itself off when the thing is done from anywhere, Settings
+/// included, and comes back if it is undone.
+private struct SetupCard: View {
+    let checklist: SetupChecklist
+    let canScan: Bool
+    let chooseApps: @MainActor () -> Void
+    let pairTag: @MainActor () -> Void
+    let finish: @MainActor () -> Void
+
+    private let steps = SetupChecklist.Step.allCases
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let next = checklist.next {
+                HStack {
+                    Text(Vocab.setupTitle).font(.headline)
+                    Spacer()
+                    Text("\(checklist.done.count) of \(steps.count)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                ForEach(steps, id: \.self) { step in
+                    row(step, isNext: step == next)
+                }
+            } else {
+                Text(Vocab.setupFinishingTitle).font(.headline)
+                Label(Vocab.setupShortcutsTip, systemImage: "bolt.horizontal")
+                    .font(.subheadline)
+                Label(Vocab.setupPlacementTip, systemImage: "house")
+                    .font(.subheadline)
+                Button(Vocab.setupDoneAction, action: finish)
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+    }
+
+    private func row(_ step: SetupChecklist.Step, isNext: Bool) -> some View {
+        let isDone = checklist.done.contains(step)
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(isDone ? Color.accentColor : .secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(Vocab.setupStepTitle(step))
+                    .font(.subheadline.weight(isNext ? .semibold : .regular))
+                    .foregroundStyle(isDone ? .secondary : .primary)
+                if isNext {
+                    Text(Vocab.setupStepDetail(step))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    if let action = Vocab.setupStepAction(step) {
+                        Button(action) {
+                            if step == .chooseApps { chooseApps() } else { pairTag() }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(step == .pairTag && !canScan)
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(Vocab.setupStepTitle(step)), \(isDone ? "done" : "not done yet")")
     }
 }
 

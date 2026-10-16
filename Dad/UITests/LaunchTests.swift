@@ -23,7 +23,7 @@ final class LaunchTests: XCTestCase {
         // Which screen depends on whether the Simulator grants Screen Time
         // authorization, and either is a pass — the point is that it rendered
         // rather than crashed.
-        let onboarding = app.buttons["Allow Screen Time access"]
+        let onboarding = app.buttons["Get started"]
         let home = app.buttons["Touch Grass"]
         let rendered = onboarding.waitForExistence(timeout: 30)
             || home.waitForExistence(timeout: 5)
@@ -42,15 +42,37 @@ final class LaunchTests: XCTestCase {
         // every real one.
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.buttons["Allow Screen Time access"].waitForExistence(timeout: 30)
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 30)
                       || app.buttons["Touch Grass"].waitForExistence(timeout: 5))
 
         app.terminate()
         app.launch()
 
-        XCTAssertTrue(app.buttons["Allow Screen Time access"].waitForExistence(timeout: 30)
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 30)
                       || app.buttons["Touch Grass"].waitForExistence(timeout: 5),
                       "The app rendered on a fresh install but not on a relaunch.")
         XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    func testOnboardingWalksThroughToThePermission() {
+        // Stops short of "Allow": the Simulator never grants Screen Time, and
+        // the system prompt is not this app's UI. What is checked is that each
+        // page leads to the next — a page with no way forward compiles fine.
+        let app = XCUIApplication()
+        app.launch()
+        let start = app.buttons["Get started"]
+        guard start.waitForExistence(timeout: 30) else {
+            // Authorization granted after all: there is no onboarding to walk.
+            return XCTAssertTrue(app.buttons["Touch Grass"].exists)
+        }
+        start.tap()
+
+        XCTAssertTrue(app.staticTexts["Whose phone is this?"].waitForExistence(timeout: 10))
+        app.buttons["Continue"].tap()
+
+        XCTAssertTrue(app.buttons["Allow"].waitForExistence(timeout: 10))
+        app.buttons["Back"].tap()
+        XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 10),
+                      "Back from the permission did not return to the role question.")
     }
 }

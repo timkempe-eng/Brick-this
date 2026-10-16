@@ -80,8 +80,21 @@ struct ModeEditorView: View {
     @State var mode: DadMode
     let onSave: (DadMode) -> Void
 
+    /// Set by the home screen's setup card: open Apple's picker straight
+    /// away, and save as soon as it closes with something chosen. A new user
+    /// who came here to choose apps would otherwise land on a form of
+    /// unfamiliar options, and then have to find Save.
+    private let opensPicker: Bool
+
+    init(mode: DadMode, opensPicker: Bool = false, onSave: @escaping (DadMode) -> Void) {
+        _mode = State(initialValue: mode)
+        self.opensPicker = opensPicker
+        self.onSave = onSave
+    }
+
     @Environment(\.dismiss) private var dismiss
     @State private var showingPicker = false
+    @State private var hasOpenedPicker = false
 
     /// The picker gets its own state rather than a binding into the Mode.
     ///
@@ -220,11 +233,26 @@ struct ModeEditorView: View {
             .navigationTitle(mode.name)
             .navigationBarTitleDisplayMode(.inline)
             .familyActivityPicker(isPresented: $showingPicker, selection: $selection)
-            .onAppear { selection = currentSelection }
+            .onAppear {
+                selection = currentSelection
+                // Once: onAppear can run again, and reopening the picker
+                // every time would trap somebody who closed it on purpose.
+                if opensPicker, !hasOpenedPicker {
+                    hasOpenedPicker = true
+                    showingPicker = true
+                }
+            }
             // Take what was chosen when the picker closes. Keyed on the Bool
             // rather than on the selection itself, which need not be Equatable.
             .onChange(of: showingPicker) { _, isShowing in
-                if !isShowing { writeBack(selection) }
+                guard !isShowing else { return }
+                writeBack(selection)
+                // Nothing chosen leaves the editor up, with Cancel, rather
+                // than saving a Mode that still hides nothing.
+                if opensPicker, mode.blocksAnything {
+                    onSave(mode)
+                    dismiss()
+                }
             }
             // Switching which way round the Mode works reloads the picker from
             // the other list. Both are kept, so flipping to look and flipping

@@ -147,6 +147,71 @@ enum Vocab {
         + "Settings › Family. You can also set this phone to \"Mine\" for now; everything "
         + "works, but it can be switched off from here."
 
+    // MARK: Setup
+
+    /// Asked before the permission, because the answer decides which
+    /// permission is requested — and said in full, because the second choice
+    /// only works on a phone inside an iCloud Family and finding that out
+    /// from an error after the prompt is the worst place to learn it.
+    static func roleExplanation(_ role: HouseholdRole) -> String {
+        switch role {
+        case .grownUp:
+            return "You set it up and you're in charge. You can switch \(appName) off "
+                + "in Settings whenever you like."
+        case .youngPerson:
+            return "Set up together with a grown-up, and it can't be switched off from "
+                + "this phone alone. Apple only allows this on a phone signed into a "
+                + "child account in an iCloud Family."
+        }
+    }
+
+    static let setupTitle = "Finish setting up"
+
+    static func setupStepTitle(_ step: SetupChecklist.Step) -> String {
+        switch step {
+        case .chooseApps: return "Choose what to hide"
+        case .pairTag:    return "Pair your \(tagNoun)"
+        case .tryIt:      return "Try it"
+        }
+    }
+
+    static func setupStepDetail(_ step: SetupChecklist.Step) -> String {
+        switch step {
+        case .chooseApps:
+            return "Start small — three or four apps you actually lose time to."
+        case .pairTag:
+            return "An NTAG215 sticker is ideal. Until you pair one, any tag your phone can read will work."
+        case .tryIt:
+            return "Tap your \(tagNoun) to \(actionInProse), then open one of the apps you hid."
+        }
+    }
+
+    /// `nil` for trying it: the home screen's own button already does that,
+    /// and a second one saying the same thing is a question about which.
+    static func setupStepAction(_ step: SetupChecklist.Step) -> String? {
+        switch step {
+        case .chooseApps: return "Choose apps"
+        case .pairTag:    return "Pair a tag"
+        case .tryIt:      return nil
+        }
+    }
+
+    /// Shown once every derived step is done. Both are advice the app cannot
+    /// see taken, so this card is the one part of setup a person dismisses.
+    static let setupFinishingTitle = "Two last things"
+    static let setupShortcutsTip =
+        "So a tap works with \(appName) closed: Shortcuts › Automation › NFC › scan your "
+        + "tag › add the “\(action)” action, and turn Ask Before Running off."
+    static let setupPlacementTip =
+        "Put the tag somewhere a little out of the way — a drawer in another room. "
+        + "One on your desk is too easy to reach for."
+    static let setupDoneAction = "Done"
+
+    /// What a tap says when no Mode hides anything yet. A "which Mode?"
+    /// question with nothing to pick is the dead end this replaces.
+    static let nothingToHideYet =
+        "Nothing to hide yet. Choose some apps for a \(modeNoun.lowercased()) first."
+
     // MARK: The warning before a scheduled Mode
 
     /// "Sleep sends you outside at 22:00 — 10 minutes."

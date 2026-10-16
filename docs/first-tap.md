@@ -116,20 +116,26 @@ build, install Clover.
 
 ## When the tags arrive
 
-1. **Open Clover, grant Screen Time access.** One system prompt.
-2. **Build a Mode.** Start with one — "Deep Work" — and three or four apps you
-   actually lose time to. Blocking thirty on day one is how people quit this
-   after a week.
-3. **Pair a tag.** Settings → Pair a Clover tag. Until you pair one, any tag works.
-4. **Test it in-app.** Press "Touch Grass", then try to open a blocked app. You
-   should get the "You're outside." shield.
-5. **Optionally give a Mode a schedule.** Sleep, every night, 22:00–07:00, and
+1. **Open Clover.** Three short screens: what it does, whose phone it is (with
+   what each answer means), then Screen Time access — one system prompt.
+2. **Follow the "Finish setting up" card on the home screen.** It ticks itself
+   off from what is really there, so a step done in Settings counts too:
+   - **Choose what to hide.** Opens Apple’s picker on Deep Work and saves once
+     you close it with apps chosen. Start with three or four apps you actually lose time to —
+     blocking thirty on day one is how people quit this after a week.
+   - **Pair your tag.** Scans it there and then. Until you pair one, any tag
+     works.
+   - **Try it.** Press "Touch Grass", then try to open a blocked app. You
+     should get the "You're outside." shield.
+3. **The card's last page** has the Shortcuts automation and where to put the
+   tag (both below), and a Done button that puts it away.
+4. **Optionally give a Mode a schedule.** Sleep, every night, 22:00–07:00, and
    Clover sends you outside on its own. A schedule never overrides a session you started by
    hand, and you can always tap out early.
-6. **Set up the Shortcuts automation** so a tap works with Clover closed —
+5. **Set up the Shortcuts automation** so a tap works with Clover closed —
    [three lines of setup](nfc-and-tags.md#2-shortcuts-automation--the-one-to-use).
    This is all on the iPhone, no computer involved.
-7. **Stick the tag somewhere inconvenient.** This is the actual product. A
+6. **Stick the tag somewhere inconvenient.** This is the actual product. A
    sticker on your desk gives you nothing; one in a drawer in another room is
    the whole mechanism.
 

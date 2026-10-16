@@ -61,6 +61,10 @@ struct ToggleDadIntent: AppIntent {
             return .result(dialog: "\(Vocab.sessionSummary(duration: session.duration.dadDurationText)) \(Vocab.breakRunning(mode: resume.modeName, until: resume.at))")
         case .breakCancelled(let mode):
             return .result(dialog: "\(Vocab.breakCancelled(mode: mode.name))")
+        case .needsModeChoice(let among) where among.isEmpty:
+            // No Mode hides anything yet. Asking "which one?" here would offer
+            // a list Shortcuts can only fill with Modes that cannot start.
+            return .result(dialog: "\(Vocab.nothingToHideYet)")
         case .needsModeChoice(let among):
             // Names the choices, so a tag set to two Modes asks between those
             // two out loud rather than an open "which one?".

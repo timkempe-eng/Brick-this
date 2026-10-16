@@ -35,6 +35,7 @@ final class UserDefaultsStore: DadPersisting {
         static let grantExchanges = "grantExchanges"
         static let emergencyUses = "emergencyUses"
         static let hasOnboarded = "hasOnboarded"
+        static let hasFinishedSetup = "hasFinishedSetup"
         static let syncedSchedules = "syncedSchedules"
         static let agreements = "agreements"
         static let rewards = "rewards"
@@ -172,6 +173,11 @@ final class UserDefaultsStore: DadPersisting {
     var hasOnboarded: Bool {
         get { defaults.bool(forKey: Key.hasOnboarded) }
         set { defaults.set(newValue, forKey: Key.hasOnboarded) }
+    }
+
+    var hasFinishedSetup: Bool {
+        get { defaults.bool(forKey: Key.hasFinishedSetup) }
+        set { defaults.set(newValue, forKey: Key.hasFinishedSetup) }
     }
 
     // MARK: - Storage
