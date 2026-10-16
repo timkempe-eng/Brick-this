@@ -41,3 +41,14 @@ jobs:
         run: |
           fastlane ios capabilities
           fastlane ios certs revoke_id:"${{ inputs.revoke_id }}"
+
+      # Its own step, so a failure here never hides the certificate report
+      # above, and a certificate failure never hides this.
+      - name: TestFlight state
+        if: always()
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+        run: fastlane ios testflight_status

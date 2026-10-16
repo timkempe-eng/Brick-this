@@ -439,4 +439,60 @@ platform :ios do
       UI.success("Revoked #{target}. Delete the match branch too, or match will keep serving the orphaned profile.")
     end
   end
+
+  # What TestFlight is actually serving, straight from Connect.
+  #
+  # Written when builds 33 and 34 both reached "Ready to Test" and both failed
+  # to install with "The requested app is not available or doesn't exist",
+  # while build 32 had installed — and the IPAs of 32 and 33 carry the same
+  # Info.plist keys but the build number, the same profiles and certificate. That moves the question off the binary
+  # and onto what Connect does with it, which is invisible from a session.
+  #
+  # This repository is public and so are its Actions logs, so nothing here
+  # prints a tester's name or email: groups, counts and states only. Each
+  # section rescues on its own, because one Spaceship call shaped differently
+  # than expected should cost that section, not the report.
+  desc "Read-only: recent builds, their beta states, and the tester groups."
+  lane :testflight_status do
+    connect_api_key
+    app = connect_app_record
+    if app.nil? || app == :unknown
+      UI.user_error!("No App Store Connect record visible for #{APP_ID}; nothing to report.")
+    end
+    UI.important("App: #{app.name} (#{app.id})")
+
+    begin
+      builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, sort: "-uploadedDate", limit: 6,
+                                                includes: "buildBetaDetail,preReleaseVersion")
+      builds.each do |b|
+        detail = b.build_beta_detail
+        UI.important("build #{b.app_version} (#{b.version})  processing=#{b.processing_state}  " \
+                     "expired=#{b.expired}  minOS=#{b.min_os_version}  uploaded=#{b.uploaded_date}  " \
+                     "internal=#{detail&.internal_build_state.inspect}  external=#{detail&.external_build_state.inspect}")
+      end
+    rescue StandardError => e
+      UI.error("builds: could not read (#{e.class}: #{e.message})")
+    end
+
+    begin
+      groups = app.get_beta_groups
+      groups.each do |g|
+        testers = begin
+          Spaceship::ConnectAPI::BetaTester.all(filter: { betaGroups: g.id }).count
+        rescue StandardError => e
+          "? (#{e.class})"
+        end
+        group_builds = begin
+          Spaceship::ConnectAPI.get_builds(filter: { betaGroups: g.id }).to_models.map(&:version)
+        rescue StandardError => e
+          ["? (#{e.class})"]
+        end
+        UI.important("group #{g.name.inspect}  internal=#{g.is_internal_group}  " \
+                     "allBuilds=#{g.has_access_to_all_builds.inspect}  testers=#{testers}  builds=#{group_builds.inspect}")
+      end
+      UI.error("no beta groups at all — nobody can be offered a build") if groups.empty?
+    rescue StandardError => e
+      UI.error("groups: could not read (#{e.class}: #{e.message})")
+    end
+  end
 end
