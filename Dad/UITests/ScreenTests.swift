@@ -66,9 +66,9 @@ final class ScreenTests: XCTestCase {
     /// right to refuse to make it; the test was asserting the wrong sentence.
     func testTurningOnAScheduleChangesWhatTheModePromises() {
         app.buttons["Modes"].firstMatch.tap()
-        // Waited for, as the other Modes tests do: the sheet is still
-        // animating in when a bare tap goes looking, and on run 219 it
-        // missed. Home carries more on a fresh install now (the setup card).
+        // Waited for, as the other Modes tests do. On run 219 a bare tap
+        // found no "Deep Work" while the identical steps passed in another
+        // test; why that run was slower is not known.
         XCTAssertTrue(app.staticTexts["Deep Work"].waitForExistence(timeout: 10))
         app.staticTexts["Deep Work"].firstMatch.tap()
         let toggle = app.switches["Run on a schedule"]
@@ -128,9 +128,9 @@ final class ScreenTests: XCTestCase {
     /// four times without ever separating those two.
     func testTheEditorAcceptsASimpleToggle() {
         app.buttons["Modes"].firstMatch.tap()
-        // Waited for, as the other Modes tests do: the sheet is still
-        // animating in when a bare tap goes looking, and on run 219 it
-        // missed. Home carries more on a fresh install now (the setup card).
+        // Waited for, as the other Modes tests do. On run 219 a bare tap
+        // found no "Deep Work" while the identical steps passed in another
+        // test; why that run was slower is not known.
         XCTAssertTrue(app.staticTexts["Deep Work"].waitForExistence(timeout: 10))
         app.staticTexts["Deep Work"].firstMatch.tap()
 
